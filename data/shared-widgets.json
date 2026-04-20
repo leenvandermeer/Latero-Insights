@@ -1,0 +1,25 @@
+[
+  {
+    "label": "sdf",
+    "description": "sdf",
+    "queryConfig": {
+      "dataSource": "data_lineage",
+      "measure": {
+        "type": "count"
+      },
+      "groupBy": {
+        "field": "step"
+      },
+      "filters": []
+    },
+    "visualType": "bar",
+    "defaultSize": {
+      "w": 3,
+      "h": 3,
+      "minW": 2,
+      "minH": 2
+    },
+    "id": "f8d37fbf-322f-4558-b8ce-bcbd6ca5d7a2",
+    "publishedAt": "2026-04-19T18:06:57.681Z"
+  }
+]

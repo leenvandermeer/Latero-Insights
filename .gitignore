@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# production
+build/
+
+# env files
+.env*.local
+
+# debug
+npm-debug.log*
+
+# turbo
+.turbo/
+
+# API response cache
+.cache/

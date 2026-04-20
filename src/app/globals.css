@@ -1,0 +1,214 @@
+@import "../styles/tokens.css";
+@import "../styles/responsive.css";
+@import "tailwindcss";
+
+/* ── Tailwind theme — light mode only
+   Dark mode is handled exclusively by [data-theme="dark"] in tokens.css.
+   Never put @media (prefers-color-scheme: dark) inside @theme — it bypasses
+   the data-theme attribute set by the theme toggle.
+   ─────────────────────────────────────────────────────────────── */
+@theme {
+  --color-primary:              #1B3B6B;
+  --color-primary-foreground:   #F5EDE0;
+  --color-secondary:            #F5EFE4;
+  --color-secondary-foreground: #1A1208;
+  --color-destructive:          #EF4444;
+  --color-destructive-foreground: #FFFFFF;
+  --color-muted:                #F5EFE4;
+  --color-muted-foreground:     #4A3C2A;
+  --color-accent:               #C8892A;
+  --color-accent-foreground:    #FFFFFF;
+  --color-card:                 #F5EFE4;
+  --color-card-foreground:      #1A1208;
+  --color-popover:              #FDFAF4;
+  --color-popover-foreground:   #1A1208;
+  --color-border:               #D6CCBA;
+  --color-input:                #D6CCBA;
+  --color-ring:                 #C8892A;
+  --color-background:           #FDFAF4;
+  --color-foreground:           #1A1208;
+
+  /* Sidebar — light design */
+  --color-sidebar:              #FFFFFF;
+  --color-sidebar-border:       #E8E2D8;
+  --color-sidebar-foreground:   #1A1208;
+  --color-sidebar-muted:        #8A7860;
+  --color-sidebar-active-bg:    #DCE9F5;
+  --color-sidebar-active-text:  #1B3B6B;
+  --color-sidebar-hover:        #F5EFE4;
+
+  --color-success:              #10B981;
+  --color-success-light:        #D1FAE5;
+  --color-warning:              #F59E0B;
+  --color-warning-light:        #FEF3C7;
+  --color-error:                #EF4444;
+  --color-error-light:          #FEE2E2;
+
+  --radius-sm:   0.5rem;
+  --radius-md:   0.75rem;
+  --radius-lg:   1rem;
+  --radius-xl:   1.5rem;
+
+  --font-sans:    "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+}
+
+/* ── Dark mode Tailwind overrides — only when data-theme="dark" ── */
+[data-theme="dark"] {
+  --color-primary:              #6B96D4;
+  --color-primary-foreground:   #0F0D08;
+  --color-secondary:            #1A1710;
+  --color-secondary-foreground: #F0EBE0;
+  --color-muted:                #1A1710;
+  --color-muted-foreground:     #B8AE9A;
+  --color-accent:               #D4A840;
+  --color-accent-foreground:    #0F0D08;
+  --color-card:                 #1A1710;
+  --color-card-foreground:      #F0EBE0;
+  --color-popover:              #1A1710;
+  --color-popover-foreground:   #F0EBE0;
+  --color-border:               #3A3428;
+  --color-input:                #3A3428;
+  --color-ring:                 #D4A840;
+  --color-background:           #0F0D08;
+  --color-foreground:           #F0EBE0;
+
+  --color-sidebar:              #0A1628;
+  --color-sidebar-border:       #1E3050;
+  --color-sidebar-foreground:   #F0EBE0;
+  --color-sidebar-muted:        #7A8FA8;
+  --color-sidebar-active-bg:    #1A2A40;
+  --color-sidebar-active-text:  #D4A840;
+  --color-sidebar-hover:        #142038;
+
+  --color-success:              #34D399;
+  --color-success-light:        #064E3B;
+  --color-warning:              #FBBF24;
+  --color-warning-light:        #78350F;
+  --color-error:                #F87171;
+  --color-error-light:          #7F1D1D;
+}
+
+/* ── Base ─────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+}
+
+h1, h2, .font-display {
+  font-family: var(--font-display);
+}
+
+/* ── Card hover ─────────────────────────────────────── */
+.card-hover:hover,
+.rounded-2xl.border:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(200,137,42,0.18), 0 2px 8px rgba(27,59,107,0.08));
+  border-color: rgba(27,59,107,0.15);
+}
+
+/* ── Button system ──────────────────────────────────── */
+.btn-primary {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  color: #fff;
+  background: var(--color-brand);
+  border: 2px solid var(--color-brand);
+  border-radius: 100px;
+  padding: 10px 22px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 220ms ease, border-color 220ms ease, transform 140ms ease, box-shadow 220ms ease;
+  line-height: 1.4;
+}
+.btn-primary:hover {
+  background: var(--color-brand-hover);
+  border-color: var(--color-brand-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(27, 59, 107, 0.30);
+}
+
+.btn-secondary {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-brand);
+  background: transparent;
+  border: 2px solid var(--color-brand);
+  border-radius: 100px;
+  padding: 10px 22px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 220ms ease, transform 140ms ease;
+  line-height: 1.4;
+}
+.btn-secondary:hover {
+  background: var(--color-brand-subtle);
+  transform: translateY(-1px);
+}
+
+/* ── Eyebrow label ──────────────────────────────────── */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  flex-shrink: 0;
+}
+
+/* ── Grid resize handle ─────────────────────────────── */
+.react-resizable-handle-se {
+  width: 18px;
+  height: 18px;
+  background: none;
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  cursor: se-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 3px;
+}
+.react-resizable-handle-se::after {
+  content: "";
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--color-accent);
+  border-bottom: 2px solid var(--color-accent);
+  border-radius: 0 0 3px 0;
+  opacity: 0.7;
+}
+.group:hover .react-resizable-handle-se {
+  opacity: 1;
+}

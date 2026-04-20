@@ -1,0 +1,259 @@
+/* ================================================================
+   Latero Meta Insights — Design System Tokens
+   Source of truth for colors, typography, spacing, shadows, and
+   responsive breakpoints. Derived from the Latero website brand.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   1. COLOR PALETTE — Light Theme (default)
+   ---------------------------------------------------------------- */
+:root {
+  /* Brand */
+  --color-brand:          #1B3B6B;
+  --color-brand-hover:    #143060;
+  --color-brand-light:    #4B7BB5;
+  --color-brand-subtle:   #DCE9F5;
+
+  /* Accent */
+  --color-accent:         #C8892A;
+  --color-accent-light:   #D9A840;
+  --color-accent-subtle:  #FDF5E4;
+
+  /* Backgrounds */
+  --color-bg:             #FDFAF4;
+  --color-surface:        #F5EFE4;
+  --color-surface-alt:    #ECE4D6;
+
+  /* Borders */
+  --color-border:         #D6CCBA;
+  --color-border-focus:   #1B3B6B;
+
+  /* Text */
+  --color-text:           #1A1208;
+  --color-text-muted:     #4A3C2A;
+  --color-text-subtle:    #8A7860;
+  --color-text-on-dark:   #F5EDE0;
+
+  /* Status */
+  --color-success:        #10B981;
+  --color-success-subtle: #D1FAE5;
+  --color-warning:        #F59E0B;
+  --color-warning-subtle: #FEF3C7;
+  --color-error:          #EF4444;
+  --color-error-subtle:   #FEE2E2;
+
+  /* Dark section */
+  --color-dark-section:   #060E1A;
+  --color-cta-from:       #0F2447;
+  --color-cta-to:         #060E1A;
+}
+
+/* ----------------------------------------------------------------
+   2. COLOR PALETTE — Dark Theme
+   ---------------------------------------------------------------- */
+[data-theme="dark"] {
+  --color-brand:          #6B96D4;
+  --color-brand-hover:    #8AB0E0;
+  --color-brand-light:    #4B7BB5;
+  --color-brand-subtle:   #1A2A40;
+
+  --color-accent:         #D4A840;
+  --color-accent-light:   #E0C060;
+  --color-accent-subtle:  #2A2010;
+
+  --color-bg:             #0F0D08;
+  --color-surface:        #1A1710;
+  --color-surface-alt:    #242018;
+
+  --color-border:         #3A3428;
+  --color-border-focus:   #6B96D4;
+
+  --color-text:           #F0EBE0;
+  --color-text-muted:     #B8AE9A;
+  --color-text-subtle:    #7A7060;
+  --color-text-on-dark:   #F0EBE0;
+
+  --color-success:        #34D399;
+  --color-success-subtle: #064E3B;
+  --color-warning:        #FBBF24;
+  --color-warning-subtle: #78350F;
+  --color-error:          #F87171;
+  --color-error-subtle:   #7F1D1D;
+
+  --color-dark-section:   #060E1A;
+}
+
+/* Also support system preference when no explicit theme is set */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-brand:          #6B96D4;
+    --color-brand-hover:    #8AB0E0;
+    --color-brand-light:    #4B7BB5;
+    --color-brand-subtle:   #1A2A40;
+
+    --color-accent:         #D4A840;
+    --color-accent-light:   #E0C060;
+    --color-accent-subtle:  #2A2010;
+
+    --color-bg:             #0F0D08;
+    --color-surface:        #1A1710;
+    --color-surface-alt:    #242018;
+
+    --color-border:         #3A3428;
+    --color-border-focus:   #6B96D4;
+
+    --color-text:           #F0EBE0;
+    --color-text-muted:     #B8AE9A;
+    --color-text-subtle:    #7A7060;
+    --color-text-on-dark:   #F0EBE0;
+
+    --color-success:        #34D399;
+    --color-success-subtle: #064E3B;
+    --color-warning:        #FBBF24;
+    --color-warning-subtle: #78350F;
+    --color-error:          #F87171;
+    --color-error-subtle:   #7F1D1D;
+  }
+}
+
+/* ----------------------------------------------------------------
+   3. TYPOGRAPHY
+   ---------------------------------------------------------------- */
+:root {
+  /* Font families */
+  --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+
+  /* Font sizes */
+  --text-display:     2rem;       /* 32px — page display headings */
+  --text-h1:          1.5rem;     /* 24px — section headings */
+  --text-h2:          1.25rem;    /* 20px — page titles */
+  --text-h3:          1rem;       /* 16px — section sub-heads */
+  --text-body:        0.875rem;   /* 14px — standard body */
+  --text-body-sm:     0.8125rem;  /* 13px — compact body */
+  --text-caption:     0.75rem;    /* 12px — captions, timestamps */
+  --text-badge:       0.6875rem;  /* 11px — badges, labels */
+  --text-counter:     2.25rem;    /* 36px — KPI counter values */
+
+  /* Font weights */
+  --weight-regular:   400;
+  --weight-medium:    500;
+  --weight-semibold:  600;
+  --weight-bold:      700;
+
+  /* Line heights */
+  --leading-tight:    1.1;
+  --leading-snug:     1.25;
+  --leading-normal:   1.5;
+  --leading-relaxed:  1.65;
+}
+
+/* ----------------------------------------------------------------
+   4. SPACING SCALE
+   ---------------------------------------------------------------- */
+:root {
+  --space-1:   0.25rem;   /* 4px */
+  --space-2:   0.5rem;    /* 8px */
+  --space-3:   0.75rem;   /* 12px */
+  --space-4:   1rem;      /* 16px */
+  --space-5:   1.25rem;   /* 20px */
+  --space-6:   1.5rem;    /* 24px */
+  --space-8:   2rem;      /* 32px */
+  --space-10:  2.5rem;    /* 40px */
+  --space-12:  3rem;      /* 48px */
+  --space-16:  4rem;      /* 64px */
+  --space-20:  5rem;      /* 80px */
+  --space-24:  6rem;      /* 96px */
+}
+
+/* ----------------------------------------------------------------
+   5. BORDER RADIUS
+   ---------------------------------------------------------------- */
+:root {
+  --radius-xs:     0.25rem;  /* 4px */
+  --radius-sm:     0.5rem;   /* 8px — badges, small elements */
+  --radius-md:     0.75rem;  /* 12px — inputs, dropdowns */
+  --radius-lg:     1rem;     /* 16px — cards */
+  --radius-xl:     1.5rem;   /* 24px — large containers */
+  --radius-pill:   6.25rem;  /* 100px — buttons */
+  --radius-full:   9999px;   /* circles */
+}
+
+/* ----------------------------------------------------------------
+   6. SHADOWS
+   ---------------------------------------------------------------- */
+:root {
+  --shadow-sm:         0 1px 3px rgba(27, 59, 107, 0.06), 0 1px 2px rgba(27, 59, 107, 0.04);
+  --shadow-card:       0 2px 8px rgba(27, 59, 107, 0.08), 0 8px 24px rgba(27, 59, 107, 0.07);
+  --shadow-card-hover: 0 8px 24px rgba(200, 137, 42, 0.22), 0 2px 8px rgba(27, 59, 107, 0.08);
+  --shadow-hover:      0 4px 16px rgba(27, 59, 107, 0.10);
+  --shadow-dropdown:   0 8px 24px rgba(27, 59, 107, 0.14);
+  --shadow-drawer:    -4px 0 24px rgba(27, 59, 107, 0.12);
+  --shadow-elevated:   0 20px 60px rgba(27, 59, 107, 0.16);
+}
+
+[data-theme="dark"] {
+  --shadow-sm:         0 1px 3px rgba(0, 0, 0, 0.20), 0 1px 2px rgba(0, 0, 0, 0.14);
+  --shadow-card:       0 2px 8px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.20);
+  --shadow-card-hover: 0 8px 24px rgba(201, 138, 82, 0.22), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-hover:      0 4px 16px rgba(0, 0, 0, 0.30);
+  --shadow-dropdown:   0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-drawer:    -4px 0 24px rgba(0, 0, 0, 0.30);
+  --shadow-elevated:   0 20px 60px rgba(0, 0, 0, 0.40);
+}
+
+/* ----------------------------------------------------------------
+   7. TRANSITIONS
+   ---------------------------------------------------------------- */
+:root {
+  --transition-fast:  140ms ease;
+  --transition-base:  220ms ease;
+  --transition-slow:  360ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast:  0ms;
+    --transition-base:  0ms;
+    --transition-slow:  0ms;
+  }
+}
+
+/* ----------------------------------------------------------------
+   8. LAYOUT
+   ---------------------------------------------------------------- */
+:root {
+  --sidebar-width:          260px;
+  --sidebar-collapsed:      64px;
+  --topbar-height:          56px;
+  --bottomnav-height:       64px;
+  --content-max-width:      1280px;
+  --page-padding-x:         var(--space-6);
+  --page-padding-x-mobile:  var(--space-4);
+  --touch-target-min:       44px;
+}
+
+/* ----------------------------------------------------------------
+   9. Z-INDEX SCALE
+   ---------------------------------------------------------------- */
+:root {
+  --z-base:      0;
+  --z-dropdown:  10;
+  --z-sticky:    20;
+  --z-drawer:    30;
+  --z-modal:     40;
+  --z-toast:     50;
+  --z-tooltip:   60;
+}
+
+/* ----------------------------------------------------------------
+   10. BREAKPOINTS (reference — use in @media queries)
+   ----------------------------------------------------------------
+   --bp-sm:   640px    Mobile landscape
+   --bp-md:   768px    Tablet portrait — bottom nav → sidebar
+   --bp-lg:   1024px   Tablet landscape — sidebar expands
+   --bp-xl:   1280px   Desktop
+   --bp-2xl:  1440px   Large desktop
+   --bp-3xl:  1920px   Full HD
+   --bp-4k:   2560px   4K / UHD
+   ---------------------------------------------------------------- */

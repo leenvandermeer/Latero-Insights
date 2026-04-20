@@ -1,0 +1,89 @@
+import type { ResponsiveLayouts } from "react-grid-layout";
+
+// ─── Widget slot ────────────────────────────────────────────────────────────
+
+export interface WidgetSlot {
+  instanceId: string;
+  type: string;              // registry key ("total-runs") or "custom" for custom widgets
+  customWidgetId?: string;   // only when type === "custom"
+  titleOverride?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+// ─── Custom widget ───────────────────────────────────────────────────────────
+
+export type DataSource = "pipeline_runs" | "data_quality_checks" | "data_lineage";
+
+export type MeasureType = "count" | "count_where" | "percentage" | "avg";
+
+export type VisualType = "counter" | "bar" | "line" | "area" | "donut" | "table";
+
+export interface Measure {
+  type: MeasureType;
+  field?: string;    // for avg: "duration_ms"
+  whereField?: string;  // for count_where / percentage: e.g. "run_status"
+  whereValue?: string;  // e.g. "SUCCESS"
+}
+
+export interface GroupBy {
+  field: string;
+  timeGrain?: "day" | "week" | "month";
+}
+
+export interface QueryFilter {
+  field: string;
+  operator: "eq" | "neq" | "contains" | "gt" | "lt";
+  value: string;
+}
+
+export interface QueryConfig {
+  dataSource: DataSource;
+  measure: Measure;
+  groupBy?: GroupBy;
+  filters: QueryFilter[];
+}
+
+export interface CustomWidget {
+  id: string;
+  label: string;
+  description?: string;
+  queryConfig: QueryConfig;
+  visualType: VisualType;
+  createdAt: string;
+}
+
+// ─── Shared (org-level) widget ───────────────────────────────────────────────
+
+export interface SharedWidgetDef {
+  id: string;
+  label: string;
+  description?: string;
+  queryConfig: QueryConfig;
+  visualType: VisualType;
+  defaultSize: { w: number; h: number; minW: number; minH: number };
+  publishedAt: string;
+  publishedBy?: string;
+}
+
+// ─── Dashboard ───────────────────────────────────────────────────────────────
+
+export interface Dashboard {
+  id: string;
+  name: string;
+  description?: string;
+  isSystem: boolean;
+  layoutVersion?: number;
+  widgets: WidgetSlot[];
+  layout: ResponsiveLayouts;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Store ───────────────────────────────────────────────────────────────────
+
+export interface DashboardStoreData {
+  dashboards: Dashboard[];
+  customWidgets: CustomWidget[];
+  activeId: string | null;
+}

@@ -1,0 +1,9 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(0,0)">
+    <path d="M130 300 L370 300 L355 350 L130 350 Z" fill="#D4A840"/>
+    <path d="M170 230 L430 230 L410 285 L170 285 Z" fill="#6B96D4"/>
+    <path d="M220 160 L470 160 L445 210 L220 210 Z" fill="#A0BDE8"/>
+    <rect x="315" y="245" width="20" height="20" rx="4" fill="#0A1628"/>
+  </g>
+  <text x="520" y="285" fill="#F5EDE0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="128" font-weight="700" letter-spacing="-2">Latero</text>
+</svg>

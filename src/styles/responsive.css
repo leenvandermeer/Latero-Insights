@@ -1,0 +1,228 @@
+/* ================================================================
+   Latero Meta Insights — Responsive Utilities
+   App-specific responsive patterns beyond Tailwind defaults.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   Safe Areas (notched devices: iPhone, etc.)
+   ---------------------------------------------------------------- */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ----------------------------------------------------------------
+   Touch Targets — minimum 44px per WCAG / Apple HIG
+   ---------------------------------------------------------------- */
+.touch-target {
+  min-height: var(--touch-target-min, 44px);
+  min-width: var(--touch-target-min, 44px);
+}
+
+/* ----------------------------------------------------------------
+   Sidebar / Bottom Nav Visibility
+   ---------------------------------------------------------------- */
+
+/* Mobile: show bottom nav, hide sidebar */
+.show-mobile-only {
+  display: flex;
+}
+.show-desktop-only {
+  display: none;
+}
+
+/* Tablet+: show sidebar, hide bottom nav */
+@media (min-width: 768px) {
+  .show-mobile-only {
+    display: none;
+  }
+  .show-desktop-only {
+    display: flex;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Content Area Padding
+   ---------------------------------------------------------------- */
+.page-content {
+  padding-left: var(--page-padding-x-mobile);
+  padding-right: var(--page-padding-x-mobile);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .page-content {
+    padding-left: var(--page-padding-x);
+    padding-right: var(--page-padding-x);
+  }
+}
+
+/* ----------------------------------------------------------------
+   Counter Row — horizontal scroll on mobile
+   ---------------------------------------------------------------- */
+.counter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4);
+}
+
+@media (max-width: 639px) {
+  .counter-row {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: var(--space-3);
+    padding-bottom: var(--space-2);
+  }
+  .counter-row > * {
+    flex: 0 0 140px;
+    scroll-snap-align: start;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Dashboard Grid — responsive widget grid
+   ---------------------------------------------------------------- */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-4);
+}
+
+@media (max-width: 1023px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Chart Container — aspect ratio preservation
+   ---------------------------------------------------------------- */
+.chart-container {
+  width: 100%;
+  min-height: 200px;
+}
+
+@media (min-width: 768px) {
+  .chart-container {
+    min-height: 280px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .chart-container {
+    min-height: 320px;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Lineage Canvas — full available height
+   ---------------------------------------------------------------- */
+.lineage-canvas {
+  width: 100%;
+  height: calc(100vh - var(--topbar-height) - var(--bottomnav-height) - var(--space-8));
+  min-height: 400px;
+}
+
+@media (min-width: 768px) {
+  .lineage-canvas {
+    height: calc(100vh - var(--space-16));
+    min-height: 500px;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Detail Panel / Drawer
+   ---------------------------------------------------------------- */
+
+/* Desktop: side drawer */
+@media (min-width: 768px) {
+  .detail-drawer {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 400px;
+    max-width: 50vw;
+    z-index: var(--z-drawer);
+    box-shadow: var(--shadow-drawer);
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform var(--transition-base);
+  }
+  .detail-drawer[data-open="true"] {
+    transform: translateX(0);
+  }
+}
+
+/* Mobile: bottom sheet */
+@media (max-width: 767px) {
+  .detail-drawer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 70vh;
+    z-index: var(--z-drawer);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: var(--shadow-elevated);
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform var(--transition-base);
+  }
+  .detail-drawer[data-open="true"] {
+    transform: translateY(0);
+  }
+}
+
+/* ----------------------------------------------------------------
+   Widget Palette — Dashboard Builder
+   ---------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  .widget-palette {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    overflow-y: auto;
+    z-index: var(--z-sticky);
+    border-left: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+}
+
+@media (max-width: 1023px) {
+  .widget-palette {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 50vh;
+    z-index: var(--z-drawer);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+    overflow-y: auto;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Table Responsive — horizontal scroll on small screens
+   ---------------------------------------------------------------- */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

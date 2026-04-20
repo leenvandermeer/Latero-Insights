@@ -1,0 +1,89 @@
+import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
+import { loadSettings } from "@/lib/settings";
+
+// Transient states that indicate the warehouse is warming up — worth retrying
+const RETRYABLE_STATES = new Set(["PENDING", "RUNNING"]);
+
+export async function POST(request: NextRequest) {
+  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { allowed } = rateLimit(clientIp);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": "60", "X-RateLimit-Remaining": "0" } },
+    );
+  }
+
+  const settings = loadSettings();
+
+  if (!settings.databricksHost || !settings.databricksToken || !settings.databricksWarehouseId) {
+    return NextResponse.json({
+      connected: false,
+      retryable: false,
+      message: "Missing configuration: host, token, or warehouse ID not set",
+    });
+  }
+
+  try {
+    const url = `https://${settings.databricksHost}/api/2.0/sql/statements`;
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${settings.databricksToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        warehouse_id: settings.databricksWarehouseId,
+        statement: "SELECT 1",
+        // Give the warehouse up to 25 s to start — it may be cold
+        wait_timeout: "25s",
+        disposition: "INLINE",
+        format: "JSON_ARRAY",
+      }),
+      // 30 s total budget per attempt (slightly more than wait_timeout)
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      let detail = text;
+      try {
+        const json = JSON.parse(text);
+        detail = json.message || json.error || text;
+      } catch { /* use raw text */ }
+      return NextResponse.json({
+        connected: false,
+        retryable: false,
+        message: `Databricks returned ${resp.status}: ${detail}`,
+      });
+    }
+
+    const data = await resp.json();
+    const state: string = data.status?.state ?? "UNKNOWN";
+
+    if (state === "SUCCEEDED") {
+      return NextResponse.json({
+        connected: true,
+        retryable: false,
+        message: `Connected to ${settings.databricksHost} (warehouse ${settings.databricksWarehouseId})`,
+      });
+    }
+
+    // Warehouse still warming up — let the client retry
+    return NextResponse.json({
+      connected: false,
+      retryable: RETRYABLE_STATES.has(state),
+      message: `Warehouse is starting (state: ${state})`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    // A timeout means the warehouse is slow to respond — retryable
+    const isTimeout = message.includes("timed out") || message.includes("TimeoutError") || message.includes("AbortError");
+    return NextResponse.json({
+      connected: false,
+      retryable: isTimeout,
+      message: isTimeout ? "Warehouse is still starting — will retry" : `Connection failed: ${message}`,
+    });
+  }
+}
