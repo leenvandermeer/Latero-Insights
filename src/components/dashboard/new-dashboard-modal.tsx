@@ -54,7 +54,7 @@ export function NewDashboardModal({ open, onClose }: NewDashboardModalProps) {
             borderColor: "var(--color-border)",
             color: "var(--color-text-muted)",
           }}
-          title={collapsed ? "Tonen" : "Verbergen"}
+          title={collapsed ? "Expand" : "Collapse"}
         >
           {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </button>
@@ -69,7 +69,7 @@ export function NewDashboardModal({ open, onClose }: NewDashboardModalProps) {
               <div className="flex items-center gap-2">
                 <LayoutDashboard className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
                 <h2 className="font-display font-semibold text-base" style={{ color: "var(--color-text)" }}>
-                  Nieuw dashboard
+                  New dashboard
                 </h2>
               </div>
               <button
@@ -87,7 +87,7 @@ export function NewDashboardModal({ open, onClose }: NewDashboardModalProps) {
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-                  Naam <span style={{ color: "var(--color-error)" }}>*</span>
+                  Name <span style={{ color: "var(--color-error)" }}>*</span>
                 </label>
                 <input
                   autoFocus
@@ -95,7 +95,7 @@ export function NewDashboardModal({ open, onClose }: NewDashboardModalProps) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                  placeholder="Mijn operationeel overzicht"
+                  placeholder="My operational overview"
                   className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
                   style={{ background: "var(--color-card)", borderColor: "var(--color-border)", color: "var(--color-text)" }}
                 />
@@ -103,13 +103,13 @@ export function NewDashboardModal({ open, onClose }: NewDashboardModalProps) {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-                  Beschrijving
+                  Description
                 </label>
                 <input
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optioneel"
+                  placeholder="Optional"
                   className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
                   style={{ background: "var(--color-card)", borderColor: "var(--color-border)", color: "var(--color-text)" }}
                 />
@@ -126,7 +126,7 @@ export function NewDashboardModal({ open, onClose }: NewDashboardModalProps) {
                 className="flex-1 rounded-lg py-2 text-sm font-medium"
                 style={{ background: "var(--color-sidebar-hover)", color: "var(--color-text-muted)" }}
               >
-                Annuleren
+                Cancel
               </button>
               <button
                 onClick={handleCreate}
@@ -134,7 +134,7 @@ export function NewDashboardModal({ open, onClose }: NewDashboardModalProps) {
                 className="flex-1 rounded-lg py-2 text-sm font-medium transition-opacity disabled:opacity-40"
                 style={{ background: "var(--color-accent)", color: "#fff" }}
               >
-                Aanmaken
+                Create
               </button>
             </div>
           </>

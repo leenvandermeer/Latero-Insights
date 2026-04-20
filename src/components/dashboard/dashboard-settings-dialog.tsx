@@ -54,7 +54,7 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
             borderColor: "var(--color-border)",
             color: "var(--color-text-muted)",
           }}
-          title={collapsed ? "Instellingen tonen" : "Instellingen verbergen"}
+          title={collapsed ? "Show settings" : "Hide settings"}
         >
           {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </button>
@@ -69,7 +69,7 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
           <div className="flex items-center gap-2">
             <Settings2 className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
             <h2 className="font-display font-semibold text-base" style={{ color: "var(--color-text)" }}>
-              Dashboard instellingen
+              Dashboard settings
             </h2>
           </div>
           <button
@@ -87,7 +87,7 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
           {/* General section */}
           <section className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>
-              Algemeen
+              General
             </h3>
 
             <div className="space-y-1.5">
@@ -134,7 +134,7 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
                 className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-40"
                 style={{ background: "var(--color-accent)", color: "#fff" }}
               >
-                Opslaan
+                Save
               </button>
             </div>
           </section>
@@ -145,7 +145,7 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
               className="text-xs font-bold uppercase tracking-widest"
               style={{ color: "var(--color-error, #EF4444)" }}
             >
-              Gevarenzone
+              Danger zone
             </h3>
 
             <div

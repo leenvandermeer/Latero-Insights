@@ -269,7 +269,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                       onClick={(e) => { e.stopPropagation(); setDashPickerOpen(false); setEditingName(true); setNameInput(dashboard.name); }}
                       className="absolute -right-7 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover/title:opacity-100 transition-opacity"
                       style={{ color: "var(--color-text-subtle)" }}
-                      title="Naam bewerken"
+                      title="Edit name"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
@@ -354,7 +354,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                   style={{ background: "rgba(34,197,94,0.12)", color: "#16a34a" }}
                 >
                   <Check className="h-3.5 w-3.5" />
-                  Gepubliceerd
+                  Published
                 </span>
               )}
 
@@ -362,7 +362,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
               {!editMode && (
                 <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} style={{ padding: "0.5rem 0.75rem" }}>
                   <Pencil className="h-4 w-4" />
-                  <span className="hidden sm:inline">Aanpassen</span>
+                  <span className="hidden sm:inline">Edit</span>
                 </Button>
               )}
 
@@ -375,12 +375,12 @@ export function DashboardCanvas({ dashboardId }: Props) {
                     disabled={publishing}
                   >
                     <Globe className="h-4 w-4" />
-                    {publishing ? "Publiceren…" : "Publiceer voor iedereen"}
+                    {publishing ? "Publishing…" : "Publish for everyone"}
                   </Button>
                 ) : (
                   <Button variant="secondary" onClick={() => { setEditMode(false); setPendingRemove(null); setConfigTarget(null); }}>
                     <Check className="h-4 w-4" />
-                    Klaar
+                    Done
                   </Button>
                 )
               )}
@@ -402,7 +402,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                         </button>
                         {isSystem && hasOverride && (
                           <button onClick={handleResetOverride} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-error, #dc2626)" }}>
-                            <RotateCcw className="h-4 w-4" /> Reset naar standaard
+                            <RotateCcw className="h-4 w-4" /> Reset to default
                           </button>
                         )}
                         {!isSystem && (
@@ -412,11 +412,11 @@ export function DashboardCanvas({ dashboardId }: Props) {
                         )}
                         {!isSystem && (
                           <button
-                            onClick={() => { if (confirm(`Dashboard "${dashboard.name}" verwijderen?`)) { deleteDash(dashboardId); router.push("/pipelines"); } setMenuOpen(false); }}
+                            onClick={() => { if (confirm(`Delete dashboard "${dashboard.name}"?`)) { deleteDash(dashboardId); router.push("/pipelines"); } setMenuOpen(false); }}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]"
                             style={{ color: "var(--color-error, #dc2626)" }}
                           >
-                            <Trash2 className="h-4 w-4" /> Verwijderen
+                            <Trash2 className="h-4 w-4" /> Delete
                           </button>
                         )}
                       </div>
@@ -440,10 +440,10 @@ export function DashboardCanvas({ dashboardId }: Props) {
           >
             <span className="flex items-center gap-2">
               {isSystem ? <Globe className="h-3.5 w-3.5 shrink-0" /> : <Pencil className="h-3.5 w-3.5 shrink-0" />}
-              <span className="font-medium">{isSystem ? "Systeem dashboard aanpassen" : "Layout bewerken"}</span>
+              <span className="font-medium">{isSystem ? "Editing system dashboard" : "Edit layout"}</span>
               <span className="text-xs opacity-70 hidden sm:inline">
                 {isSystem
-                  ? "— wijzigingen zijn zichtbaar voor alle gebruikers na publicatie"
+                  ? "— changes are visible to all users after publishing"
                   : "— drag to reorder · resize from corner · configure with ⚙"}
               </span>
             </span>
@@ -456,7 +456,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                     style={{ borderColor: "rgba(99,102,241,0.4)", color: "rgb(99,102,241)" }}
                   >
                     <X className="h-3.5 w-3.5" />
-                    Annuleren
+                    Cancel
                   </button>
                   <button
                     onClick={handlePublish}
@@ -465,7 +465,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                     style={{ background: "rgb(99,102,241)", color: "#fff", opacity: publishing ? 0.7 : 1 }}
                   >
                     <Globe className="h-3.5 w-3.5" />
-                    {publishing ? "Publiceren…" : "Publiceer voor iedereen"}
+                    {publishing ? "Publishing…" : "Publish for everyone"}
                   </button>
                 </>
               ) : (
@@ -476,7 +476,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                     style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
                   >
                     <Check className="h-3.5 w-3.5" />
-                    Klaar
+                    Done
                   </button>
                 </>
               )}
@@ -516,7 +516,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                   style={{ background: "var(--color-accent)", color: "#fff" }}
                 >
                   <Plus className="h-4 w-4" />
-                  Widgets toevoegen
+                  Add widgets
                 </button>
                 <button
                   onClick={() => { setEditMode(true); router.push("/dashboard/widget-builder"); }}
@@ -570,14 +570,14 @@ export function DashboardCanvas({ dashboardId }: Props) {
                       )}
                       style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, transparent 100%)" }}
                     >
-                      <div className="drag-handle cursor-grab active:cursor-grabbing rounded p-1" style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }} title="Verplaatsen">
+                      <div className="drag-handle cursor-grab active:cursor-grabbing rounded p-1" style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }} title="Move">
                         <GripVertical className="h-3.5 w-3.5" />
                       </div>
                       <button
                         onClick={() => setConfigTarget(w)}
                         className="rounded p-1"
                         style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }}
-                        title="Instellingen"
+                        title="Settings"
                       >
                         <Settings2 className="h-3.5 w-3.5" />
                       </button>
@@ -588,7 +588,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                             onClick={() => { removeWidget(w.instanceId); setPendingRemove(null); }}
                             className="rounded p-1 text-xs font-medium"
                             style={{ color: "#fff", background: "var(--color-error, #EF4444)" }}
-                            title="Bevestig verwijderen"
+                            title="Confirm delete"
                           >
                             <Check className="h-3.5 w-3.5" />
                           </button>
@@ -596,7 +596,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                             onClick={() => setPendingRemove(null)}
                             className="rounded p-1"
                             style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }}
-                            title="Annuleren"
+                            title="Cancel"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -606,7 +606,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                           onClick={() => setPendingRemove(w.instanceId)}
                           className="rounded p-1"
                           style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }}
-                          title="Widget verwijderen"
+                          title="Remove widget"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>

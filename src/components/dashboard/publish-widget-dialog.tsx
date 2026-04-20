@@ -71,7 +71,7 @@ export function PublishWidgetDialog({ widget, onClose, onPublished }: PublishWid
             color: "var(--color-text-muted)",
             boxShadow: "var(--shadow-sm)",
           }}
-          title={collapsed ? "Uitklappen" : "Inklappen"}
+          title={collapsed ? "Expand" : "Collapse"}
         >
           {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </button>

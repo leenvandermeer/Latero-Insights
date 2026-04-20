@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useQuality } from "@/hooks";
 import { Card, CardContent } from "@/components/ui/card";
 import { TableSkeleton } from "@/components/ui/loading-skeleton";
+import { normalizeStatus } from "@/lib/chart-colors";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
 interface Props {
   from: string;
@@ -28,8 +31,31 @@ function fmtTs(ts: string): string {
   }
 }
 
+type SortCol = "check_id" | "dataset_id" | "step" | "check_category" | "check_status" | "timestamp_utc";
+type SortDir = "asc" | "desc";
+
+const COLUMNS: { key: SortCol; label: string }[] = [
+  { key: "check_id",      label: "Check ID" },
+  { key: "dataset_id",    label: "Dataset" },
+  { key: "step",          label: "Step" },
+  { key: "check_category", label: "Category" },
+  { key: "check_status",  label: "Status" },
+  { key: "timestamp_utc", label: "Time" },
+];
+
 export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
   const { data: response, isLoading, error } = useQuality(from, to);
+  const [sortCol, setSortCol] = useState<SortCol>("timestamp_utc");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const handleSort = (col: SortCol) => {
+    if (col === sortCol) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir(col === "timestamp_utc" ? "desc" : "asc");
+    }
+  };
 
   if (isLoading) return <TableSkeleton rows={8} />;
   if (error) return (
@@ -39,7 +65,11 @@ export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
   );
 
   const checks = [...(response?.data ?? [])]
-    .sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc))
+    .sort((a, b) => {
+      const va = (a[sortCol] ?? "") as string;
+      const vb = (b[sortCol] ?? "") as string;
+      return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+    })
     .slice(0, 25);
 
   return (
@@ -59,20 +89,29 @@ export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
         <table className="w-full text-xs">
           <thead>
             <tr style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
-              {["Check ID", "Dataset", "Step", "Category", "Status", "Time"].map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-2 text-left font-semibold uppercase tracking-wider"
-                  style={{ color: "var(--color-text-muted)", fontSize: "10px" }}
-                >
-                  {h}
-                </th>
-              ))}
+              {COLUMNS.map(({ key, label }) => {
+                const active = sortCol === key;
+                const Icon = active ? (sortDir === "asc" ? ChevronUp : ChevronDown) : ChevronsUpDown;
+                return (
+                  <th
+                    key={key}
+                    className="px-4 py-2 text-left font-semibold uppercase tracking-wider select-none"
+                    style={{ color: active ? "var(--color-accent)" : "var(--color-text-muted)", fontSize: "10px", cursor: "pointer", whiteSpace: "nowrap" }}
+                    onClick={() => handleSort(key)}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {label}
+                      <Icon className="h-3 w-3 shrink-0" style={{ opacity: active ? 1 : 0.5 }} />
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
             {checks.map((c, i) => {
-              const st = statusStyle(c.check_status);
+              const normalized = normalizeStatus(c.check_status);
+              const st = statusStyle(normalized);
               return (
                 <tr
                   key={c.run_id + c.check_id + i}
@@ -89,7 +128,7 @@ export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
                       className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
                       style={{ background: st.bg, color: st.text }}
                     >
-                      {c.check_status}
+                      {normalized}
                     </span>
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>{fmtTs(c.timestamp_utc)}</td>

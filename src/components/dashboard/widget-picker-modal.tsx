@@ -528,7 +528,7 @@ export function WidgetPickerDrawer({ open, onAdd, onCreateCustom, onClose }: Dra
             borderColor: "var(--color-border)",
             color: "var(--color-text-muted)",
           }}
-          title={collapsed ? "Widgets tonen" : "Widgets verbergen"}
+          title={collapsed ? "Show widgets" : "Hide widgets"}
         >
           {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </button>
@@ -550,7 +550,7 @@ export function WidgetPickerDrawer({ open, onAdd, onCreateCustom, onClose }: Dra
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Zoek widgets…"
+                  placeholder="Search widgets…"
                   className="w-full rounded-lg border pl-8 pr-3 py-2 text-xs focus:outline-none focus:ring-1"
                   style={{
                     background: "var(--color-card)",
@@ -589,7 +589,7 @@ export function WidgetPickerDrawer({ open, onAdd, onCreateCustom, onClose }: Dra
             {noResults && (
               <div className="py-8 text-center" style={{ color: "var(--color-text-muted)" }}>
                 <Search className="h-6 w-6 mx-auto mb-2 opacity-40" />
-                <p className="text-xs">{q ? <>Geen resultaten voor <strong>"{search}"</strong></> : "Geen widgets."}</p>
+                <p className="text-xs">{q ? <>No results for <strong>"{search}"</strong></> : "No widgets."}</p>
               </div>
             )}
 
