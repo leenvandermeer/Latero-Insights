@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Settings2, Trash2, AlertTriangle } from "lucide-react";
+import { X, Settings2, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Props {
   dashboardId: string;
@@ -16,6 +16,7 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
   const [nameInput, setNameInput] = useState(name);
   const [descInput, setDescInput] = useState(description ?? "");
   const [deletePhase, setDeletePhase] = useState<"idle" | "confirm">("idle");
+  const [collapsed, setCollapsed] = useState(false);
 
   const handleSave = () => {
     if (!nameInput.trim()) return;
@@ -30,17 +31,37 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />
+      {!collapsed && (
+        <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />
+      )}
       <div
-        className="fixed top-0 right-0 h-full w-full max-w-sm z-50 flex flex-col"
+        className="fixed top-0 right-0 h-full z-50 flex flex-col transition-all duration-300 ease-in-out"
         style={{
+          width: collapsed ? 36 : 320,
           background: "var(--color-surface)",
           borderLeft: "1px solid var(--color-border)",
           boxShadow: "var(--shadow-drawer, -4px 0 24px rgba(27,59,107,0.12))",
           animation: "slideInRight 0.2s ease-out",
+          overflow: "hidden",
         }}
       >
-        {/* Header */}
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          className="absolute top-3 -left-3.5 z-10 flex items-center justify-center rounded-full w-7 h-7 shadow-sm border"
+          style={{
+            background: "var(--color-surface)",
+            borderColor: "var(--color-border)",
+            color: "var(--color-text-muted)",
+          }}
+          title={collapsed ? "Instellingen tonen" : "Instellingen verbergen"}
+        >
+          {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        </button>
+
+        {/* Content — hidden when collapsed */}
+        {!collapsed && (
+        <>{/* Header */}
         <div
           className="flex items-center justify-between px-5 py-4 shrink-0"
           style={{ borderBottom: "1px solid var(--color-border)" }}
@@ -190,6 +211,8 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
             </div>
           </section>
         </div>
+        </>
+        )}
       </div>
     </>
   );
