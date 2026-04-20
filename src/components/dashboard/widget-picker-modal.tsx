@@ -38,8 +38,14 @@ const WIDGET_ICONS: Record<string, React.ComponentType<{ className?: string; sty
 
 // ─── Category definitions ─────────────────────────────────────────────────────
 
-const COUNTER_TYPES  = ["total-runs", "failed-runs", "pass-rate", "bcbs239-score"];
-const CHART_TYPES    = ["pipeline-status", "dq-trend", "severity-category", "step-duration", "event-log"];
+const COUNTER_TYPES  = [
+  "total-runs", "failed-runs", "success-runs", "warning-runs",
+  "avg-run-duration", "unique-pipelines",
+  "pass-rate", "bcbs239-score",
+  "total-dq-checks", "success-dq-checks", "warning-dq-checks", "failed-dq-checks",
+  "unique-check-types",
+];
+const CHART_TYPES    = ["pipeline-status", "dq-trend", "severity-category", "step-duration", "event-log", "runs-by-pipeline", "dq-by-category"];
 const TABLE_TYPES    = ["pipeline-runs-table", "dq-checks-table"];
 const OVERVIEW_TYPES = ["dataset-overview"];
 
