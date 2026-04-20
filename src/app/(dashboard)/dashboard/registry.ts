@@ -206,7 +206,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     label: "DQ Check Results",
     description: "Table of latest data quality check results per check ID",
     category: "table",
-    defaultSize: { w: 12, h: 4, minW: 6, minH: 3 },
+    defaultSize: { w: 8, h: 3, minW: 4, minH: 2 },
     component: DqChecksTableWidget,
   },
   {
