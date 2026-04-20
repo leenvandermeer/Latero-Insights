@@ -9,6 +9,15 @@ import { Bcbs239ScoreWidget } from "./widgets/bcbs239-score-widget";
 import { FailedRunsWidget } from "./widgets/failed-runs-widget";
 import { SuccessRunsWidget } from "./widgets/success-runs-widget";
 import { WarningRunsWidget } from "./widgets/warning-runs-widget";
+import { TotalDqChecksWidget } from "./widgets/total-dq-checks-widget";
+import { FailedDqChecksWidget } from "./widgets/failed-dq-checks-widget";
+import { WarningDqChecksWidget } from "./widgets/warning-dq-checks-widget";
+import { SuccessDqChecksWidget } from "./widgets/success-dq-checks-widget";
+import { AvgRunDurationWidget } from "./widgets/avg-run-duration-widget";
+import { UniquePipelinesWidget } from "./widgets/unique-pipelines-widget";
+import { UniqueCheckTypesWidget } from "./widgets/unique-check-types-widget";
+import { RunsByPipelineWidget } from "./widgets/runs-by-pipeline-widget";
+import { DqByCategoryWidget } from "./widgets/dq-by-category-widget";
 import { PipelineRunsTableWidget } from "./widgets/pipeline-runs-table-widget";
 import { DqChecksTableWidget } from "./widgets/dq-checks-table-widget";
 import { EventLogWidget } from "./widgets/event-log-widget";
@@ -58,6 +67,55 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: WarningRunsWidget,
   },
   {
+    type: "avg-run-duration",
+    label: "Avg Run Duration",
+    description: "Average duration of pipeline runs in the selected period",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: AvgRunDurationWidget,
+  },
+  {
+    type: "unique-pipelines",
+    label: "Unique Pipelines",
+    description: "Number of distinct pipelines active in the selected period",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: UniquePipelinesWidget,
+  },
+  {
+    type: "total-dq-checks",
+    label: "Total DQ Checks",
+    description: "Total number of data quality checks in the selected period",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: TotalDqChecksWidget,
+  },
+  {
+    type: "success-dq-checks",
+    label: "Passed DQ Checks",
+    description: "Count of PASSED data quality checks in the selected period",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: SuccessDqChecksWidget,
+  },
+  {
+    type: "warning-dq-checks",
+    label: "Warning DQ Checks",
+    description: "Count of WARNING data quality checks in the selected period",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: WarningDqChecksWidget,
+  },
+  {
+    type: "failed-dq-checks",
+    label: "Failed DQ Checks",
+    description: "Count of FAILED data quality checks in the selected period",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: FailedDqChecksWidget,
+  },
+  {
+    type: "unique-check-types",
+    label: "Unique Check Types",
+    description: "Number of distinct DQ check IDs active in the selected period",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: UniqueCheckTypesWidget,
+  },
+  {
     type: "pass-rate",
     label: "DQ Pass Rate",
     description: "Data quality check pass rate percentage",
@@ -98,6 +156,20 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     description: "Horizontal bar chart of average pipeline step duration",
     defaultSize: { w: 6, h: 4, minW: 4, minH: 3 },
     component: StepDurationWidget,
+  },
+  {
+    type: "runs-by-pipeline",
+    label: "Runs by Pipeline",
+    description: "Horizontal bar chart of run counts per pipeline (top 10)",
+    defaultSize: { w: 6, h: 4, minW: 4, minH: 3 },
+    component: RunsByPipelineWidget,
+  },
+  {
+    type: "dq-by-category",
+    label: "DQ Checks by Category",
+    description: "Donut chart of data quality check distribution by category",
+    defaultSize: { w: 4, h: 4, minW: 3, minH: 3 },
+    component: DqByCategoryWidget,
   },
   {
     type: "pipeline-runs-table",
