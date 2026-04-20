@@ -11,7 +11,7 @@ import { DateRangePicker, Button } from "@/components/ui";
 import { useDashboards } from "@/contexts/dashboard-context";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
 import { DashboardSettingsDialog } from "@/components/dashboard/dashboard-settings-dialog";
-import { WidgetPickerModal } from "@/components/dashboard/widget-picker-modal";
+import { WidgetPickerDrawer } from "@/components/dashboard/widget-picker-modal";
 import { getWidgetDef, WIDGET_REGISTRY } from "./registry";
 import { WidgetConfigPanel } from "./widget-config-panel";
 import { CustomWidgetRenderer } from "./widgets/custom-widget";
@@ -212,11 +212,10 @@ export function DashboardCanvas({ dashboardId }: Props) {
 
   return (
     <>
-      <div className="flex h-full" style={{ alignItems: "flex-start" }}>
-
+      <div className="flex h-full gap-0" style={{ alignItems: "flex-start" }}>
 
         {/* Main content */}
-        <div className="flex-1 min-w-0 space-y-4 p-0">
+        <div className="flex-1 min-w-0 space-y-4 p-0 overflow-hidden">
         {/* Dashboard header */}
         <div
           className="relative rounded-2xl mb-2 px-8 py-6"
@@ -349,14 +348,6 @@ export function DashboardCanvas({ dashboardId }: Props) {
                 </span>
               )}
 
-              {/* Add Widget button — available for all dashboards in edit mode */}
-              {editMode && (
-                <Button variant="primary" onClick={() => setPickerOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  Widget toevoegen
-                </Button>
-              )}
-
               {/* Edit button — available for all dashboards */}
               {!editMode && (
                 <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} style={{ padding: "0.5rem 0.75rem" }}>
@@ -470,14 +461,6 @@ export function DashboardCanvas({ dashboardId }: Props) {
               ) : (
                 <>
                   <button
-                    onClick={() => setPickerOpen(true)}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium"
-                    style={{ background: "var(--color-accent)", color: "#fff" }}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Widget toevoegen
-                  </button>
-                  <button
                     onClick={() => { setEditMode(false); setPendingRemove(null); setConfigTarget(null); }}
                     className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium border"
                     style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
@@ -518,12 +501,12 @@ export function DashboardCanvas({ dashboardId }: Props) {
               </p>
               <div className="flex items-center justify-center gap-3 flex-wrap">
                 <button
-                  onClick={() => { setEditMode(true); setPickerOpen(true); }}
+                  onClick={() => setEditMode(true)}
                   className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium"
                   style={{ background: "var(--color-accent)", color: "#fff" }}
                 >
                   <Plus className="h-4 w-4" />
-                  Add Widget
+                  Widgets toevoegen
                 </button>
                 <button
                   onClick={() => { setEditMode(true); router.push("/dashboard/widget-builder"); }}
@@ -634,6 +617,14 @@ export function DashboardCanvas({ dashboardId }: Props) {
           )}
         </div>
         </div>
+
+        {/* Widget picker drawer — slides in from the right in edit mode */}
+        <WidgetPickerDrawer
+          open={editMode}
+          onAdd={(type, customWidgetId, size) => addWidget(type, customWidgetId, size)}
+          onCreateCustom={() => { setEditMode(false); router.push("/dashboard/widget-builder"); }}
+          onClose={() => setEditMode(false)}
+        />
       </div>
 
       <WidgetConfigPanel
@@ -647,14 +638,6 @@ export function DashboardCanvas({ dashboardId }: Props) {
       />
 
       <NewDashboardModal open={newDashOpen} onClose={() => setNewDashOpen(false)} />
-
-      {pickerOpen && (
-        <WidgetPickerModal
-          onAdd={(type, customWidgetId, size) => { addWidget(type, customWidgetId, size); }}
-          onCreateCustom={() => { setPickerOpen(false); router.push("/dashboard/widget-builder"); }}
-          onClose={() => setPickerOpen(false)}
-        />
-      )}
 
       {settingsOpen && !isSystem && (
         <DashboardSettingsDialog
