@@ -88,10 +88,23 @@ interface EntityData {
   health: HealthStatus;
 }
 
+// ── Layout constants ──────────────────────────────────────────────────────
+const X_SPACING = 400; // horizontal gap between DAG layers
+const Y_SPACING = 200; // vertical gap between nodes within a layer
+
+/**
+ * Auto-layout: topological layer assignment (longest-path BFS) + barycenter
+ * heuristic to minimise edge crossings within each layer.
+ *
+ * This replaces the previous 3-bucket (pureSources/middle/pureTargets) approach
+ * which placed all intermediate nodes in one column regardless of their depth,
+ * causing edges to route through unrelated nodes.
+ */
 function buildGraph(hops: LineageHop[], datasetHealth?: Map<string, HealthStatus>) {
   const nodeMap = new Map<string, EntityData>();
   const edges: Edge[] = [];
   const edgeSet = new Set<string>();
+  const edgePairs: Array<{ src: string; tgt: string }> = [];
 
   for (const hop of hops) {
     // Source node
@@ -130,14 +143,16 @@ function buildGraph(hops: LineageHop[], datasetHealth?: Map<string, HealthStatus
       tgtNode.attributes.push(hop.target_attribute);
     }
 
-    // Edge
+    // Edge — smoothstep routes around nodes instead of through them
     const edgeId = `${srcId}->${tgtId}`;
     if (!edgeSet.has(edgeId)) {
       edgeSet.add(edgeId);
+      edgePairs.push({ src: srcId, tgt: tgtId });
       edges.push({
         id: edgeId,
         source: srcId,
         target: tgtId,
+        type: "smoothstep",
         animated: true,
         markerEnd: { type: MarkerType.ArrowClosed },
         style: { stroke: "var(--color-primary)", strokeWidth: 2 },
@@ -145,37 +160,96 @@ function buildGraph(hops: LineageHop[], datasetHealth?: Map<string, HealthStatus
     }
   }
 
-  // Auto-layout: arrange nodes in layers (sources on left, targets on right)
-  const sourceIds = new Set(hops.map((h) => h.source_entity));
-  const targetIds = new Set(hops.map((h) => h.target_entity));
-  const pureTargets = [...targetIds].filter((id) => !sourceIds.has(id));
-  const pureSources = [...sourceIds].filter((id) => !targetIds.has(id));
-  const middle = [...nodeMap.keys()].filter(
-    (id) => !pureSources.includes(id) && !pureTargets.includes(id)
-  );
+  // ── 1. Build adjacency structures ────────────────────────────────────────
+  const allIds = [...nodeMap.keys()];
+  const tempInDeg = new Map<string, number>(allIds.map((id) => [id, 0]));
+  const succ = new Map<string, Set<string>>(allIds.map((id) => [id, new Set()]));
+  const pred = new Map<string, Set<string>>(allIds.map((id) => [id, new Set()]));
 
-  const layers = [pureSources, middle, pureTargets].filter((l) => l.length > 0);
+  for (const { src, tgt } of edgePairs) {
+    tempInDeg.set(tgt, (tempInDeg.get(tgt) ?? 0) + 1);
+    succ.get(src)!.add(tgt);
+    pred.get(tgt)!.add(src);
+  }
 
-  const nodes: Node[] = [];
-  const xSpacing = 320;
-  const ySpacing = 120;
+  // ── 2. Kahn's BFS → topological order ───────────────────────────────────
+  const topoOrder: string[] = [];
+  const queue: string[] = allIds.filter((id) => tempInDeg.get(id) === 0).sort();
 
-  layers.forEach((layer, layerIdx) => {
-    layer.forEach((id, nodeIdx) => {
-      const data = nodeMap.get(id)!;
-      nodes.push({
-        id,
-        type: "entity",
-        position: {
-          x: layerIdx * xSpacing,
-          y: nodeIdx * ySpacing,
-        },
-        data: data as unknown as Record<string, unknown>,
-      });
+  while (queue.length > 0) {
+    queue.sort(); // deterministic ordering
+    const node = queue.shift()!;
+    topoOrder.push(node);
+    for (const s of succ.get(node)!) {
+      const next = (tempInDeg.get(s) ?? 1) - 1;
+      tempInDeg.set(s, next);
+      if (next === 0) queue.push(s);
+    }
+  }
+  // Append any remaining nodes (shouldn't occur in a DAG, but safe fallback)
+  for (const id of allIds) {
+    if (!topoOrder.includes(id)) topoOrder.push(id);
+  }
+
+  // ── 3. Assign each node its layer = max(pred layers) + 1 ─────────────────
+  const layerOf = new Map<string, number>();
+  for (const id of topoOrder) {
+    const preds = [...(pred.get(id) ?? [])];
+    layerOf.set(
+      id,
+      preds.length === 0
+        ? 0
+        : Math.max(...preds.map((p) => layerOf.get(p) ?? 0)) + 1
+    );
+  }
+
+  // ── 4. Group nodes by layer ───────────────────────────────────────────────
+  const byLayer = new Map<number, string[]>();
+  for (const [id, l] of layerOf) {
+    if (!byLayer.has(l)) byLayer.set(l, []);
+    byLayer.get(l)!.push(id);
+  }
+
+  // ── 5. Barycenter sort within each layer to minimise edge crossings ───────
+  const yOf = new Map<string, number>();
+  const sortedLayerNums = [...byLayer.keys()].sort((a, b) => a - b);
+
+  for (const l of sortedLayerNums) {
+    const layerNodes = byLayer.get(l)!;
+    layerNodes.sort((a, b) => {
+      const predsA = [...(pred.get(a) ?? [])];
+      const predsB = [...(pred.get(b) ?? [])];
+      const avgA =
+        predsA.length
+          ? predsA.reduce((s, p) => s + (yOf.get(p) ?? 0), 0) / predsA.length
+          : 0;
+      const avgB =
+        predsB.length
+          ? predsB.reduce((s, p) => s + (yOf.get(p) ?? 0), 0) / predsB.length
+          : 0;
+      return avgA !== avgB ? avgA - avgB : a.localeCompare(b);
     });
-  });
 
-  // Apply saved positions (override auto-layout)
+    // Center each layer vertically around y=0
+    const start = -((layerNodes.length - 1) * Y_SPACING) / 2;
+    layerNodes.forEach((id, i) => yOf.set(id, start + i * Y_SPACING));
+  }
+
+  // ── 6. Build Node objects ─────────────────────────────────────────────────
+  const nodes: Node[] = [];
+  for (const [id, data] of nodeMap.entries()) {
+    nodes.push({
+      id,
+      type: "entity",
+      position: {
+        x: (layerOf.get(id) ?? 0) * X_SPACING,
+        y: yOf.get(id) ?? 0,
+      },
+      data: data as unknown as Record<string, unknown>,
+    });
+  }
+
+  // Apply saved positions (override auto-layout when user has dragged nodes)
   const savedPositions = loadPositions();
   for (const node of nodes) {
     if (savedPositions[node.id]) {
