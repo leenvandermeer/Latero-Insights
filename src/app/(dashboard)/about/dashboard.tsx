@@ -9,8 +9,8 @@ export function AboutDashboard() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Product"
-        title="Latero Meta Data Control Framework"
-        description="Latero Meta Data Controle Framework (MDCF) & Latero Meta Insights — pipeline metadata, data quality, and lineage in one integrated platform."
+        title="Latero Meta Insights"
+        description="Latero Meta Insights visualiseert pipeline metadata, datakwaliteit en lineage — rechtstreeks uit de meta-tabellen van het Latero Meta Data Controle Framework (MDCF)."
       />
 
       {/* Two products */}
@@ -18,20 +18,20 @@ export function AboutDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
-              Latero Meta Data Control Framework
+              <BarChart2 className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+              Latero Meta Insights
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-              A platform-agnostic metadata control runtime that captures pipeline execution, data quality, and lineage as a built-in property of every pipeline run — not as an afterthought.
+              Een standalone webapplicatie die pipeline-metadata, datakwaliteit en lineage visualiseert vanuit de Latero meta-tabellen. Leest rechtstreeks uit de drie meta-tabellen die het framework vult.
             </p>
             <ul className="space-y-2">
               {[
-                "Policy-driven DQ engine — enforce vs. observe per check",
-                "Event-sourced audit trail across all pipeline steps",
-                "OpenLineage-compatible lineage registration",
-                "Runs on Databricks and Snowflake",
+                "Pipeline health dashboards en run-history",
+                "DQ check resultaten, slagingspercentages en trendanalyse",
+                "Interactieve lineage explorer met OpenLineage export",
+                "Aangepaste dashboards en widget builder",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
                   <span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ background: "var(--color-accent)" }} />
@@ -45,20 +45,20 @@ export function AboutDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BarChart2 className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
-              Latero Meta Insights
+              <Database className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+              Latero Meta Data Controle Framework
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-              A standalone web application that visualizes pipeline metadata, data quality, and lineage from the Latero meta tables. Reads directly from the three meta tables the framework writes to.
+              Een platform-agnostische metadata control runtime die pipeline-executie, datakwaliteit en lineage vastlegt als ingebouwde eigenschap van elke pipeline run — geen nagedachte.
             </p>
             <ul className="space-y-2">
               {[
-                "Pipeline health dashboards and run history",
-                "DQ check results, pass rates, and trend analysis",
-                "Interactive lineage explorer with OpenLineage export",
-                "Custom dashboards and widget builder",
+                "Policy-gedreven DQ-engine — enforce vs. observe per check",
+                "Event-sourced audittrail over alle pipeline-stappen",
+                "OpenLineage-compatibele lineage-registratie",
+                "Draait op Databricks en Snowflake",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
                   <span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ background: "var(--color-accent)" }} />
@@ -77,7 +77,7 @@ export function AboutDashboard() {
         </CardHeader>
         <CardContent>
           <p className="text-sm mb-4" style={{ color: "var(--color-text-muted)" }}>
-            Latero Meta Data Controle Framework (MDCF) writes to three meta tables. Latero Meta Insights reads from the same tables.
+            Het Latero MDCF schrijft naar drie meta-tabellen. Latero Meta Insights leest uit dezelfde tabellen.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
@@ -103,7 +103,7 @@ export function AboutDashboard() {
 
       {/* Version */}
       <div className="flex items-center justify-between rounded-xl px-5 py-3 text-xs" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
-        <span>Latero Meta Data Control Framework & Latero Meta Insights</span>
+        <span>Latero Meta Insights — onderdeel van het Latero MDCF platform</span>
         <a
           href="https://latero.nl"
           target="_blank"
