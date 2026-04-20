@@ -534,7 +534,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
               className="layout"
               layouts={layouts}
               width={gridWidth ?? 1280}
-              breakpoints={{ lg: 768, md: 480, sm: 0 }}
+              breakpoints={{ lg: 600, md: 400, sm: 0 }}
               cols={{ lg: 12, md: 8, sm: 4 }}
               rowHeight={72}
               containerPadding={[0, 0]}
