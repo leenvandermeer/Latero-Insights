@@ -46,11 +46,12 @@ export function WidgetConfigPanel({ widget, onClose, onSave }: WidgetConfigPanel
       )}
 
       <div
-        className="fixed top-0 right-0 h-full w-72 z-50 flex flex-col transition-transform duration-200"
+        className="fixed top-0 right-0 h-full w-72 z-50 flex flex-col"
         style={{
           background: "var(--color-surface)",
           borderLeft: "1px solid var(--color-border)",
           boxShadow: "var(--shadow-drawer, -4px 0 24px rgba(27,59,107,0.12))",
+          transition: "transform 0.2s ease-out",
           transform: open ? "translateX(0)" : "translateX(100%)",
         }}
       >

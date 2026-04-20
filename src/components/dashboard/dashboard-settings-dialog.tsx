@@ -29,41 +29,44 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />
       <div
-        className="relative w-full max-w-md rounded-2xl overflow-hidden"
+        className="fixed top-0 right-0 h-full w-full max-w-sm z-50 flex flex-col"
         style={{
           background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          boxShadow: "var(--shadow-elevated, 0 24px 48px rgba(27,59,107,0.18))",
+          borderLeft: "1px solid var(--color-border)",
+          boxShadow: "var(--shadow-drawer, -4px 0 24px rgba(27,59,107,0.12))",
+          animation: "slideInRight 0.2s ease-out",
         }}
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between px-6 py-4"
+          className="flex items-center justify-between px-5 py-4 shrink-0"
           style={{ borderBottom: "1px solid var(--color-border)" }}
         >
           <div className="flex items-center gap-2">
             <Settings2 className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
             <h2 className="font-display font-semibold text-base" style={{ color: "var(--color-text)" }}>
-              Dashboard settings
+              Dashboard instellingen
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5"
+            className="rounded-lg p-1.5 transition-colors"
             style={{ color: "var(--color-text-muted)" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "transparent")}
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
           {/* General section */}
           <section className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>
-              General
+              Algemeen
             </h3>
 
             <div className="space-y-1.5">
@@ -110,7 +113,7 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
                 className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-40"
                 style={{ background: "var(--color-accent)", color: "#fff" }}
               >
-                Save changes
+                Opslaan
               </button>
             </div>
           </section>
@@ -121,7 +124,7 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
               className="text-xs font-bold uppercase tracking-widest"
               style={{ color: "var(--color-error, #EF4444)" }}
             >
-              Danger zone
+              Gevarenzone
             </h3>
 
             <div
@@ -188,6 +191,6 @@ export function DashboardSettingsDialog({ name, description, onClose, onRename, 
           </section>
         </div>
       </div>
-    </div>
+    </>
   );
 }

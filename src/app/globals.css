@@ -212,3 +212,9 @@ h1, h2, .font-display {
 .group:hover .react-resizable-handle-se {
   opacity: 1;
 }
+
+/* ── Drawer animation ───────────────────────────────── */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
