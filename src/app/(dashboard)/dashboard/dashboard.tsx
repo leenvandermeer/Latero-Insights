@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { ResponsiveGridLayout, useContainerWidth, verticalCompactor, type LayoutItem, type ResponsiveLayouts } from "react-grid-layout";
+import { ResponsiveGridLayout, verticalCompactor, type LayoutItem, type ResponsiveLayouts } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2, Check, MoreHorizontal, Sparkles, ChevronDown, Plus } from "lucide-react";
 import { useDateRange } from "@/hooks";
@@ -55,11 +55,32 @@ export function DashboardCanvas({ dashboardId }: Props) {
   const [mounted, setMounted] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<string | null>(null);
   const router = useRouter();
-  const { width, containerRef } = useContainerWidth();
+  // Custom ResizeObserver-based width measurement.
+  // useContainerWidth() from react-grid-layout has initialWidth=1280 and sets up
+  // its ResizeObserver in a useEffect([]) that runs when containerRef is still null
+  // (because we return null until mounted=true). The observer therefore never fires
+  // and width is stuck at 1280, causing the grid to overflow the visible area.
+  // By re-running the effect whenever `mounted` changes we guarantee the element
+  // exists before we observe it.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [gridWidth, setGridWidth] = useState<number | null>(null);
   const layoutsRef = useRef<ResponsiveLayouts>({});
   const widgetsRef = useRef<WidgetSlot[]>([]);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Measure container width once the element is in the DOM (after mounted=true)
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const measure = () => setGridWidth(node.getBoundingClientRect().width);
+    measure();
+    const ro = new ResizeObserver((entries) => {
+      setGridWidth(entries[0]?.contentRect.width ?? node.getBoundingClientRect().width);
+    });
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [mounted]); // re-run when mounted flips to true so containerRef.current is set
 
   const dashboard = getDashboardById(dashboardId);
 
@@ -438,7 +459,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
               key={editMode ? "edit" : "view"}
               className="layout"
               layouts={layouts}
-              width={width ?? (typeof window !== "undefined" ? Math.max(window.innerWidth - (parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width") || "256") || 256) - 48, 600) : 1200)}
+              width={gridWidth ?? 1280}
               breakpoints={{ lg: 768, md: 480, sm: 0 }}
               cols={{ lg: 12, md: 8, sm: 4 }}
               rowHeight={90}
