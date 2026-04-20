@@ -71,7 +71,7 @@ export function Sidebar() {
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--sidebar-width",
-      collapsed ? "64px" : "256px"
+      collapsed ? "64px" : "280px"
     );
     // Trigger a resize event so react-grid-layout re-measures the container
     // width after the sidebar expands or collapses.
@@ -110,7 +110,7 @@ export function Sidebar() {
       <aside
         className={cn(
           "hidden md:flex flex-col fixed inset-y-0 left-0 z-30 transition-all duration-200",
-          collapsed ? "w-[64px]" : "w-64"
+          collapsed ? "w-[64px]" : "w-[280px]"
         )}
         style={{
           background: "var(--color-sidebar)",
@@ -119,12 +119,12 @@ export function Sidebar() {
         }}
       >
         {/* Logo */}
-        <div className="flex items-center h-14 px-4 shrink-0" style={{ borderBottom: "1px solid var(--color-sidebar-border)" }}>
+        <div className="flex items-center h-14 px-3 shrink-0" style={{ borderBottom: "1px solid var(--color-sidebar-border)" }}>
           {!collapsed ? (
             <div className="flex items-center justify-between w-full">
-              <Link href="/" className="flex items-center gap-2.5 min-w-0" aria-label="Latero">
+              <Link href="/" className="flex items-center gap-2.5 min-w-0 flex-1 h-14 hover:opacity-80 transition-opacity" aria-label="Latero Meta Insights">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo/latero-mark-light.svg" alt="Latero" width={26} height={26} className="shrink-0" />
+                <img src="/logo/latero-mark-light.svg" alt="Latero" width={28} height={28} className="shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold leading-none tracking-tight truncate" style={{ color: "var(--color-brand, #1B3B6B)" }}>Latero</p>
                   <p className="text-xs leading-none mt-0.5 truncate" style={{ color: "var(--color-text-subtle)" }}>Meta Insights</p>
@@ -167,7 +167,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
+                className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
                 style={active ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
                 onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
                 onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
@@ -187,7 +187,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors justify-center px-2")}
+                className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors justify-center px-2")}
                 style={active ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
                 onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
                 onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
@@ -219,7 +219,7 @@ export function Sidebar() {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors")}
+                        className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors")}
                         style={active ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
                         onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
                         onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
@@ -306,7 +306,7 @@ export function Sidebar() {
         <div className="px-2 pb-3 space-y-0.5" style={{ borderTop: "1px solid var(--color-sidebar-border)", paddingTop: 12 }}>
           <Link
             href="/about"
-            className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
+            className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
             style={pathname === "/about" ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
             onMouseEnter={(e) => { if (pathname !== "/about") { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
             onMouseLeave={(e) => { if (pathname !== "/about") { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
@@ -317,7 +317,7 @@ export function Sidebar() {
           </Link>
           <Link
             href="/settings"
-            className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
+            className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
             style={pathname === "/settings" ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
             title={collapsed ? "Settings" : undefined}
           >
@@ -326,7 +326,7 @@ export function Sidebar() {
           </Link>
           <button
             onClick={toggleTheme}
-            className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors w-full", collapsed && "justify-center px-2")}
+            className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors w-full", collapsed && "justify-center px-2")}
             style={{ color: "var(--color-sidebar-muted)" }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-sidebar-foreground)"; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-sidebar-muted)"; }}
