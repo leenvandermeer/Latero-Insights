@@ -134,21 +134,65 @@ function buildGraph(entities: LineageEntity[]) {
     });
   }
 
-  // Build edges from downstream relationships
+  // Build edges — prefer downstream refs, fall back to upstream refs.
+  // FQNs in the table may have a dataset-id prefix (e.g. ".cbsenergie.silver_energielabel")
+  // while upstream/downstream references use the canonical catalog.schema.table form.
+  // We therefore try: 1) exact match, 2) suffix match on the last N dot-segments.
   const edges: Edge[] = [];
   const edgeSet = new Set<string>();
+  const allFqns = new Set(entities.map((e) => e.entity_fqn));
+
+  /** Resolve a reference string to a known entity FQN, or null if unresolvable. */
+  function resolveRef(ref: string): string | null {
+    if (allFqns.has(ref)) return ref;
+    // Try suffix match: find an entity whose FQN ends with each trailing segment
+    const refParts = ref.split(".");
+    for (let len = refParts.length; len >= 1; len--) {
+      const suffix = "." + refParts.slice(refParts.length - len).join(".");
+      for (const fqn of allFqns) {
+        if (fqn.endsWith(suffix)) return fqn;
+      }
+    }
+    return null;
+  }
+
   for (const e of entities) {
+    // Edges from downstream refs (source = e, target = ds)
     for (const ds of e.downstream_entity_fqns) {
-      const id = `${e.entity_fqn}->${ds}`;
+      const target = resolveRef(ds);
+      if (!target) continue;
+      const id = `${e.entity_fqn}->${target}`;
       if (!edgeSet.has(id)) {
         edgeSet.add(id);
         const color = STATUS_EDGE_COLOR[e.latest_status] ?? STATUS_EDGE_COLOR.UNKNOWN;
         edges.push({
           id,
           source: e.entity_fqn,
-          target: ds,
+          target,
           type: "smoothstep",
           animated: e.latest_status === "SUCCESS",
+          markerEnd: { type: MarkerType.ArrowClosed, color },
+          style: { stroke: color, strokeWidth: 2 },
+        });
+      }
+    }
+
+    // Edges from upstream refs (source = up, target = e)
+    for (const up of e.upstream_entity_fqns) {
+      const source = resolveRef(up);
+      if (!source) continue;
+      if (source === e.entity_fqn) continue; // self-loop guard
+      const id = `${source}->${e.entity_fqn}`;
+      if (!edgeSet.has(id)) {
+        edgeSet.add(id);
+        const srcEntity = entities.find((x) => x.entity_fqn === source);
+        const color = STATUS_EDGE_COLOR[srcEntity?.latest_status ?? "UNKNOWN"] ?? STATUS_EDGE_COLOR.UNKNOWN;
+        edges.push({
+          id,
+          source,
+          target: e.entity_fqn,
+          type: "smoothstep",
+          animated: srcEntity?.latest_status === "SUCCESS",
           markerEnd: { type: MarkerType.ArrowClosed, color },
           style: { stroke: color, strokeWidth: 2 },
         });
