@@ -137,7 +137,7 @@ export class DatabricksAdapter implements DataAdapter {
   }
 
   async getLineageEntities(): Promise<LineageEntity[]> {
-    const sql = `SELECT entity_fqn, layer, latest_status, end_to_end_status, latest_success_at, upstream_entity_fqns, downstream_entity_fqns, lineage_group_id, last_completed_layer FROM ${fqTable("lineage_entities_current")}`;
+    const sql = `SELECT entity_fqn, layer, latest_status, end_to_end_status, latest_success_at, upstream_entity_fqns, downstream_entity_fqns, latest_lineage_group_id AS lineage_group_id, last_completed_layer FROM ${fqTable("lineage_entities_current")}`;
     const resp = await executeStatement(sql);
     return mapRows(resp, (row, cols) => ({
       entity_fqn: col(row, cols, "entity_fqn") ?? "",
