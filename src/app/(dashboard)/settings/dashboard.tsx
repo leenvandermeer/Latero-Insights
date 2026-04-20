@@ -473,7 +473,7 @@ export function SettingsDashboard() {
                   <Sparkles className="h-5 w-5 mt-0.5 shrink-0" style={{ color: "var(--color-accent)" }} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>Load Demo Data</p>
-                    <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>Fills cache with ESG demo data. No Databricks connection needed. Enables Cache-only mode.</p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>Fills cache with demo data. No Databricks connection needed. Enables Cache-only mode.</p>
                     <button
                       onClick={async () => { await handleSeedDemo(); updateField("cacheOnly", true); }}
                       disabled={seeding}

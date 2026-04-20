@@ -1,1 +1,215 @@
-{}
+{
+  "system:pipelines": {
+    "id": "system:pipelines",
+    "widgets": [
+      {
+        "instanceId": "sys-runs-table",
+        "type": "pipeline-runs-table"
+      },
+      {
+        "instanceId": "total-runs-27d25b29-1b23-4306-be1d-8e1f56af09f3",
+        "type": "total-runs"
+      },
+      {
+        "instanceId": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
+        "type": "failed-runs",
+        "titleOverride": "Run failed"
+      },
+      {
+        "instanceId": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
+        "type": "success-runs"
+      },
+      {
+        "instanceId": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
+        "type": "warning-runs"
+      },
+      {
+        "instanceId": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
+        "type": "pass-rate"
+      }
+    ],
+    "layout": {
+      "lg": [
+        {
+          "i": "sys-runs-table",
+          "x": 0,
+          "y": 2,
+          "w": 12,
+          "h": 5,
+          "minW": 6,
+          "minH": 3,
+          "moved": false,
+          "static": false
+        },
+        {
+          "i": "total-runs-27d25b29-1b23-4306-be1d-8e1f56af09f3",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 2,
+          "minW": 2,
+          "minH": 2,
+          "moved": false,
+          "static": false
+        },
+        {
+          "i": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
+          "x": 2,
+          "y": 0,
+          "w": 2,
+          "h": 2,
+          "minW": 2,
+          "minH": 2,
+          "moved": false,
+          "static": false
+        },
+        {
+          "i": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
+          "x": 4,
+          "y": 0,
+          "w": 2,
+          "h": 2,
+          "minW": 2,
+          "minH": 2,
+          "moved": false,
+          "static": false
+        },
+        {
+          "i": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
+          "x": 6,
+          "y": 0,
+          "w": 2,
+          "h": 2,
+          "minW": 2,
+          "minH": 2,
+          "moved": false,
+          "static": false
+        },
+        {
+          "i": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
+          "x": 8,
+          "y": 0,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2,
+          "moved": false,
+          "static": false
+        }
+      ],
+      "md": [
+        {
+          "i": "sys-runs-table",
+          "x": 0,
+          "y": 15,
+          "w": 8,
+          "h": 5,
+          "minW": 6,
+          "minH": 3
+        },
+        {
+          "i": "total-runs-27d25b29-1b23-4306-be1d-8e1f56af09f3",
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
+          "x": 3,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
+          "x": 0,
+          "y": 2,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
+          "x": 3,
+          "y": 2,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
+          "x": 3,
+          "y": 4,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        }
+      ],
+      "sm": [
+        {
+          "i": "sys-runs-table",
+          "x": 0,
+          "y": 21,
+          "w": 4,
+          "h": 5,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "total-runs-27d25b29-1b23-4306-be1d-8e1f56af09f3",
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
+          "x": 0,
+          "y": 2,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
+          "x": 0,
+          "y": 4,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
+          "x": 0,
+          "y": 6,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
+          "x": 0,
+          "y": 18,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        }
+      ]
+    },
+    "updatedAt": "2026-04-20T16:53:20.092Z"
+  }
+}

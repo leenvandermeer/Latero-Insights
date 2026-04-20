@@ -12,6 +12,8 @@ interface EntityData {
   attributes: string[];
   hopCount: number;
   health: HealthStatus;
+  layer?: string;
+  end_to_end_status?: string;
 }
 
 const HEALTH_COLORS: Record<HealthStatus, { border: string; dot: string; bg: string }> = {
@@ -22,9 +24,12 @@ const HEALTH_COLORS: Record<HealthStatus, { border: string; dot: string; bg: str
 };
 
 function EntityNodeComponent({ data }: NodeProps) {
-  const { label, type, attributes, health, atRisk } = data as unknown as EntityData & { atRisk?: boolean };
+  const { label, type, attributes, health, atRisk, layer, end_to_end_status } = data as unknown as EntityData & { atRisk?: boolean };
   const Icon = type === "table" ? Table2 : Database;
   const colors = HEALTH_COLORS[health ?? "unknown"];
+
+  // Show end_to_end badge when it signals a different state than latest_status
+  const showE2eBadge = end_to_end_status && end_to_end_status !== "SUCCESS" && end_to_end_status !== "UNKNOWN";
 
   return (
     <div
@@ -48,12 +53,29 @@ function EntityNodeComponent({ data }: NodeProps) {
         <span className="text-sm font-medium truncate flex-1" style={{ color: "var(--color-text)" }}>
           {label}
         </span>
+        {layer && (
+          <span
+            className="text-[9px] font-bold uppercase tracking-wide rounded px-1 shrink-0"
+            style={{ background: "rgba(128,128,128,0.12)", color: "var(--color-text-muted)" }}
+          >
+            {layer}
+          </span>
+        )}
         {health !== "unknown" && (
           <span
             className="w-2 h-2 rounded-full shrink-0"
             style={{ background: colors.dot }}
             title={health}
           />
+        )}
+        {showE2eBadge && (
+          <span
+            className="text-[9px] font-bold rounded px-1 shrink-0"
+            style={{ background: "rgba(239,68,68,0.15)", color: "#dc2626" }}
+            title={`End-to-end: ${end_to_end_status}`}
+          >
+            E2E {end_to_end_status}
+          </span>
         )}
         {atRisk && (
           <span

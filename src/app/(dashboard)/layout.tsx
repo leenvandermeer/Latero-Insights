@@ -9,7 +9,7 @@ export default function DashboardLayout({
 }) {
   return (
     <DashboardProvider>
-      <div className="min-h-screen overflow-x-hidden" style={{ background: "var(--color-bg)" }}>
+      <div className="min-h-screen overflow-x-clip" style={{ background: "var(--color-bg)" }}>
         <Sidebar />
         {/* paddingLeft tracks --sidebar-width, set by Sidebar via JS (LADR-013) */}
         <main

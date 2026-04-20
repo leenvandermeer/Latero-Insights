@@ -41,6 +41,26 @@ export interface LineageHop {
   target_attribute: string | null;
 }
 
+export interface LineageEntity {
+  entity_fqn: string;
+  layer: string;
+  latest_status: string;          // "SUCCESS" | "FAILED" | "WARNING" | "UNKNOWN"
+  end_to_end_status: string;      // "SUCCESS" | "PARTIAL" | "FAILED" | "UNKNOWN"
+  latest_success_at: string | null;
+  upstream_entity_fqns: string[];
+  downstream_entity_fqns: string[];
+  lineage_group_id: string | null;
+  last_completed_layer: string | null;
+}
+
+export interface LineageAttribute {
+  source_entity_fqn: string;
+  source_attribute: string;
+  target_entity_fqn: string;
+  target_attribute: string;
+  is_current: boolean;
+}
+
 export interface DateRange {
   from: string; // YYYY-MM-DD
   to: string;
@@ -50,5 +70,7 @@ export interface DataAdapter {
   getPipelineRuns(range: DateRange): Promise<PipelineRun[]>;
   getDataQualityChecks(range: DateRange): Promise<DataQualityCheck[]>;
   getLineageHops(range: DateRange): Promise<LineageHop[]>;
+  getLineageEntities(): Promise<LineageEntity[]>;
+  getLineageAttributes(): Promise<LineageAttribute[]>;
   testConnection(): Promise<boolean>;
 }

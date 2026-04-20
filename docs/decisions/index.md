@@ -14,3 +14,4 @@
 | [LADR-012](20260419-shared-widget-library.md) | 2026-04-19 | Shared widget library: three-tier model and server-side JSON persistence | ACCEPTED |
 | [LADR-013](20260420-adaptive-nav-breakpoint.md) | 2026-04-20 | Adaptive navigation breakpoints: sidebar expanded threshold raised to 1280px | ACCEPTED |
 | [LADR-014](20260420-grid-container-width.md) | 2026-04-20 | Grid container width: custom ResizeObserver in plaats van useContainerWidth | ACCEPTED |
+| [LADR-015](20260420-lineage-entity-model-redesign.md) | 2026-04-20 | Lineage Explorer: nieuw entiteitsmodel en drie-perspectief UX | ACCEPTED |

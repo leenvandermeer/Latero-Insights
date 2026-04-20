@@ -1,4 +1,4 @@
-import type { DataAdapter, DateRange, PipelineRun, DataQualityCheck, LineageHop } from "./types";
+import type { DataAdapter, DateRange, PipelineRun, DataQualityCheck, LineageHop, LineageEntity, LineageAttribute } from "./types";
 import { loadSettings } from "@/lib/settings";
 
 interface StatementResponse {
@@ -66,6 +66,11 @@ function fqTable(table: string): string {
   return `${settings.databricksCatalog}.${settings.databricksSchema}.${table}`;
 }
 
+function parseJsonArray(value: string | null): string[] {
+  if (!value) return [];
+  try { return JSON.parse(value) as string[]; } catch { return []; }
+}
+
 export class DatabricksAdapter implements DataAdapter {
   async getPipelineRuns(range: DateRange): Promise<PipelineRun[]> {
     const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, source_system, step, run_id, run_status, duration_ms, environment FROM ${fqTable("pipeline_runs")} WHERE event_date >= :date_from AND event_date <= :date_to ORDER BY timestamp_utc DESC`;
@@ -128,6 +133,34 @@ export class DatabricksAdapter implements DataAdapter {
       target_type: col(row, cols, "target_type") ?? "",
       target_ref: col(row, cols, "target_ref") ?? "",
       target_attribute: col(row, cols, "target_attribute"),
+    }));
+  }
+
+  async getLineageEntities(): Promise<LineageEntity[]> {
+    const sql = `SELECT entity_fqn, layer, latest_status, end_to_end_status, latest_success_at, upstream_entity_fqns, downstream_entity_fqns, lineage_group_id, last_completed_layer FROM ${fqTable("lineage_entities_current")}`;
+    const resp = await executeStatement(sql);
+    return mapRows(resp, (row, cols) => ({
+      entity_fqn: col(row, cols, "entity_fqn") ?? "",
+      layer: col(row, cols, "layer") ?? "",
+      latest_status: (col(row, cols, "latest_status") ?? "UNKNOWN").toUpperCase(),
+      end_to_end_status: (col(row, cols, "end_to_end_status") ?? "UNKNOWN").toUpperCase(),
+      latest_success_at: col(row, cols, "latest_success_at"),
+      upstream_entity_fqns: parseJsonArray(col(row, cols, "upstream_entity_fqns")),
+      downstream_entity_fqns: parseJsonArray(col(row, cols, "downstream_entity_fqns")),
+      lineage_group_id: col(row, cols, "lineage_group_id"),
+      last_completed_layer: col(row, cols, "last_completed_layer"),
+    }));
+  }
+
+  async getLineageAttributes(): Promise<LineageAttribute[]> {
+    const sql = `SELECT source_entity_fqn, source_attribute, target_entity_fqn, target_attribute, is_current FROM ${fqTable("lineage_attributes_current")} WHERE is_current = true`;
+    const resp = await executeStatement(sql);
+    return mapRows(resp, (row, cols) => ({
+      source_entity_fqn: col(row, cols, "source_entity_fqn") ?? "",
+      source_attribute: col(row, cols, "source_attribute") ?? "",
+      target_entity_fqn: col(row, cols, "target_entity_fqn") ?? "",
+      target_attribute: col(row, cols, "target_attribute") ?? "",
+      is_current: col(row, cols, "is_current") === "true",
     }));
   }
 

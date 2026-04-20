@@ -510,28 +510,30 @@ export function WidgetPickerDrawer({ open, onAdd, onCreateCustom, onClose }: Dra
     <div
       className="flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden"
       style={{
-        width: open ? (collapsed ? 36 : 280) : 0,
+        width: open ? (collapsed ? 40 : 280) : 0,
         opacity: open ? 1 : 0,
         borderLeft: open ? "1px solid var(--color-border)" : "none",
         background: "var(--color-surface)",
-        minHeight: 0,
-        position: "relative",
+        position: "sticky",
+        top: "1rem",
+        height: "calc(100vh - 2rem)",
+        alignSelf: "flex-start",
       }}
     >
-      {/* Collapse toggle */}
-      {open && (
-        <button
-          onClick={() => setCollapsed((v) => !v)}
-          className="absolute top-3 -left-3.5 z-10 flex items-center justify-center rounded-full w-7 h-7 shadow-sm border"
-          style={{
-            background: "var(--color-surface)",
-            borderColor: "var(--color-border)",
-            color: "var(--color-text-muted)",
-          }}
-          title={collapsed ? "Show widgets" : "Hide widgets"}
-        >
-          {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-        </button>
+      {/* Collapsed state — icon strip to expand */}
+      {open && collapsed && (
+        <div className="flex flex-col h-full items-center py-3">
+          <button
+            onClick={() => setCollapsed(false)}
+            className="flex items-center justify-center w-8 h-8 rounded-md transition-colors"
+            style={{ color: "var(--color-text-muted)" }}
+            title="Open widget panel"
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-muted)"; }}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
       )}
 
       {/* Content — hidden when collapsed */}
@@ -559,6 +561,16 @@ export function WidgetPickerDrawer({ open, onAdd, onCreateCustom, onClose }: Dra
                   }}
                 />
               </div>
+              <button
+                onClick={() => setCollapsed(true)}
+                className="shrink-0 flex items-center justify-center w-7 h-7 rounded-md transition-colors"
+                style={{ color: "var(--color-text-muted)" }}
+                title="Collapse widget panel"
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-muted)"; }}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
 
             {/* Tabs */}
