@@ -166,6 +166,7 @@ by the Latero framework bootstrap SQL:
 │   │       ├── lineage/        # Lineage Explorer
 │   │       └── openlineage/    # OpenLineage Viewer
 │   ├── components/
+│   │   ├── dashboard/          # Drawer panels (settings, new dashboard, publish widget)
 │   │   ├── navigation/         # Sidebar, bottom nav, nav config
 │   │   └── ui/                 # Shared UI components (Card, etc.)
 │   ├── hooks/
@@ -189,9 +190,11 @@ Every view in Layer2 Meta Insights is a customisable dashboard. System dashboard
 
 Click the dashboard title (the italic heading in the canvas header) to open the **dashboard switcher dropdown**. The dropdown lists all system and user dashboards. Select any entry to navigate to it. A "New Dashboard" action at the bottom creates a blank canvas.
 
+To rename a user dashboard, hover over the title — a pencil icon (✎) appears to the right. Click it to edit the name inline.
+
 ### Widget Library
 
-The widget library opens as a left-side panel when edit mode is active. Click **+ Add Widget** in the dashboard header (accent button, always visible) to open it. The library is not in the sidebar — it is part of the canvas editing surface.
+The widget library opens as a **right-side drawer** when edit mode is active. Click **Aanpassen** (edit button) in the dashboard header to enter edit mode — the drawer slides in automatically from the right. The library is part of the canvas editing surface, not the sidebar.
 
 Available widget categories:
 
