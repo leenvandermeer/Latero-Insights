@@ -212,10 +212,10 @@ export function DashboardCanvas({ dashboardId }: Props) {
 
   return (
     <>
-      <div className="flex h-full gap-0" style={{ alignItems: "flex-start" }}>
+      <div className="flex h-full gap-3" style={{ alignItems: "flex-start" }}>
 
         {/* Main content */}
-        <div className="flex-1 min-w-0 space-y-4 p-0 overflow-hidden">
+        <div className="flex-1 min-w-0 space-y-4 p-0 overflow-hidden pr-1">
         {/* Dashboard header */}
         <div
           className="relative rounded-2xl mb-2 px-8 py-6"
