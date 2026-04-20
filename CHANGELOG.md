@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+### Fixed
+- **Grid layout overflow on MacBook Pro and other ≥1280px viewports** (LADR-014): `useContainerWidth()` from `react-grid-layout` v2 initializes at `1280px` and registers its `ResizeObserver` in `useEffect([])`. Because `DashboardCanvas` returns `null` until `mounted=true`, the container element does not yet exist when the effect runs — the observer never fires and `width` stays permanently at `1280px`. On viewports narrower than 1280px (e.g. sidebar-adjusted content area) the grid overflowed and right-side widgets (Dataset Health) were clipped. Replaced `useContainerWidth` with a custom `ResizeObserver` in `useEffect([mounted])` that starts observing only after the container is in the DOM.
+- `useBreakpoint` initial state was hardcoded `"lg"`, causing a sidebar flash on ≥1280px viewports at page load. Fixed with a lazy `useState` initializer reading `window.innerWidth` directly.
+- `transition-all` on `<main>` replaced with `transition-[padding-left]` to prevent unintended CSS transitions on sidebar toggle.
+
 ### Changed
 - LINS-011 updated (LADR-013): sidebar auto-expand threshold raised from 1024px to 1280px for better content width on common laptop resolutions (1024–1279px now collapses by default, user can expand)
 - `useBreakpoint` gains `isSmallDesktop` flag (1024–1279px)
@@ -50,3 +55,5 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 - LADR-010: Canvas CTA pattern and smart placement algorithm
 - LADR-011: Remove static dashboard views
 - LADR-012: Shared widget library three-tier model
+- LADR-013: Adaptive navigation breakpoints (sidebar 1280px threshold)
+- LADR-014: Grid container width — custom ResizeObserver tied to mounted state
