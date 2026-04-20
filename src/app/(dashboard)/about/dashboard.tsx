@@ -10,7 +10,7 @@ export function AboutDashboard() {
       <PageHeader
         eyebrow="Product"
         title="Latero Meta Data Control Framework"
-        description="Latero MDCF & Latero Meta Insights — pipeline metadata, data quality, and lineage in one integrated platform."
+        description="Latero Meta Data Controle Framework (MDCF) & Latero Meta Insights — pipeline metadata, data quality, and lineage in one integrated platform."
       />
 
       {/* Two products */}
@@ -77,7 +77,7 @@ export function AboutDashboard() {
         </CardHeader>
         <CardContent>
           <p className="text-sm mb-4" style={{ color: "var(--color-text-muted)" }}>
-            Latero MDCF writes to three meta tables. Latero Meta Insights reads from the same tables.
+            Latero Meta Data Controle Framework (MDCF) writes to three meta tables. Latero Meta Insights reads from the same tables.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[

@@ -62,7 +62,7 @@ function toOpenLineageFormat(event: RunEvent) {
       runId: event.run_id,
       facets: {
         processing_engine: {
-          name: "latero-mdcf",
+          name: "latero-meta-data-controle-framework",
           version: "1.0",
         },
       },
