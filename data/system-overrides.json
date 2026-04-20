@@ -3,112 +3,102 @@
     "id": "system:pipelines",
     "widgets": [
       {
-        "instanceId": "sys-runs-table",
-        "type": "pipeline-runs-table"
-      },
-      {
-        "instanceId": "total-runs-27d25b29-1b23-4306-be1d-8e1f56af09f3",
+        "instanceId": "total-runs-708bdea0-ddcb-4d4d-a250-8a655baa281d",
         "type": "total-runs"
       },
       {
-        "instanceId": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
-        "type": "failed-runs",
-        "titleOverride": "Run failed"
+        "instanceId": "failed-runs-cf3aec1c-9fa9-4df2-a3f0-9a5fd71843c7",
+        "type": "failed-runs"
       },
       {
-        "instanceId": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
+        "instanceId": "success-runs-98f56dfd-8215-4181-be2a-5c1aef03dee9",
         "type": "success-runs"
       },
       {
-        "instanceId": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
+        "instanceId": "warning-runs-0054635c-ee07-440b-915d-b60c802df456",
         "type": "warning-runs"
       },
       {
-        "instanceId": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
-        "type": "pass-rate"
+        "instanceId": "pipeline-status-9490ee75-8e27-4faf-9c9d-0aa7e0491e26",
+        "type": "pipeline-status"
+      },
+      {
+        "instanceId": "pipeline-runs-table-44a3bc46-e741-4e68-9577-0d6338a7893b",
+        "type": "pipeline-runs-table"
       }
     ],
     "layout": {
       "lg": [
         {
-          "i": "sys-runs-table",
+          "i": "total-runs-708bdea0-ddcb-4d4d-a250-8a655baa281d",
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2,
+          "moved": false,
+          "static": false
+        },
+        {
+          "i": "failed-runs-cf3aec1c-9fa9-4df2-a3f0-9a5fd71843c7",
+          "x": 3,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2,
+          "moved": false,
+          "static": false
+        },
+        {
+          "i": "success-runs-98f56dfd-8215-4181-be2a-5c1aef03dee9",
+          "x": 6,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2,
+          "moved": false,
+          "static": false
+        },
+        {
+          "i": "warning-runs-0054635c-ee07-440b-915d-b60c802df456",
+          "x": 9,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2,
+          "moved": false,
+          "static": false
+        },
+        {
+          "i": "pipeline-status-9490ee75-8e27-4faf-9c9d-0aa7e0491e26",
           "x": 0,
           "y": 2,
           "w": 12,
-          "h": 5,
-          "minW": 6,
+          "h": 3,
+          "minW": 4,
           "minH": 3,
           "moved": false,
           "static": false
         },
         {
-          "i": "total-runs-27d25b29-1b23-4306-be1d-8e1f56af09f3",
+          "i": "pipeline-runs-table-44a3bc46-e741-4e68-9577-0d6338a7893b",
           "x": 0,
-          "y": 0,
-          "w": 2,
-          "h": 2,
-          "minW": 2,
-          "minH": 2,
-          "moved": false,
-          "static": false
-        },
-        {
-          "i": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
-          "x": 2,
-          "y": 0,
-          "w": 2,
-          "h": 2,
-          "minW": 2,
-          "minH": 2,
-          "moved": false,
-          "static": false
-        },
-        {
-          "i": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
-          "x": 4,
-          "y": 0,
-          "w": 2,
-          "h": 2,
-          "minW": 2,
-          "minH": 2,
-          "moved": false,
-          "static": false
-        },
-        {
-          "i": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
-          "x": 6,
-          "y": 0,
-          "w": 2,
-          "h": 2,
-          "minW": 2,
-          "minH": 2,
-          "moved": false,
-          "static": false
-        },
-        {
-          "i": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
-          "x": 8,
-          "y": 0,
-          "w": 4,
-          "h": 2,
-          "minW": 2,
-          "minH": 2,
+          "y": 5,
+          "w": 12,
+          "h": 4,
+          "minW": 6,
+          "minH": 3,
           "moved": false,
           "static": false
         }
       ],
       "md": [
         {
-          "i": "sys-runs-table",
-          "x": 0,
-          "y": 15,
-          "w": 8,
-          "h": 5,
-          "minW": 6,
-          "minH": 3
-        },
-        {
-          "i": "total-runs-27d25b29-1b23-4306-be1d-8e1f56af09f3",
+          "i": "total-runs-708bdea0-ddcb-4d4d-a250-8a655baa281d",
           "x": 0,
           "y": 0,
           "w": 3,
@@ -117,7 +107,7 @@
           "minH": 2
         },
         {
-          "i": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
+          "i": "failed-runs-cf3aec1c-9fa9-4df2-a3f0-9a5fd71843c7",
           "x": 3,
           "y": 0,
           "w": 3,
@@ -126,7 +116,7 @@
           "minH": 2
         },
         {
-          "i": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
+          "i": "success-runs-98f56dfd-8215-4181-be2a-5c1aef03dee9",
           "x": 0,
           "y": 2,
           "w": 3,
@@ -135,7 +125,7 @@
           "minH": 2
         },
         {
-          "i": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
+          "i": "warning-runs-0054635c-ee07-440b-915d-b60c802df456",
           "x": 3,
           "y": 2,
           "w": 3,
@@ -144,27 +134,27 @@
           "minH": 2
         },
         {
-          "i": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
-          "x": 3,
+          "i": "pipeline-status-9490ee75-8e27-4faf-9c9d-0aa7e0491e26",
+          "x": 0,
           "y": 4,
-          "w": 3,
-          "h": 2,
-          "minW": 2,
-          "minH": 2
-        }
-      ],
-      "sm": [
-        {
-          "i": "sys-runs-table",
-          "x": 0,
-          "y": 21,
-          "w": 4,
-          "h": 5,
+          "w": 6,
+          "h": 4,
           "minW": 4,
           "minH": 3
         },
         {
-          "i": "total-runs-27d25b29-1b23-4306-be1d-8e1f56af09f3",
+          "i": "pipeline-runs-table-44a3bc46-e741-4e68-9577-0d6338a7893b",
+          "x": 0,
+          "y": 8,
+          "w": 8,
+          "h": 4,
+          "minW": 6,
+          "minH": 3
+        }
+      ],
+      "sm": [
+        {
+          "i": "total-runs-708bdea0-ddcb-4d4d-a250-8a655baa281d",
           "x": 0,
           "y": 0,
           "w": 3,
@@ -173,7 +163,7 @@
           "minH": 2
         },
         {
-          "i": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
+          "i": "failed-runs-cf3aec1c-9fa9-4df2-a3f0-9a5fd71843c7",
           "x": 0,
           "y": 2,
           "w": 3,
@@ -182,7 +172,7 @@
           "minH": 2
         },
         {
-          "i": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
+          "i": "success-runs-98f56dfd-8215-4181-be2a-5c1aef03dee9",
           "x": 0,
           "y": 4,
           "w": 3,
@@ -191,7 +181,7 @@
           "minH": 2
         },
         {
-          "i": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
+          "i": "warning-runs-0054635c-ee07-440b-915d-b60c802df456",
           "x": 0,
           "y": 6,
           "w": 3,
@@ -200,16 +190,25 @@
           "minH": 2
         },
         {
-          "i": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
+          "i": "pipeline-status-9490ee75-8e27-4faf-9c9d-0aa7e0491e26",
           "x": 0,
-          "y": 18,
-          "w": 3,
-          "h": 2,
-          "minW": 2,
-          "minH": 2
+          "y": 8,
+          "w": 4,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "pipeline-runs-table-44a3bc46-e741-4e68-9577-0d6338a7893b",
+          "x": 0,
+          "y": 12,
+          "w": 4,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
         }
       ]
     },
-    "updatedAt": "2026-04-20T16:53:20.092Z"
+    "updatedAt": "2026-04-20T21:02:56.130Z"
   }
 }
