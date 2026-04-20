@@ -438,10 +438,12 @@ export function DashboardCanvas({ dashboardId }: Props) {
               key={editMode ? "edit" : "view"}
               className="layout"
               layouts={layouts}
-              width={width ?? (typeof window !== "undefined" ? Math.max(window.innerWidth - 320, 800) : 1200)}
+              width={width ?? (typeof window !== "undefined" ? Math.max(window.innerWidth - (parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width") || "256") || 256) - 48, 600) : 1200)}
               breakpoints={{ lg: 768, md: 480, sm: 0 }}
               cols={{ lg: 12, md: 8, sm: 4 }}
               rowHeight={90}
+              containerPadding={[0, 0]}
+              margin={[16, 16]}
               compactor={verticalCompactor}
               onLayoutChange={handleLayoutChange}
               dragConfig={{ enabled: editMode, handle: ".drag-handle" }}

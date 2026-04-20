@@ -73,6 +73,9 @@ export function Sidebar() {
       "--sidebar-width",
       collapsed ? "64px" : "256px"
     );
+    // Trigger a resize event so react-grid-layout re-measures the container
+    // width after the sidebar expands or collapses.
+    window.dispatchEvent(new Event("resize"));
     if (!isAutoCollapsed) {
       localStorage.setItem("sidebar-collapsed", String(collapsed));
     }

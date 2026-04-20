@@ -19,6 +19,7 @@ import { EntityNode } from "./entity-node";
 import { NodeDetailPanel } from "./node-detail-panel";
 import { ChevronDown, Search, RotateCcw } from "lucide-react";
 import type { LineageHop } from "@/lib/adapters/types";
+import { SearchableSelect } from "./searchable-select";
 
 export { SearchableSelect } from "./searchable-select";
 export type { SearchableSelectProps } from "./searchable-select";

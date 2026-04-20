@@ -13,7 +13,7 @@ export default function DashboardLayout({
         <Sidebar />
         {/* paddingLeft tracks --sidebar-width, set by Sidebar via JS (LADR-013) */}
         <main
-          className="pb-16 md:pb-0 transition-all duration-200"
+          className="pb-16 md:pb-0 transition-[padding-left] duration-200"
           style={{ paddingLeft: "var(--sidebar-width, 256px)" }}
         >
           <div className="px-4 py-4 xl:px-6 xl:py-6 w-full min-w-0">{children}</div>

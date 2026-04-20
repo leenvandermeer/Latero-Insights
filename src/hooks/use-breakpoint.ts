@@ -25,7 +25,13 @@ function getBreakpoint(width: number): Breakpoint {
 }
 
 export function useBreakpoint() {
-  const [breakpoint, setBreakpoint] = useState<Breakpoint>("lg");
+  // Initialize with the actual viewport width on first client render to prevent
+  // a wrong initial breakpoint (e.g. "lg") causing a sidebar flash (LADR-013).
+  // Falls back to "xl" on SSR (safe desktop-first default).
+  const [breakpoint, setBreakpoint] = useState<Breakpoint>(() => {
+    if (typeof window === "undefined") return "xl";
+    return getBreakpoint(window.innerWidth);
+  });
 
   useEffect(() => {
     function update() {
