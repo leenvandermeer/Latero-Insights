@@ -20,7 +20,7 @@ const systemPipelinesLayout: ResponsiveLayouts = {
   lg: [
     { i: "sys-total-runs",      x: 0, y: 0,  w: 3,  h: 2, minW: 2, minH: 2 },
     { i: "sys-failed-runs",     x: 3, y: 0,  w: 3,  h: 2, minW: 2, minH: 2 },
-    { i: "sys-dataset-ov",      x: 6, y: 0,  w: 6,  h: 5, minW: 3, minH: 3 },
+    { i: "sys-dataset-ov",      x: 6, y: 0,  w: 6,  h: 4, minW: 3, minH: 2 },
     { i: "sys-pipeline-status", x: 0, y: 2,  w: 6,  h: 4, minW: 4, minH: 3 },
     { i: "sys-step-duration",   x: 0, y: 6,  w: 6,  h: 4, minW: 4, minH: 3 },
     { i: "sys-event-log",       x: 6, y: 5,  w: 6,  h: 4, minW: 3, minH: 3 },
@@ -31,7 +31,7 @@ const systemPipelinesLayout: ResponsiveLayouts = {
     { i: "sys-failed-runs",     x: 4, y: 0,  w: 4,  h: 2, minW: 2, minH: 2 },
     { i: "sys-pipeline-status", x: 0, y: 2,  w: 8,  h: 4, minW: 4, minH: 3 },
     { i: "sys-step-duration",   x: 0, y: 6,  w: 8,  h: 4, minW: 4, minH: 3 },
-    { i: "sys-dataset-ov",      x: 0, y: 10, w: 4,  h: 5, minW: 3, minH: 3 },
+    { i: "sys-dataset-ov",      x: 0, y: 10, w: 4,  h: 4, minW: 3, minH: 2 },
     { i: "sys-event-log",       x: 4, y: 10, w: 4,  h: 5, minW: 3, minH: 3 },
     { i: "sys-runs-table",      x: 0, y: 15, w: 8,  h: 5, minW: 6, minH: 3 },
   ],
@@ -39,7 +39,7 @@ const systemPipelinesLayout: ResponsiveLayouts = {
     { i: "sys-total-runs",      x: 0, y: 0,  w: 4, h: 2, minW: 2, minH: 2 },
     { i: "sys-failed-runs",     x: 0, y: 2,  w: 4, h: 2, minW: 2, minH: 2 },
     { i: "sys-pipeline-status", x: 0, y: 4,  w: 4, h: 4, minW: 4, minH: 3 },
-    { i: "sys-dataset-ov",      x: 0, y: 8,  w: 4, h: 5, minW: 3, minH: 3 },
+    { i: "sys-dataset-ov",      x: 0, y: 8,  w: 4, h: 4, minW: 3, minH: 2 },
     { i: "sys-step-duration",   x: 0, y: 13, w: 4, h: 4, minW: 4, minH: 3 },
     { i: "sys-event-log",       x: 0, y: 17, w: 4, h: 4, minW: 3, minH: 3 },
     { i: "sys-runs-table",      x: 0, y: 21, w: 4, h: 5, minW: 4, minH: 3 },
@@ -63,7 +63,7 @@ const systemQualityLayout: ResponsiveLayouts = {
     { i: "sys-bcbs239",        x: 8, y: 0, w: 4,  h: 2, minW: 2, minH: 2 },
     { i: "sys-dq-trend",       x: 0, y: 2, w: 6,  h: 4, minW: 4, minH: 3 },
     { i: "sys-severity-cat",   x: 6, y: 2, w: 6,  h: 4, minW: 4, minH: 3 },
-    { i: "sys-dataset-ov-q",   x: 0, y: 6, w: 4,  h: 5, minW: 3, minH: 3 },
+    { i: "sys-dataset-ov-q",   x: 0, y: 6, w: 4,  h: 4, minW: 3, minH: 2 },
     { i: "sys-dq-table",       x: 4, y: 6, w: 8,  h: 5, minW: 6, minH: 3 },
   ],
   md: [
@@ -72,7 +72,7 @@ const systemQualityLayout: ResponsiveLayouts = {
     { i: "sys-bcbs239",        x: 0, y: 2,  w: 4,  h: 2, minW: 2, minH: 2 },
     { i: "sys-dq-trend",       x: 0, y: 4,  w: 8,  h: 4, minW: 4, minH: 3 },
     { i: "sys-severity-cat",   x: 0, y: 8,  w: 8,  h: 4, minW: 4, minH: 3 },
-    { i: "sys-dataset-ov-q",   x: 0, y: 12, w: 4,  h: 5, minW: 3, minH: 3 },
+    { i: "sys-dataset-ov-q",   x: 0, y: 12, w: 4,  h: 4, minW: 3, minH: 2 },
     { i: "sys-dq-table",       x: 4, y: 12, w: 4,  h: 5, minW: 4, minH: 3 },
   ],
   sm: [
@@ -81,7 +81,7 @@ const systemQualityLayout: ResponsiveLayouts = {
     { i: "sys-bcbs239",        x: 0, y: 4,  w: 4, h: 2, minW: 2, minH: 2 },
     { i: "sys-dq-trend",       x: 0, y: 6,  w: 4, h: 4, minW: 4, minH: 3 },
     { i: "sys-severity-cat",   x: 0, y: 10, w: 4, h: 4, minW: 4, minH: 3 },
-    { i: "sys-dataset-ov-q",   x: 0, y: 14, w: 4, h: 5, minW: 3, minH: 3 },
+    { i: "sys-dataset-ov-q",   x: 0, y: 14, w: 4, h: 4, minW: 3, minH: 2 },
     { i: "sys-dq-table",       x: 0, y: 19, w: 4, h: 5, minW: 4, minH: 3 },
   ],
 };
@@ -103,7 +103,7 @@ const systemBcbs239Layout: ResponsiveLayouts = {
     { i: "sys-bcbs-failed",     x: 8, y: 0, w: 4,  h: 2, minW: 2, minH: 2 },
     { i: "sys-bcbs-dq-trend",   x: 0, y: 2, w: 6,  h: 4, minW: 4, minH: 3 },
     { i: "sys-bcbs-sev-cat",    x: 6, y: 2, w: 6,  h: 4, minW: 4, minH: 3 },
-    { i: "sys-bcbs-dataset-ov", x: 0, y: 6, w: 4,  h: 5, minW: 3, minH: 3 },
+    { i: "sys-bcbs-dataset-ov", x: 0, y: 6, w: 4,  h: 4, minW: 3, minH: 2 },
     { i: "sys-bcbs-dq-table",   x: 4, y: 6, w: 8,  h: 5, minW: 6, minH: 3 },
   ],
   md: [
@@ -112,7 +112,7 @@ const systemBcbs239Layout: ResponsiveLayouts = {
     { i: "sys-bcbs-failed",     x: 0, y: 2,  w: 4,  h: 2, minW: 2, minH: 2 },
     { i: "sys-bcbs-dq-trend",   x: 0, y: 4,  w: 8,  h: 4, minW: 4, minH: 3 },
     { i: "sys-bcbs-sev-cat",    x: 0, y: 8,  w: 8,  h: 4, minW: 4, minH: 3 },
-    { i: "sys-bcbs-dataset-ov", x: 0, y: 12, w: 4,  h: 5, minW: 3, minH: 3 },
+    { i: "sys-bcbs-dataset-ov", x: 0, y: 12, w: 4,  h: 4, minW: 3, minH: 2 },
     { i: "sys-bcbs-dq-table",   x: 4, y: 12, w: 4,  h: 5, minW: 4, minH: 3 },
   ],
   sm: [
@@ -121,7 +121,7 @@ const systemBcbs239Layout: ResponsiveLayouts = {
     { i: "sys-bcbs-failed",     x: 0, y: 4,  w: 4, h: 2, minW: 2, minH: 2 },
     { i: "sys-bcbs-dq-trend",   x: 0, y: 6,  w: 4, h: 4, minW: 4, minH: 3 },
     { i: "sys-bcbs-sev-cat",    x: 0, y: 10, w: 4, h: 4, minW: 4, minH: 3 },
-    { i: "sys-bcbs-dataset-ov", x: 0, y: 14, w: 4, h: 5, minW: 3, minH: 3 },
+    { i: "sys-bcbs-dataset-ov", x: 0, y: 14, w: 4, h: 4, minW: 3, minH: 2 },
     { i: "sys-bcbs-dq-table",   x: 0, y: 19, w: 4, h: 5, minW: 4, minH: 3 },
   ],
 };

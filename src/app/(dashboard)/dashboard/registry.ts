@@ -108,7 +108,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     type: "dataset-overview",
     label: "Dataset Health",
     description: "Compact scrollable overview of all datasets with DQ status, lineage depth and last run time",
-    defaultSize: { w: 4, h: 5, minW: 3, minH: 3 },
+    defaultSize: { w: 4, h: 4, minW: 3, minH: 2 },
     component: DatasetOverviewWidget,
   },
 ];
