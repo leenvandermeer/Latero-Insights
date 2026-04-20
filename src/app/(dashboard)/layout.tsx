@@ -9,13 +9,14 @@ export default function DashboardLayout({
 }) {
   return (
     <DashboardProvider>
-      <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
+      <div className="min-h-screen overflow-x-hidden" style={{ background: "var(--color-bg)" }}>
         <Sidebar />
+        {/* paddingLeft tracks --sidebar-width, set by Sidebar via JS (LADR-013) */}
         <main
           className="pb-16 md:pb-0 transition-all duration-200"
           style={{ paddingLeft: "var(--sidebar-width, 256px)" }}
         >
-          <div className="px-6 py-6 w-full">{children}</div>
+          <div className="px-4 py-4 xl:px-6 xl:py-6 w-full min-w-0">{children}</div>
         </main>
         <BottomNav />
       </div>

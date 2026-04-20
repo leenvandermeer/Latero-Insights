@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useDashboards } from "@/contexts/dashboard-context";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
+import { useBreakpoint } from "@/hooks";
 
 const SYSTEM_NAV = [
   { label: "Pipelines",    href: "/pipelines",    icon: Activity },
@@ -44,27 +45,52 @@ export function Sidebar() {
   const [lineageOpen, setLineageOpen] = useState(true);
   const [newDashOpen, setNewDashOpen] = useState(false);
   const { userDashboards, deleteDash } = useDashboards();
+  const { isTablet, isSmallDesktop } = useBreakpoint();
+  // isTablet      = 768–1023px: always collapsed, no expand button
+  // isSmallDesktop = 1024–1279px: collapsed by default, user can expand
+  // neither        = ≥1280px: expanded by default, user can collapse (LADR-013)
+  const isAutoCollapsed = isTablet || isSmallDesktop;
 
+  // Init theme from localStorage
   useEffect(() => {
     const stored = (localStorage.getItem("theme") as "light" | "dark") ?? "light";
     setTheme(stored);
-    const storedCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
-    setCollapsed(storedCollapsed);
   }, []);
 
+  // LINS-011 / LADR-013: auto-collapse at <1280px; restore user preference at ≥1280px
+  useEffect(() => {
+    if (isAutoCollapsed) {
+      setCollapsed(true);
+    } else {
+      const storedCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
+      setCollapsed(storedCollapsed);
+    }
+  }, [isAutoCollapsed]);
+
+  // Sync --sidebar-width CSS var; persist preference only at ≥1280px
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--sidebar-width",
       collapsed ? "64px" : "256px"
     );
-    localStorage.setItem("sidebar-collapsed", String(collapsed));
-  }, [collapsed]);
+    if (!isAutoCollapsed) {
+      localStorage.setItem("sidebar-collapsed", String(collapsed));
+    }
+  }, [collapsed, isAutoCollapsed]);
 
   const toggleTheme = () => {
     const next = theme === "light" ? "dark" : "light";
     setTheme(next);
     localStorage.setItem("theme", next);
     document.documentElement.setAttribute("data-theme", next);
+  };
+
+  const handleCollapseToggle = (next: boolean) => {
+    setCollapsed(next);
+    // Persist only at ≥1280px; smaller viewports are viewport-driven (LADR-013)
+    if (!isAutoCollapsed) {
+      localStorage.setItem("sidebar-collapsed", String(next));
+    }
   };
 
   const handleDeleteDash = (e: React.MouseEvent, id: string) => {
@@ -101,12 +127,21 @@ export function Sidebar() {
                   <p className="text-xs leading-none mt-0.5 truncate" style={{ color: "var(--color-text-subtle)" }}>Meta Insights</p>
                 </div>
               </Link>
-              <button onClick={() => setCollapsed(true)} className="p-1.5 rounded-md" style={{ color: "var(--color-sidebar-muted)" }} aria-label="Collapse">
-                <ChevronLeft className="h-4 w-4" />
-              </button>
+              {/* Hide collapse button at md (768–1023px): sidebar is always collapsed there */}
+              {!isTablet && (
+                <button onClick={() => handleCollapseToggle(true)} className="p-1.5 rounded-md" style={{ color: "var(--color-sidebar-muted)" }} aria-label="Collapse">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              )}
             </div>
           ) : (
-            <button onClick={() => setCollapsed(false)} className="mx-auto flex items-center justify-center w-8 h-8 rounded-md" style={{ color: "var(--color-brand, #1B3B6B)" }} aria-label="Expand">
+            <button
+              onClick={() => handleCollapseToggle(false)}
+              className="mx-auto flex items-center justify-center w-8 h-8 rounded-md"
+              style={{ color: "var(--color-brand, #1B3B6B)", cursor: "pointer" }}
+              aria-label="Expand"
+              title="Expand sidebar"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo/latero-mark-light.svg" alt="Latero" width={22} height={22} />
             </button>

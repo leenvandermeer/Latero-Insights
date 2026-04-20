@@ -13,7 +13,7 @@ import { isNoDataError } from "@/lib/api";
 import { TableSkeleton } from "@/components/ui/loading-skeleton";
 import { RunEventCard } from "./run-event-card";
 import { JsonDrawer } from "./json-drawer";
-import { SearchableSelect } from "@/app/(dashboard)/lineage/lineage-canvas";
+import { SearchableSelect } from "@/app/(dashboard)/lineage/searchable-select";
 import { Search } from "lucide-react";
 import type { LineageHop } from "@/lib/adapters/types";
 

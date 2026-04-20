@@ -6,6 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+### Changed
+- LINS-011 updated (LADR-013): sidebar auto-expand threshold raised from 1024px to 1280px for better content width on common laptop resolutions (1024–1279px now collapses by default, user can expand)
+- `useBreakpoint` gains `isSmallDesktop` flag (1024–1279px)
+- Sidebar viewport-reactive collapse logic updated to match new thresholds
+- Dashboard layout padding adjusted: `xl:px-6` instead of `lg:px-6`
+- `overflow-x-hidden` added to root layout to prevent horizontal overflow
+
 ## [0.1.0] — 2026-04-20
 
 ### Added

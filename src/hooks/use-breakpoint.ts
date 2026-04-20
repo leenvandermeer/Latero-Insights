@@ -40,7 +40,10 @@ export function useBreakpoint() {
     breakpoint,
     isMobile: breakpoint === "sm",
     isTablet: breakpoint === "md",
-    isDesktop: breakpoint === "lg" || breakpoint === "xl" || breakpoint === "2xl" || breakpoint === "3xl" || breakpoint === "4k",
+    // 1024–1279px: sidebar collapsed by default, user can expand (LADR-013)
+    isSmallDesktop: breakpoint === "lg",
+    // ≥1280px: sidebar expanded by default (LADR-013)
+    isDesktop: breakpoint === "xl" || breakpoint === "2xl" || breakpoint === "3xl" || breakpoint === "4k",
     isWide: breakpoint === "2xl" || breakpoint === "3xl" || breakpoint === "4k",
     is4k: breakpoint === "4k",
   };

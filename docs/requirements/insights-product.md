@@ -182,14 +182,17 @@ The following breakpoints MUST be used:
 
 ### LINS-011 — Adaptive Navigation
 
-Navigation MUST adapt between desktop sidebar, tablet compact sidebar, and
+*Updated by [LADR-013](../decisions/20260420-adaptive-nav-breakpoint.md) — threshold raised from 1024px to 1280px.*
+
+Navigation MUST adapt between desktop sidebar, compact sidebar, and
 mobile bottom navigation with top bar.
 
-| Viewport     | Navigation style                                               |
-|--------------|---------------------------------------------------------------|
-| ≥ 1024px     | Sidebar: expanded (260px) with icon + label, collapsible to 64px (icon only) |
-| 768px–1023px | Sidebar: always collapsed (64px, icons only); overlay expand on long-press or swipe |
-| < 768px      | Bottom navigation bar (5 items, 44px touch targets) + top bar (56px) with logo, notification icon, and hamburger menu |
+| Viewport | Navigation style | User control |
+|----------|-----------------|-------------|
+| ≥ 1280px | Sidebar expanded (256px), icon + label | Collapsible; preference persisted |
+| 1024px–1279px | Sidebar collapsed (64px, icons only) | User MAY expand manually |
+| 768px–1023px | Sidebar always collapsed (64px, icons only) | No expand; viewport-forced |
+| < 768px | Bottom navigation bar (5 items, 44px touch targets) + top bar (56px) | N/A |
 
 **Desktop sidebar footer** MUST show user avatar (32px circle) and dark mode
 toggle. **Mobile hamburger menu** MUST open a full-screen overlay with all

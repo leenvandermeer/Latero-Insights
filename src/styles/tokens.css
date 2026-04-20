@@ -223,7 +223,7 @@
    8. LAYOUT
    ---------------------------------------------------------------- */
 :root {
-  --sidebar-width:          260px;
+  --sidebar-width:          256px;
   --sidebar-collapsed:      64px;
   --topbar-height:          56px;
   --bottomnav-height:       64px;
