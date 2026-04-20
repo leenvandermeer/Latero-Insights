@@ -536,7 +536,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
               width={gridWidth ?? 1280}
               breakpoints={{ lg: 768, md: 480, sm: 0 }}
               cols={{ lg: 12, md: 8, sm: 4 }}
-              rowHeight={90}
+              rowHeight={72}
               containerPadding={[0, 0]}
               margin={[16, 16]}
               compactor={verticalCompactor}
