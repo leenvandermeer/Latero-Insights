@@ -16,6 +16,7 @@ import {
   detachSharedWidget,
   SYSTEM_DASHBOARD_DEFS,
 } from "@/lib/dashboard-store";
+import type { SystemOverride } from "@/app/api/dashboards/system/route";
 
 interface DashboardContextValue {
   store: DashboardStoreData;
@@ -30,6 +31,11 @@ interface DashboardContextValue {
   deleteDash: (id: string) => void;
   resetDash: (id: string) => void;
   duplicateDash: (id: string) => Dashboard;
+
+  // System dashboard publish/reset
+  publishSystemDashboard: (id: string, widgets: WidgetSlot[], layout: ResponsiveLayouts) => Promise<void>;
+  resetSystemOverride: (id: string) => Promise<void>;
+  systemOverrides: Record<string, SystemOverride>;
 
   // Widget mutations within a dashboard
   updateDashboardContent: (id: string, widgets: WidgetSlot[], layout: ResponsiveLayouts) => void;
@@ -55,10 +61,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     activeId: null,
   }));
   const [mounted, setMounted] = useState(false);
+  const [systemOverrides, setSystemOverrides] = useState<Record<string, SystemOverride>>({});
 
   useEffect(() => {
     setStore(loadStore());
     setMounted(true);
+    // Load server-side system dashboard overrides
+    fetch("/api/dashboards/system")
+      .then((r) => r.json())
+      .then((data) => setSystemOverrides(data as Record<string, SystemOverride>))
+      .catch(() => {});
   }, []);
 
   const getDashboardById = useCallback(
@@ -141,9 +153,36 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const systemDashboards = Object.values(SYSTEM_DASHBOARD_DEFS).map(
-    (def) => getDashboard(store, def.id) ?? def
-  );
+  const publishSystemDashboard = useCallback(async (id: string, widgets: WidgetSlot[], layout: ResponsiveLayouts) => {
+    const res = await fetch("/api/dashboards/system", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, widgets, layout }),
+    });
+    if (!res.ok) throw new Error("Failed to publish system dashboard");
+    const override = await res.json() as SystemOverride;
+    setSystemOverrides((prev) => ({ ...prev, [id]: override }));
+  }, []);
+
+  const resetSystemOverride = useCallback(async (id: string) => {
+    await fetch(`/api/dashboards/system?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    setSystemOverrides((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    // Also reset local store snapshot
+    setStore((prev) => resetSystemDashboard(prev, id));
+  }, []);
+
+  // Merge system dashboard defs with server-side overrides
+  const systemDashboards = Object.values(SYSTEM_DASHBOARD_DEFS).map((def) => {
+    const override = systemOverrides[def.id];
+    if (override) {
+      return { ...def, widgets: override.widgets, layout: override.layout };
+    }
+    return getDashboard(store, def.id) ?? def;
+  });
   const userDashboards = mounted
     ? store.dashboards.filter((d) => !d.id.startsWith("system:"))
     : [];
@@ -160,6 +199,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     resetDash,
     duplicateDash,
     updateDashboardContent,
+    publishSystemDashboard,
+    resetSystemOverride,
+    systemOverrides,
     customWidgets: store.customWidgets,
     saveCustomWidget,
     deleteCustomWidget: deleteCustomWidgetFn,

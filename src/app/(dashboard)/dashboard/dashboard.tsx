@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { ResponsiveGridLayout, verticalCompactor, type LayoutItem, type ResponsiveLayouts } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
-import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2, Check, MoreHorizontal, Sparkles, ChevronDown, Plus } from "lucide-react";
+import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2, Check, MoreHorizontal, Sparkles, ChevronDown, Plus, Globe } from "lucide-react";
 import { useDateRange } from "@/hooks";
 import { DateRangePicker, Button } from "@/components/ui";
 import { useDashboards } from "@/contexts/dashboard-context";
@@ -39,9 +39,11 @@ function layoutsEqual(a: ResponsiveLayouts, b: ResponsiveLayouts): boolean {
 }
 
 export function DashboardCanvas({ dashboardId }: Props) {
-  const { getDashboardById, updateDashboardContent, renameDash, deleteDash, resetDash, duplicateDash, systemDashboards, userDashboards } = useDashboards();
+  const { getDashboardById, updateDashboardContent, renameDash, deleteDash, resetDash, duplicateDash, systemDashboards, userDashboards, publishSystemDashboard, resetSystemOverride, systemOverrides } = useDashboards();
   const { from, to, setRange } = useDateRange();
   const [editMode, setEditMode] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishDone, setPublishDone] = useState(false);
   const [configTarget, setConfigTarget] = useState<WidgetSlot | null>(null);
   const [draggingWidget, setDraggingWidget] = useState<{ type: string; size: { w: number; h: number }; customWidgetId?: string } | null>(null);
   const [editingName, setEditingName] = useState(false);
@@ -185,6 +187,25 @@ export function DashboardCanvas({ dashboardId }: Props) {
     setEditingName(false);
   };
 
+  const hasOverride = Boolean(systemOverrides[dashboardId]);
+
+  const handlePublish = async () => {
+    setPublishing(true);
+    try {
+      await publishSystemDashboard(dashboardId, widgets, layouts);
+      setPublishDone(true);
+      setEditMode(false);
+      setTimeout(() => setPublishDone(false), 3000);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleResetOverride = async () => {
+    await resetSystemOverride(dashboardId);
+    setMenuOpen(false);
+  };
+
   if (!mounted || !dashboard) return null;
 
   const isSystem = dashboard.isSystem;
@@ -317,58 +338,90 @@ export function DashboardCanvas({ dashboardId }: Props) {
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
               <DateRangePicker from={from} to={to} onChange={setRange} />
 
-              {!isSystem && (
-                <Button variant="primary" onClick={() => { setEditMode(true); setPickerOpen(true); }}>
+              {/* Publish success badge */}
+              {publishDone && (
+                <span
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium"
+                  style={{ background: "rgba(34,197,94,0.12)", color: "#16a34a" }}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Gepubliceerd
+                </span>
+              )}
+
+              {/* Add Widget button — available for all dashboards in edit mode */}
+              {editMode && (
+                <Button variant="primary" onClick={() => setPickerOpen(true)}>
                   <Plus className="h-4 w-4" />
-                  Add Widget
+                  Widget toevoegen
                 </Button>
               )}
 
-              {!editMode && !isSystem && (
+              {/* Edit button — available for all dashboards */}
+              {!editMode && (
                 <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} style={{ padding: "0.5rem 0.75rem" }}>
                   <Pencil className="h-4 w-4" />
-                  <span className="hidden sm:inline">Edit</span>
+                  <span className="hidden sm:inline">Aanpassen</span>
                 </Button>
               )}
 
+              {/* Done / Publish button in edit mode */}
               {editMode && (
-                <Button variant="secondary" onClick={() => { setEditMode(false); setPendingRemove(null); setConfigTarget(null); }}>
-                  <Check className="h-4 w-4" />
-                  Done
-                </Button>
+                isSystem ? (
+                  <Button
+                    variant="primary"
+                    onClick={handlePublish}
+                    disabled={publishing}
+                  >
+                    <Globe className="h-4 w-4" />
+                    {publishing ? "Publiceren…" : "Publiceer voor iedereen"}
+                  </Button>
+                ) : (
+                  <Button variant="secondary" onClick={() => { setEditMode(false); setPendingRemove(null); setConfigTarget(null); }}>
+                    <Check className="h-4 w-4" />
+                    Klaar
+                  </Button>
+                )
               )}
 
               {!editMode && (
-                <>
-                  <div className="relative">
-                    <Button variant="ghost" size="sm" onClick={() => setMenuOpen((v) => !v)} style={{ padding: "0.5rem" }}>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                    {menuOpen && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                        <div
-                          className="absolute right-0 top-full mt-1 w-44 rounded-xl py-1 z-20"
-                          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown, 0 8px 24px rgba(27,59,107,0.12))" }}
-                        >
-                          <button onClick={() => { duplicateDash(dashboardId); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
-                            <Copy className="h-4 w-4" /> Duplicate
+                <div className="relative">
+                  <Button variant="ghost" size="sm" onClick={() => setMenuOpen((v) => !v)} style={{ padding: "0.5rem" }}>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                      <div
+                        className="absolute right-0 top-full mt-1 w-52 rounded-xl py-1 z-20"
+                        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown, 0 8px 24px rgba(27,59,107,0.12))" }}
+                      >
+                        <button onClick={() => { duplicateDash(dashboardId); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
+                          <Copy className="h-4 w-4" /> Duplicate
+                        </button>
+                        {isSystem && hasOverride && (
+                          <button onClick={handleResetOverride} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-error, #dc2626)" }}>
+                            <RotateCcw className="h-4 w-4" /> Reset naar standaard
                           </button>
-                          {isSystem && (
-                            <button onClick={() => { resetDash(dashboardId); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
-                              <RotateCcw className="h-4 w-4" /> Reset to default
-                            </button>
-                          )}
-                          {!isSystem && (
-                            <button onClick={() => { setSettingsOpen(true); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
-                              <Settings2 className="h-4 w-4" /> Settings
-                            </button>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </>
+                        )}
+                        {!isSystem && (
+                          <button onClick={() => { setSettingsOpen(true); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
+                            <Settings2 className="h-4 w-4" /> Settings
+                          </button>
+                        )}
+                        {!isSystem && (
+                          <button
+                            onClick={() => { if (confirm(`Dashboard "${dashboard.name}" verwijderen?`)) { deleteDash(dashboardId); router.push("/pipelines"); } setMenuOpen(false); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]"
+                            style={{ color: "var(--color-error, #dc2626)" }}
+                          >
+                            <Trash2 className="h-4 w-4" /> Verwijderen
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -379,33 +432,61 @@ export function DashboardCanvas({ dashboardId }: Props) {
           <div
             className="flex items-center justify-between rounded-xl px-4 py-2.5 text-sm"
             style={{
-              background: "rgba(200,137,42,0.08)",
-              border: "1px solid var(--color-accent)",
-              color: "var(--color-accent)",
+              background: isSystem ? "rgba(99,102,241,0.08)" : "rgba(200,137,42,0.08)",
+              border: isSystem ? "1px solid rgba(99,102,241,0.4)" : "1px solid var(--color-accent)",
+              color: isSystem ? "rgb(99,102,241)" : "var(--color-accent)",
             }}
           >
             <span className="flex items-center gap-2">
-              <Pencil className="h-3.5 w-3.5 shrink-0" />
-              <span className="font-medium">Editing layout</span>
-              <span className="text-xs opacity-70 hidden sm:inline">— drag to reorder · resize from corner · configure with ⚙</span>
+              {isSystem ? <Globe className="h-3.5 w-3.5 shrink-0" /> : <Pencil className="h-3.5 w-3.5 shrink-0" />}
+              <span className="font-medium">{isSystem ? "Systeem dashboard aanpassen" : "Layout bewerken"}</span>
+              <span className="text-xs opacity-70 hidden sm:inline">
+                {isSystem
+                  ? "— wijzigingen zijn zichtbaar voor alle gebruikers na publicatie"
+                  : "— drag to reorder · resize from corner · configure with ⚙"}
+              </span>
             </span>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPickerOpen(true)}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium"
-                style={{ background: "var(--color-accent)", color: "#fff" }}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add Widget
-              </button>
-              <button
-                onClick={() => { setEditMode(false); setPendingRemove(null); setConfigTarget(null); }}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium border"
-                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
-              >
-                <Check className="h-3.5 w-3.5" />
-                Done
-              </button>
+              {isSystem ? (
+                <>
+                  <button
+                    onClick={() => { setEditMode(false); setPendingRemove(null); setConfigTarget(null); }}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium border"
+                    style={{ borderColor: "rgba(99,102,241,0.4)", color: "rgb(99,102,241)" }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Annuleren
+                  </button>
+                  <button
+                    onClick={handlePublish}
+                    disabled={publishing}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium"
+                    style={{ background: "rgb(99,102,241)", color: "#fff", opacity: publishing ? 0.7 : 1 }}
+                  >
+                    <Globe className="h-3.5 w-3.5" />
+                    {publishing ? "Publiceren…" : "Publiceer voor iedereen"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setPickerOpen(true)}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium"
+                    style={{ background: "var(--color-accent)", color: "#fff" }}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Widget toevoegen
+                  </button>
+                  <button
+                    onClick={() => { setEditMode(false); setPendingRemove(null); setConfigTarget(null); }}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium border"
+                    style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    Klaar
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
