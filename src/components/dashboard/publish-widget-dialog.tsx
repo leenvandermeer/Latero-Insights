@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Globe } from "lucide-react";
+import { Globe, ChevronLeft, ChevronRight } from "lucide-react";
 import { usePublishWidget } from "@/hooks/use-shared-widgets";
 import type { CustomWidget } from "@/types/dashboard";
 
@@ -15,6 +15,7 @@ export function PublishWidgetDialog({ widget, onClose, onPublished }: PublishWid
   const [label, setLabel] = useState(widget?.label ?? "");
   const [description, setDescription] = useState(widget?.description ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
   const { mutateAsync: publish, isPending } = usePublishWidget();
 
   if (!widget) return null;
@@ -38,100 +39,133 @@ export function PublishWidgetDialog({ widget, onClose, onPublished }: PublishWid
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+    <>
+      {/* Backdrop — hidden when collapsed */}
+      {!collapsed && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Drawer */}
       <div
-        className="relative w-full max-w-md rounded-2xl p-6 space-y-5"
+        className="fixed top-0 right-0 h-full z-50 flex flex-col"
         style={{
+          width: collapsed ? 36 : 320,
           background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          boxShadow: "var(--shadow-elevated, 0 24px 48px rgba(27,59,107,0.18))",
+          borderLeft: "1px solid var(--color-border)",
+          boxShadow: "var(--shadow-drawer)",
+          transition: "width 0.3s ease-in-out",
+          animation: "slideInRight 0.2s ease-out",
+          overflow: "hidden",
         }}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="rounded-lg p-2" style={{ background: "rgba(200,137,42,0.1)" }}>
-              <Globe className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          className="absolute -left-3.5 top-6 z-10 flex h-7 w-7 items-center justify-center rounded-full"
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text-muted)",
+            boxShadow: "var(--shadow-sm)",
+          }}
+          title={collapsed ? "Uitklappen" : "Inklappen"}
+        >
+          {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        </button>
+
+        {!collapsed && (
+          <>
+            {/* Header */}
+            <div
+              className="flex items-center gap-2 px-4 py-4 shrink-0"
+              style={{ borderBottom: "1px solid var(--color-border)" }}
+            >
+              <div className="rounded-lg p-2" style={{ background: "rgba(200,137,42,0.1)" }}>
+                <Globe className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+              </div>
+              <h2 className="font-display font-semibold text-base flex-1" style={{ color: "var(--color-text)" }}>
+                Publish to library
+              </h2>
             </div>
-            <h2 className="font-display font-semibold text-base" style={{ color: "var(--color-text)" }}>
-              Publish to library
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
 
-        <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-          This widget will appear in the <strong style={{ color: "var(--color-text)" }}>Shared</strong> section
-          of the widget library and be available to all dashboards in this deployment.
-        </p>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                This widget will appear in the <strong style={{ color: "var(--color-text)" }}>Shared</strong> section
+                of the widget library and be available to all dashboards in this deployment.
+              </p>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            Name <span style={{ color: "var(--color-error)" }}>*</span>
-          </label>
-          <input
-            autoFocus
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handlePublish()}
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-            style={{
-              background: "var(--color-card)",
-              borderColor: "var(--color-border)",
-              color: "var(--color-text)",
-            }}
-          />
-        </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
+                  Name <span style={{ color: "var(--color-error)" }}>*</span>
+                </label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handlePublish()}
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                  style={{
+                    background: "var(--color-bg)",
+                    borderColor: "var(--color-border)",
+                    color: "var(--color-text)",
+                  }}
+                />
+              </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            Description
-          </label>
-          <input
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Optional — shown in palette"
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-            style={{
-              background: "var(--color-card)",
-              borderColor: "var(--color-border)",
-              color: "var(--color-text)",
-            }}
-          />
-        </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Optional — shown in palette"
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                  style={{
+                    background: "var(--color-bg)",
+                    borderColor: "var(--color-border)",
+                    color: "var(--color-text)",
+                  }}
+                />
+              </div>
 
-        {error && (
-          <p className="text-xs rounded-lg px-3 py-2" style={{ background: "rgba(239,68,68,0.08)", color: "var(--color-error, #EF4444)" }}>
-            {error}
-          </p>
+              {error && (
+                <p className="text-xs rounded-lg px-3 py-2" style={{ background: "rgba(239,68,68,0.08)", color: "var(--color-error, #EF4444)" }}>
+                  {error}
+                </p>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div
+              className="flex gap-2 px-4 py-4 shrink-0"
+              style={{ borderTop: "1px solid var(--color-border)" }}
+            >
+              <button
+                onClick={() => { setCollapsed(false); onClose(); }}
+                className="flex-1 rounded-lg py-2 text-sm font-medium"
+                style={{ background: "var(--color-sidebar-hover)", color: "var(--color-text-muted)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={!label.trim() || isPending}
+                className="flex-1 rounded-lg py-2 text-sm font-medium transition-opacity disabled:opacity-40"
+                style={{ background: "var(--color-accent)", color: "#fff" }}
+              >
+                {isPending ? "Publishing…" : "Publish"}
+              </button>
+            </div>
+          </>
         )}
-
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-lg py-2 text-sm font-medium"
-            style={{ background: "var(--color-sidebar-hover)", color: "var(--color-text-muted)" }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handlePublish}
-            disabled={!label.trim() || isPending}
-            className="flex-1 rounded-lg py-2 text-sm font-medium transition-opacity disabled:opacity-40"
-            style={{ background: "var(--color-accent)", color: "#fff" }}
-          >
-            {isPending ? "Publishing…" : "Publish"}
-          </button>
-        </div>
       </div>
-    </div>
+    </>
   );
 }

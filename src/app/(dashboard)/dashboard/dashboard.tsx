@@ -247,7 +247,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                   <button onClick={saveName} className="p-1 rounded" style={{ color: "var(--color-accent)" }}><Check className="h-4 w-4" /></button>
                 </div>
               ) : (
-                <div className="relative">
+                <div className="relative group/title">
                   <button
                     onClick={() => setDashPickerOpen((v) => !v)}
                     className="group flex items-center gap-1.5 text-left"
@@ -264,6 +264,16 @@ export function DashboardCanvas({ dashboardId }: Props) {
                       style={{ color: "var(--color-text-muted)", transform: dashPickerOpen ? "rotate(180deg)" : "rotate(0deg)", marginTop: 4 }}
                     />
                   </button>
+                  {!isSystem && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDashPickerOpen(false); setEditingName(true); setNameInput(dashboard.name); }}
+                      className="absolute -right-7 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover/title:opacity-100 transition-opacity"
+                      style={{ color: "var(--color-text-subtle)" }}
+                      title="Naam bewerken"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )}
 
                   {dashPickerOpen && (
                     <>
@@ -305,7 +315,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                         )}
 
                         <div className="my-1 mx-3" style={{ borderTop: "1px solid var(--color-border)" }} />
-                        <button onClick={() => { setNewDashOpen(true); setDashPickerOpen(false); }}
+                        <button onClick={() => { setNewDashOpen(true); setSettingsOpen(false); setDashPickerOpen(false); }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--color-sidebar-hover)]"
                           style={{ color: "var(--color-accent)" }}>
                           <Plus className="h-3.5 w-3.5 shrink-0" />
@@ -396,7 +406,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                           </button>
                         )}
                         {!isSystem && (
-                          <button onClick={() => { setSettingsOpen(true); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
+                          <button onClick={() => { setSettingsOpen(true); setNewDashOpen(false); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
                             <Settings2 className="h-4 w-4" /> Settings
                           </button>
                         )}

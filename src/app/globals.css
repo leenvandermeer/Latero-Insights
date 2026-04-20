@@ -76,7 +76,7 @@
   --color-sidebar:              #0A1628;
   --color-sidebar-border:       #1E3050;
   --color-sidebar-foreground:   #F0EBE0;
-  --color-sidebar-muted:        #7A8FA8;
+  --color-sidebar-muted:        #A0B5CC;
   --color-sidebar-active-bg:    #1A2A40;
   --color-sidebar-active-text:  #D4A840;
   --color-sidebar-hover:        #142038;
@@ -217,4 +217,9 @@ h1, h2, .font-display {
 @keyframes slideInRight {
   from { transform: translateX(100%); }
   to   { transform: translateX(0); }
+}
+
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }

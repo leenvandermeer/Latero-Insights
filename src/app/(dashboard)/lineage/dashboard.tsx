@@ -159,7 +159,7 @@ export function LineageDashboard() {
                   : "Run history — filtered by date range"
                 }
               >
-                {mode === "history" ? "Run History" : mode === "canonical" ? "Current Structure" : "Pipeline Chain"}
+                {mode === "history" ? "By Run" : mode === "canonical" ? "Latest" : "Full Chain"}
               </button>
             ))}
           </div>
