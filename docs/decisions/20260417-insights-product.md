@@ -61,7 +61,7 @@ Key decisions:
   notifications, lineage enhancements, BCBS239 drilldown, dark mode, local
   dev) and LINS-080–LINS-085 (design system) based on the completed UX design.
 - LINS-046 (Snowflake) is deferred to future scope.
-- The meta table contract (`latero/docs/requirements/meta-table-contract.md`)
+- The meta table contract (`docs/requirements/meta-table-contract.md`)
   becomes a dependency for the Insights query layer.
 - Changes to meta table column names or types must consider Insights
   compatibility.

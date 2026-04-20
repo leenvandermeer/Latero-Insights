@@ -1,5 +1,6 @@
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { createHash, randomUUID } from "crypto";
 
 // --- Config ---
 
