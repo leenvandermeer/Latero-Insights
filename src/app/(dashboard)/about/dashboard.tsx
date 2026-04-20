@@ -105,13 +105,13 @@ export function AboutDashboard() {
       <div className="flex items-center justify-between rounded-xl px-5 py-3 text-xs" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
         <span>Latero Meta Data Control Framework & Latero Meta Insights</span>
         <a
-          href="https://latero.io"
+          href="https://latero.nl"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 hover:underline"
           style={{ color: "var(--color-accent)" }}
         >
-          latero.io <ExternalLink className="h-3 w-3" />
+          latero.nl <ExternalLink className="h-3 w-3" />
         </a>
       </div>
     </div>

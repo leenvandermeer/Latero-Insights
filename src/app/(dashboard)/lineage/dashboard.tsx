@@ -53,7 +53,7 @@ export function LineageDashboard() {
       job: { namespace: "latero", name: ev.job },
       inputs: ev.inputs.map(ref => ({ namespace: "latero", name: ref })),
       outputs: ev.outputs.map(ref => ({ namespace: "latero", name: ref })),
-      producer: "https://latero.io",
+      producer: "https://latero.nl",
       schemaURL: "https://openlineage.io/spec/1-0-5/OpenLineage.json",
     }));
 
