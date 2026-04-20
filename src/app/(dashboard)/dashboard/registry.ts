@@ -7,6 +7,8 @@ import { SeverityCategoryWidget } from "./widgets/severity-category-widget";
 import { StepDurationWidget } from "./widgets/step-duration-widget";
 import { Bcbs239ScoreWidget } from "./widgets/bcbs239-score-widget";
 import { FailedRunsWidget } from "./widgets/failed-runs-widget";
+import { SuccessRunsWidget } from "./widgets/success-runs-widget";
+import { WarningRunsWidget } from "./widgets/warning-runs-widget";
 import { PipelineRunsTableWidget } from "./widgets/pipeline-runs-table-widget";
 import { DqChecksTableWidget } from "./widgets/dq-checks-table-widget";
 import { EventLogWidget } from "./widgets/event-log-widget";
@@ -40,6 +42,20 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     description: "Count of FAILED pipeline runs in the selected period",
     defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
     component: FailedRunsWidget,
+  },
+  {
+    type: "success-runs",
+    label: "Successful Runs",
+    description: "Count of SUCCESS pipeline runs in the selected period",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: SuccessRunsWidget,
+  },
+  {
+    type: "warning-runs",
+    label: "Warning Runs",
+    description: "Count of WARNING pipeline runs in the selected period",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: WarningRunsWidget,
   },
   {
     type: "pass-rate",
