@@ -570,58 +570,54 @@ export function DashboardCanvas({ dashboardId }: Props) {
                     {/* Controls — only visible in edit mode */}
                     <div
                       className={cn(
-                        "absolute inset-x-0 top-0 z-10 flex items-center justify-between px-2 py-1 transition-opacity",
+                        "absolute inset-x-0 top-0 z-10 flex items-center justify-end gap-1 px-2 py-1 transition-opacity",
                         editMode
                           ? "opacity-100 pointer-events-auto"
                           : "opacity-0 pointer-events-none"
                       )}
                       style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, transparent 100%)" }}
                     >
+                      <div className="drag-handle cursor-grab active:cursor-grabbing rounded p-1" style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }} title="Verplaatsen">
+                        <GripVertical className="h-3.5 w-3.5" />
+                      </div>
                       <button
                         onClick={() => setConfigTarget(w)}
                         className="rounded p-1"
                         style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }}
-                        title="Configure"
+                        title="Instellingen"
                       >
                         <Settings2 className="h-3.5 w-3.5" />
                       </button>
-                      <div className="flex items-center gap-1">
-                        {editMode && (
-                          <div className="drag-handle cursor-grab active:cursor-grabbing rounded p-1" style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }} title="Drag">
-                            <GripVertical className="h-3.5 w-3.5" />
-                          </div>
-                        )}
-                        {pendingRemove === w.instanceId ? (
-                          <>
-                            <button
-                              ref={(el) => { if (el) el.focus(); }}
-                              onClick={() => { removeWidget(w.instanceId); setPendingRemove(null); }}
-                              className="rounded p-1 text-xs font-medium"
-                              style={{ color: "#fff", background: "var(--color-error, #EF4444)" }}
-                              title="Confirm remove"
-                            >
-                              <Check className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setPendingRemove(null)}
-                              className="rounded p-1"
-                              style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }}
-                              title="Cancel"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </>
-                        ) : (
+                      {pendingRemove === w.instanceId ? (
+                        <>
                           <button
-                            onClick={() => setPendingRemove(w.instanceId)}
+                            ref={(el) => { if (el) el.focus(); }}
+                            onClick={() => { removeWidget(w.instanceId); setPendingRemove(null); }}
+                            className="rounded p-1 text-xs font-medium"
+                            style={{ color: "#fff", background: "var(--color-error, #EF4444)" }}
+                            title="Bevestig verwijderen"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setPendingRemove(null)}
                             className="rounded p-1"
                             style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }}
-                            title="Remove widget"
+                            title="Annuleren"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <X className="h-3.5 w-3.5" />
                           </button>
-                        )}
-                      </div>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setPendingRemove(w.instanceId)}
+                          className="rounded p-1"
+                          style={{ color: "var(--color-text-muted)", background: "var(--color-surface)" }}
+                          title="Widget verwijderen"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
 
                     <div className="h-full">
