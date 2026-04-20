@@ -199,51 +199,7 @@ export function LineageDashboard() {
         </div>
       )}
 
-      {/* Stats bar */}
-      {!activeLoading && hops.length > 0 && (() => {
-        const entities = new Set([...hops.map(h => h.source_entity), ...hops.map(h => h.target_entity)]);
-        const datasets = new Set(hops.map(h => h.dataset_id));
-        const healthCounts: Record<string, number> = { healthy: 0, warning: 0, error: 0, unknown: 0 };
-        for (const [, v] of datasetHealth) healthCounts[v] = (healthCounts[v] ?? 0) + 1;
-
-        const atRiskCount = (() => {
-          const errorDatasets = new Set(
-            [...datasetHealth.entries()]
-              .filter(([, v]) => v === "error")
-              .map(([k]) => k)
-          );
-          const errorSources = new Set(
-            hops.filter(h => errorDatasets.has(h.dataset_id)).map(h => h.source_entity)
-          );
-          const atRisk = new Set<string>();
-          for (const src of errorSources) {
-            hops.filter(h => h.source_entity === src).forEach(h => atRisk.add(h.target_entity));
-          }
-          return atRisk.size;
-        })();
-        return (
-          <div
-            className="flex items-center gap-6 px-6 py-3 shrink-0 flex-wrap"
-            style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}
-          >
-            {[
-              { label: "Entities", value: entities.size, color: undefined },
-              { label: "Datasets", value: datasets.size, color: undefined },
-              { label: "Lineage hops", value: hops.length, color: undefined },
-              { label: "Healthy", value: healthCounts.healthy, color: "#16a34a" },
-              { label: "Warning", value: healthCounts.warning, color: "#ca8a04" },
-              { label: "Error", value: healthCounts.error, color: "#dc2626" },
-              { label: "At risk", value: atRiskCount, color: atRiskCount > 0 ? "#dc2626" : undefined },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="flex items-center gap-1.5">
-                {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />}
-                <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>{label}</span>
-                <span className="text-xs font-bold" style={{ color: color ?? "var(--color-text)" }}>{value}</span>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
+      {/* Stats bar — removed: stats are shown in the canvas top-right panel */}
 
       {/* Canvas — fills all remaining height */}
       <div className="flex-1 min-h-0">

@@ -17,7 +17,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { EntityNode } from "./entity-node";
 import { NodeDetailPanel } from "./node-detail-panel";
-import { ChevronDown, Search, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, RotateCcw, SlidersHorizontal } from "lucide-react";
 import type { LineageHop } from "@/lib/adapters/types";
 import { SearchableSelect } from "./searchable-select";
 
@@ -293,6 +293,7 @@ export function LineageCanvas({ hops, datasetHealth }: LineageCanvasProps) {
   const [runIdFilter, setRunIdFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [healthFilter, setHealthFilter] = useState<Set<string>>(new Set());
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const datasets = useMemo(() => {
     const unique = [...new Set(hops.map((h) => h.dataset_id))].sort();
@@ -525,86 +526,123 @@ export function LineageCanvas({ hops, datasetHealth }: LineageCanvasProps) {
           pannable
         />
 
-        {/* Toolbar — search + filters */}
+        {/* Toolbar — search + collapsible filters */}
         <Panel position="top-left">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div
-              className="flex items-center gap-2 px-3 py-2"
-              style={panelStyle}
-            >
-              <Search className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-text-muted)" }} />
-              <input
-                type="text"
-                placeholder="Search entities…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="bg-transparent text-sm outline-none w-36 lg:w-48"
-                style={{ color: "var(--color-text)", caretColor: "var(--color-accent)" }}
-              />
-            </div>
-            <SearchableSelect
-              value={datasetFilter}
-              options={datasets.filter(d => d !== "all")}
-              allLabel="All datasets"
-              placeholder="Search dataset…"
-              onChange={setDatasetFilter}
-              style={panelStyle}
-            />
-            <select
-              value={stepFilter}
-              onChange={(e) => setStepFilter(e.target.value)}
-              className="px-3 py-2 text-sm outline-none cursor-pointer"
-              style={{ ...panelStyle, paddingRight: 28 }}
-            >
-              {LAYER_STEPS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-            <SearchableSelect
-              value={dateFilter}
-              options={availableDates}
-              allLabel="All dates"
-              placeholder="Search date…"
-              onChange={(v) => { setDateFilter(v); setRunIdFilter("all"); }}
-              style={panelStyle}
-            />
-            <SearchableSelect
-              value={runIdFilter}
-              options={runIds}
-              allLabel="All runs"
-              placeholder="Search run ID…"
-              onChange={setRunIdFilter}
-              style={panelStyle}
-            />
-            {/* Health pill toggles */}
-            <div className="flex items-center gap-1 px-2 py-1.5" style={panelStyle}>
-              {(["healthy", "warning", "error"] as const).map((h) => {
-                const color = h === "healthy" ? "#10B981" : h === "warning" ? "#F59E0B" : "#EF4444";
-                const active = healthFilter.has(h);
-                return (
-                  <button
-                    key={h}
-                    onClick={() => setHealthFilter((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(h)) next.delete(h); else next.add(h);
-                      return next;
-                    })}
-                    className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-all"
-                    style={{
-                      background: active ? color : "transparent",
-                      color: active ? "#fff" : "var(--color-text-muted)",
-                      border: `1px solid ${active ? color : "var(--color-border)"}`,
-                    }}
-                    title={`Filter by ${h}`}
+          <div className="flex flex-col gap-2">
+            {/* Always-visible row: search + filter toggle */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-2" style={panelStyle}>
+                <Search className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-text-muted)" }} />
+                <input
+                  type="text"
+                  placeholder="Search entities…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="bg-transparent text-sm outline-none w-36 lg:w-48"
+                  style={{ color: "var(--color-text)", caretColor: "var(--color-accent)" }}
+                />
+              </div>
+              <button
+                onClick={() => setFiltersOpen((v) => !v)}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium"
+                style={{
+                  ...panelStyle,
+                  color: filtersOpen ? "var(--color-accent)" : "var(--color-text-muted)",
+                  borderColor: filtersOpen ? "var(--color-accent)" : "var(--color-border)",
+                }}
+                title="Toggle filters"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Filters
+                {(datasetFilter !== "all" || stepFilter !== "all" || runIdFilter !== "all" || dateFilter !== "all" || healthFilter.size > 0) && (
+                  <span
+                    className="flex items-center justify-center rounded-full text-xs font-bold w-4 h-4"
+                    style={{ background: "var(--color-accent)", color: "#fff", fontSize: 10 }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? "#fff" : color }} />
-                    {h.charAt(0).toUpperCase() + h.slice(1)}
-                  </button>
-                );
-              })}
+                    {[datasetFilter !== "all", stepFilter !== "all", runIdFilter !== "all", dateFilter !== "all", healthFilter.size > 0].filter(Boolean).length}
+                  </span>
+                )}
+                {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
             </div>
+
+            {/* Expandable filter row */}
+            {filtersOpen && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <SearchableSelect
+                  value={datasetFilter}
+                  options={datasets.filter(d => d !== "all")}
+                  allLabel="All datasets"
+                  placeholder="Search dataset…"
+                  onChange={setDatasetFilter}
+                  style={panelStyle}
+                />
+                <select
+                  value={stepFilter}
+                  onChange={(e) => setStepFilter(e.target.value)}
+                  className="px-3 py-2 text-sm outline-none cursor-pointer"
+                  style={{ ...panelStyle, paddingRight: 28 }}
+                >
+                  {LAYER_STEPS.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <SearchableSelect
+                  value={dateFilter}
+                  options={availableDates}
+                  allLabel="All dates"
+                  placeholder="Search date…"
+                  onChange={(v) => { setDateFilter(v); setRunIdFilter("all"); }}
+                  style={panelStyle}
+                />
+                <SearchableSelect
+                  value={runIdFilter}
+                  options={runIds}
+                  allLabel="All runs"
+                  placeholder="Search run ID…"
+                  onChange={setRunIdFilter}
+                  style={panelStyle}
+                />
+                {/* Health pill toggles */}
+                <div className="flex items-center gap-1 px-2 py-1.5" style={panelStyle}>
+                  {(["healthy", "warning", "error"] as const).map((h) => {
+                    const color = h === "healthy" ? "#10B981" : h === "warning" ? "#F59E0B" : "#EF4444";
+                    const active = healthFilter.has(h);
+                    return (
+                      <button
+                        key={h}
+                        onClick={() => setHealthFilter((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(h)) next.delete(h); else next.add(h);
+                          return next;
+                        })}
+                        className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-all"
+                        style={{
+                          background: active ? color : "transparent",
+                          color: active ? "#fff" : "var(--color-text-muted)",
+                          border: `1px solid ${active ? color : "var(--color-border)"}`,
+                        }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? "#fff" : color }} />
+                        {h.charAt(0).toUpperCase() + h.slice(1)}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Clear all */}
+                {(datasetFilter !== "all" || stepFilter !== "all" || runIdFilter !== "all" || dateFilter !== "all" || healthFilter.size > 0) && (
+                  <button
+                    onClick={() => { setDatasetFilter("all"); setStepFilter("all"); setRunIdFilter("all"); setDateFilter("all"); setHealthFilter(new Set()); }}
+                    className="px-3 py-2 text-xs font-medium"
+                    style={{ ...panelStyle, color: "var(--color-error, #EF4444)" }}
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </Panel>
 
