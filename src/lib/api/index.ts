@@ -1,4 +1,19 @@
-export { fetchPipelineRuns, fetchDataQualityChecks, fetchLineageHops, fetchHealth, fetchCacheStatus, refreshCache, clearCache, fetchSettings, updateSettings, seedDemoData, ApiClientError } from "./client";
+export {
+  fetchPipelineRuns,
+  fetchDataQualityChecks,
+  fetchLineageHops,
+  fetchLineageEntities,
+  fetchLineageAttributes,
+  fetchCanonicalLineage,
+  fetchHealth,
+  fetchCacheStatus,
+  refreshCache,
+  clearCache,
+  fetchSettings,
+  updateSettings,
+  seedDemoData,
+  ApiClientError,
+} from "./client";
 
 export function isNoDataError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;

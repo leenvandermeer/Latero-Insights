@@ -39,6 +39,11 @@ export interface LineageHop {
   target_type: string;
   target_ref: string;
   target_attribute: string | null;
+  source_system?: string | null;
+  installation_id?: string | null;
+  environment?: string | null;
+  schema_version?: string | null;
+  lineage_evidence?: string | null;
 }
 
 export interface LineageEntity {
@@ -59,6 +64,14 @@ export interface LineageAttribute {
   target_entity_fqn: string;
   target_attribute: string;
   is_current: boolean;
+  provenance?: "lineage_attributes_current" | "data_lineage_hop";
+  evidence?: string | null;
+}
+
+export interface LineageSchemaInventory {
+  lineage_entities_current: string[];
+  lineage_attributes_current: string[];
+  data_lineage: string[];
 }
 
 export interface DateRange {
@@ -72,5 +85,6 @@ export interface DataAdapter {
   getLineageHops(range: DateRange): Promise<LineageHop[]>;
   getLineageEntities(): Promise<LineageEntity[]>;
   getLineageAttributes(): Promise<LineageAttribute[]>;
+  getLineageSchemaInventory(): Promise<LineageSchemaInventory>;
   testConnection(): Promise<boolean>;
 }

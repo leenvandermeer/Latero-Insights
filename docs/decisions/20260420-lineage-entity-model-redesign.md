@@ -4,6 +4,7 @@
 **Status:** ACCEPTED
 **Auteur:** Tech Lead
 **Vervangt/uitbreidt:** LADR-003 (lineage-sectie), vervangt canonical-modus
+**Nadere UX-richtlijn:** [LADR-016](20260422-progressive-disclosure-dashboard-ux.md)
 
 ---
 
@@ -97,7 +98,8 @@ De lineage-pagina krijgt drie tabbladen die elk een afzonderlijk perspectief bie
 - ReactFlow-canvas met `entity_fqn` als node-identiteit
 - Edges afgeleid van `upstream_entity_fqns` / `downstream_entity_fqns`
 - Node-kleur bepaald door `latest_status`
-- Badge op node bij afwijkende `end_to_end_status`
+- `end_to_end_status` zichtbaar in het detailpanel, niet als vaste node-badge
+  (zie LADR-016: graph blijft scanbaar, details via progressive disclosure)
 - Horizontale layer-swimlanes (Landing / Raw / Bronze / Silver / Gold)
 - Zoeken op `entity_fqn`, filteren op layer en status
 - Klik op node → slide-in detailpanel
@@ -178,6 +180,23 @@ dimensie die een aparte UI vereist.
 | Nieuw data vereiste | `lineage_entities_current` en `lineage_attributes_current` moeten bestaan in Unity Catalog |
 | Cache-only mode | Seed-script uitbreiden met twee nieuwe cache-keys |
 | TypeScript | `LineageHop` type blijft; twee nieuwe types toegevoegd |
+
+---
+
+## Aanvulling 2026-04-22 — schema-introspectie en provenance
+
+Omdat Databricks-omgevingen incrementeel extra lineage-kolommen kunnen
+publiceren, moet de adapterlaag schema-aware blijven:
+
+- De adapter leest beschikbare kolommen van `lineage_entities_current`,
+  `lineage_attributes_current` en `data_lineage` via `DESCRIBE TABLE`.
+- Lineage-selects gebruiken alleen kolommen die in de doelomgeving aanwezig
+  zijn, zodat nieuwe attributen incrementeel kunnen worden geactiveerd.
+- Attribuutlineage gebruikt `lineage_attributes_current` als primaire bron en
+  kan `data_lineage` hop-evidence toevoegen als fallback.
+- Samengevoegde attribuutmappings dragen provenance metadata
+  (`lineage_attributes_current` of `data_lineage_hop`) voor uitlegbaarheid en
+  debugging in UI/API.
 
 ---
 

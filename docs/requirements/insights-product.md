@@ -97,16 +97,18 @@ All data platform API calls MUST be proxied through server-side API routes.
 
 ---
 
-### LINS-005 — Standard Meta Tables Only
+### LINS-005 — Standard Meta Tables and Lineage Snapshots
 
-All queries MUST read from the three standard meta tables (`pipeline_runs`,
-`data_quality_checks`, `data_lineage`). No additional tables MUST be required
-for core functionality. Queries MUST use only columns defined in the Latero
-meta table contract (see [`meta-table-contract.md`](meta-table-contract.md)).
+Core monitoring queries MUST read from the three standard meta tables
+(`pipeline_runs`, `data_quality_checks`, `data_lineage`).
+Lineage Explorer MAY additionally read from the snapshot lineage tables
+(`lineage_entities_current`, `lineage_attributes_current`) as defined in LADR-015.
+Queries MUST use only columns defined in the applicable Latero contract.
 
 **Acceptance criteria:**
 
-- Every SQL query references only the three meta tables
+- Core monitoring queries reference only `pipeline_runs`, `data_quality_checks`, and `data_lineage`
+- Lineage Explorer queries may reference `lineage_entities_current` and `lineage_attributes_current`
 - No DDL or DML (INSERT, UPDATE, DELETE) statements are issued
 - Column references match the meta table contract
 
@@ -364,19 +366,19 @@ directed acyclic graph (DAG).
 
 | Aspect | Specification |
 |--------|---------------|
-| Nodes | Represent entities (tables) from `data_lineage` |
-| Edges | Represent lineage hops connecting `source_entity` to `target_entity` |
-| Layout | Left-to-right flow (source → target) |
-| Node interaction | Click to open detail panel with attributes and run evidence |
-| Edge interaction | Click to open column-level lineage for that hop |
+| Nodes | Represent entities from `lineage_entities_current` |
+| Edges | Derived from `upstream_entity_fqns` and `downstream_entity_fqns` |
+| Layout | Layer-based left-to-right flow (Landing → Raw → Bronze → Silver → Gold) |
+| Node interaction | Click to open detail panel with status, connectivity, and attribute preview |
+| Edge interaction | Optional; column-level exploration is available via Columns tab |
 
 **Acceptance criteria:**
 
-- Graph renders entities from `data_lineage` as nodes
-- Edges connect `source_entity` to `target_entity`
-- Graph layout flows left-to-right
+- Graph renders entities from `lineage_entities_current` as nodes
+- Edges are resolved from `upstream_entity_fqns` and `downstream_entity_fqns`
+- Graph layout follows ordered layer lanes left-to-right
 - Node click opens a detail panel
-- Edge click opens column-level lineage (links to LINS-023)
+- Columns drill-in is reachable from lineage navigation actions (links to LINS-023)
 - Graph re-renders on filter change
 
 **Affected files:** `src/app/lineage/`, `src/components/`
@@ -390,14 +392,15 @@ lineage.
 
 | Component | Description |
 |-----------|-------------|
-| Column mapping view | Source column → target column with transformation type |
+| Column mapping view | Source column → target column with provenance |
 | Coverage metric | Percentage of target columns with a mapped source |
 
 **Acceptance criteria:**
 
-- Column mappings are derived from `data_lineage` attribute-level rows
+- Column mappings are primarily derived from `lineage_attributes_current`
+- `data_lineage` attribute-level rows MAY be used as fallback evidence when current mappings are missing
 - Coverage metric is calculated per target entity
-- The view is accessible from the Lineage Explorer DAG (LINS-022) edge click
+- The view is accessible from Lineage Explorer navigation and detail actions (LINS-022)
 
 **Affected files:** `src/app/lineage/`, `src/components/`
 

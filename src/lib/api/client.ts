@@ -1,4 +1,4 @@
-import type { PipelineRun, DataQualityCheck, LineageHop } from "@/lib/adapters/types";
+import type { PipelineRun, DataQualityCheck, LineageHop, LineageEntity, LineageAttribute } from "@/lib/adapters/types";
 import type {
   ApiResponse,
   ApiError,
@@ -80,6 +80,18 @@ export function fetchDataQualityChecks(range: DateRangeParams): Promise<ApiRespo
 
 export function fetchLineageHops(range: DateRangeParams): Promise<ApiResponse<LineageHop[]>> {
   return request(`/lineage${dateParams(range)}`);
+}
+
+export function fetchLineageEntities(): Promise<ApiResponse<LineageEntity[]>> {
+  return request("/lineage/entities");
+}
+
+export function fetchLineageAttributes(): Promise<ApiResponse<LineageAttribute[]>> {
+  return request("/lineage/attributes");
+}
+
+export function fetchCanonicalLineage(): Promise<ApiResponse<LineageHop[]>> {
+  return request("/lineage/canonical");
 }
 
 // ── Health & cache endpoints ────────────────────────────────────

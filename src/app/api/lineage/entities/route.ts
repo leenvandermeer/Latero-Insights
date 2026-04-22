@@ -32,9 +32,19 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const entities = await adapter.getLineageEntities();
+    const [entities, schema] = await Promise.all([
+      adapter.getLineageEntities(),
+      adapter.getLineageSchemaInventory(),
+    ]);
     writeToCache(CACHE_KEY, CACHE_PARAMS, entities);
-    const response = NextResponse.json({ data: entities, source: "databricks" });
+    const response = NextResponse.json({
+      data: entities,
+      source: "databricks",
+      meta: {
+        schema: schema.lineage_entities_current,
+        resolution: "lineage_entities_current",
+      },
+    });
     response.headers.set("X-RateLimit-Remaining", String(remaining));
     response.headers.set("X-Cache", "MISS");
     return response;

@@ -6,6 +6,8 @@ export interface ApiResponse<T> {
   data: T;
   source: "databricks" | "cache" | "fallback";
   cachedAt?: string;
+  warning?: string;
+  meta?: Record<string, unknown>;
 }
 
 export interface ApiError {
