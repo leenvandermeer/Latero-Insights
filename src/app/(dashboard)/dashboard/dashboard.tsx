@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ResponsiveGridLayout, verticalCompactor, type LayoutItem, type ResponsiveLayouts } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2, Check, MoreHorizontal, Sparkles, ChevronDown, Plus, Globe } from "lucide-react";
-import { useDateRange } from "@/hooks";
+import { useDateRange } from "@/hooks/use-date-range";
 import { DateRangePicker, Button } from "@/components/ui";
 import { useDashboards } from "@/contexts/dashboard-context";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
@@ -39,7 +39,22 @@ function layoutsEqual(a: ResponsiveLayouts, b: ResponsiveLayouts): boolean {
 }
 
 export function DashboardCanvas({ dashboardId }: Props) {
-  const { getDashboardById, updateDashboardContent, renameDash, deleteDash, resetDash, duplicateDash, systemDashboards, userDashboards, publishSystemDashboard, resetSystemOverride, systemOverrides } = useDashboards();
+  const {
+    getDashboardById,
+    updateDashboardContent,
+    renameDash,
+    deleteDash,
+    resetDash,
+    duplicateDash,
+    systemDashboards,
+    userDashboards,
+    publishSystemDashboard,
+    resetSystemOverride,
+    systemOverrides,
+    customWidgets,
+    dashboards,
+    updateCustomWidget,
+  } = useDashboards();
   const { from, to, setRange } = useDateRange();
   const [editMode, setEditMode] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -188,6 +203,17 @@ export function DashboardCanvas({ dashboardId }: Props) {
   };
 
   const hasOverride = Boolean(systemOverrides[dashboardId]);
+  const selectedCustomWidget = useMemo(() => {
+    if (!configTarget || configTarget.type !== "custom" || !configTarget.customWidgetId) return undefined;
+    return customWidgets.find((cw) => cw.id === configTarget.customWidgetId);
+  }, [configTarget, customWidgets]);
+
+  const selectedCustomWidgetImpact = useMemo(() => {
+    if (!selectedCustomWidget) return 0;
+    return dashboards.filter((d) =>
+      d.widgets.some((w) => w.type === "custom" && w.customWidgetId === selectedCustomWidget.id)
+    ).length;
+  }, [dashboards, selectedCustomWidget]);
 
   const handlePublish = async () => {
     setPublishing(true);
@@ -639,11 +665,14 @@ export function DashboardCanvas({ dashboardId }: Props) {
 
       <WidgetConfigPanel
         widget={configTarget}
+        customWidget={selectedCustomWidget}
+        impactCount={selectedCustomWidgetImpact}
         currentSize={configTarget ? (() => {
           const item = (layoutsRef.current.lg ?? []).find((l) => l.i === configTarget.instanceId);
           return item ? { w: item.w, h: item.h } : undefined;
         })() : undefined}
         onClose={() => setConfigTarget(null)}
+        onUpdateCustomWidget={updateCustomWidget}
         onSave={(instanceId, patch, size) => { updateSlotConfig(instanceId, patch, size); setConfigTarget(null); }}
       />
 

@@ -368,6 +368,23 @@ export function addCustomWidget(
   return { data: next, widget: newWidget };
 }
 
+export function updateCustomWidget(
+  data: DashboardStoreData,
+  id: string,
+  patch: Partial<Pick<CustomWidget, "label" | "description" | "queryConfig" | "visualType">>
+): DashboardStoreData {
+  let changed = false;
+  const customWidgets = data.customWidgets.map((cw) => {
+    if (cw.id !== id) return cw;
+    changed = true;
+    return { ...cw, ...patch };
+  });
+  if (!changed) return data;
+  const next = { ...data, customWidgets };
+  save(next);
+  return next;
+}
+
 /**
  * Detach a shared widget from all dashboards that use it.
  * Converts each "shared" slot into a personal custom widget so those dashboards

@@ -12,6 +12,7 @@ import {
   deleteDashboard,
   resetSystemDashboard,
   addCustomWidget,
+  updateCustomWidget,
   deleteCustomWidget,
   detachSharedWidget,
   SYSTEM_DASHBOARD_DEFS,
@@ -43,6 +44,7 @@ interface DashboardContextValue {
   // Custom widgets
   customWidgets: CustomWidget[];
   saveCustomWidget: (widget: Omit<CustomWidget, "id" | "createdAt">) => CustomWidget;
+  updateCustomWidget: (id: string, patch: Partial<Pick<CustomWidget, "label" | "description" | "queryConfig" | "visualType">>) => void;
   deleteCustomWidget: (id: string) => void;
   withdrawSharedWidget: (sharedWidget: SharedWidgetDef) => void;
 
@@ -138,6 +140,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const updateCustomWidgetFn = useCallback(
+    (id: string, patch: Partial<Pick<CustomWidget, "label" | "description" | "queryConfig" | "visualType">>) =>
+      setStore((prev) => updateCustomWidget(prev, id, patch)),
+    []
+  );
+
   const withdrawSharedWidgetFn = useCallback(
     (sharedWidget: SharedWidgetDef) =>
       setStore((prev) => detachSharedWidget(prev, sharedWidget.id, sharedWidget)),
@@ -204,6 +212,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     systemOverrides,
     customWidgets: store.customWidgets,
     saveCustomWidget,
+    updateCustomWidget: updateCustomWidgetFn,
     deleteCustomWidget: deleteCustomWidgetFn,
     withdrawSharedWidget: withdrawSharedWidgetFn,
     activeId: store.activeId,

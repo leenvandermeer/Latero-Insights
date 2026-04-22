@@ -843,6 +843,7 @@ The Dashboard Builder MUST support the following widget types:
 ### LINS-063 — Widget Configuration
 
 *Updated by [LADR-018](../decisions/20260422-widget-builder-json-configuration-mode.md) — optional advanced JSON configuration mode added.*
+*Updated by [LADR-019](../decisions/20260422-dashboard-in-place-custom-widget-editing.md) — in-place editing from dashboard settings added for custom widgets.*
 
 Each widget MUST be configurable with the following properties:
 
@@ -865,6 +866,8 @@ Each widget MUST be configurable with the following properties:
 - The widget builder provides an optional advanced JSON editor for full widget definitions (`label`, `description`, `queryConfig`, `visualType`)
 - JSON input is validated before apply/save; invalid JSON cannot be persisted
 - Users can apply valid JSON back into the guided form controls
+- When configuring a placed custom widget from the dashboard canvas, users can edit the underlying custom widget definition in-place via JSON
+- The dashboard settings panel shows an impact warning when the same custom widget is referenced by multiple dashboards
 
 **Affected files:** `src/components/`, `src/app/dashboards/`
 
