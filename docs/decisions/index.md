@@ -17,3 +17,4 @@
 | [LADR-015](20260420-lineage-entity-model-redesign.md) | 2026-04-20 | Lineage Explorer: nieuw entiteitsmodel en drie-perspectief UX | ACCEPTED |
 | [LADR-016](20260422-progressive-disclosure-dashboard-ux.md) | 2026-04-22 | Progressive Disclosure as Dashboard UX Baseline | ACCEPTED |
 | [LADR-017](20260422-lineage-dataset-titling-and-openlineage-job-label.md) | 2026-04-22 | Dataset-first titling in Lineage and job-name-first labels in OpenLineage | ACCEPTED |
+| [LADR-018](20260422-widget-builder-json-configuration-mode.md) | 2026-04-22 | Widget Builder JSON configuration mode for advanced users | ACCEPTED |

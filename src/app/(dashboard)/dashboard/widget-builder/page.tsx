@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Database, BarChart2, Eye, Tag } from "lucide-react";
 import { useDashboards } from "@/contexts/dashboard-context";
@@ -24,6 +24,86 @@ import type {
 // ─── Step types ───────────────────────────────────────────────────────────────
 
 type Step = 0 | 1 | 2 | 3;
+
+type WidgetDraft = {
+  label: string;
+  description?: string;
+  queryConfig: QueryConfig;
+  visualType: VisualType;
+};
+
+const DATA_SOURCES: DataSource[] = ["pipeline_runs", "data_quality_checks", "data_lineage"];
+const MEASURE_TYPES: MeasureType[] = ["count", "count_where", "percentage", "avg"];
+const VISUAL_TYPES: VisualType[] = ["counter", "bar", "line", "area", "donut", "table"];
+const FILTER_OPERATORS: QueryFilter["operator"][] = ["eq", "neq", "contains", "gt", "lt"];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseWidgetDraftJson(input: string): { data?: WidgetDraft; error?: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(input);
+  } catch {
+    return { error: "Invalid JSON syntax." };
+  }
+
+  if (!isRecord(parsed)) return { error: "Top-level JSON value must be an object." };
+
+  const { label, description, visualType, queryConfig } = parsed;
+  if (typeof label !== "string" || !label.trim()) return { error: "Field 'label' is required." };
+  if (description !== undefined && typeof description !== "string") return { error: "Field 'description' must be a string when provided." };
+  if (typeof visualType !== "string" || !VISUAL_TYPES.includes(visualType as VisualType)) {
+    return { error: "Field 'visualType' is invalid." };
+  }
+  if (!isRecord(queryConfig)) return { error: "Field 'queryConfig' is required and must be an object." };
+
+  const dataSource = queryConfig.dataSource;
+  if (typeof dataSource !== "string" || !DATA_SOURCES.includes(dataSource as DataSource)) {
+    return { error: "Field 'queryConfig.dataSource' is invalid." };
+  }
+
+  const measure = queryConfig.measure;
+  if (!isRecord(measure)) return { error: "Field 'queryConfig.measure' must be an object." };
+  const measureType = measure.type;
+  if (typeof measureType !== "string" || !MEASURE_TYPES.includes(measureType as MeasureType)) {
+    return { error: "Field 'queryConfig.measure.type' is invalid." };
+  }
+  if (measureType === "avg" && (typeof measure.field !== "string" || !measure.field.trim())) {
+    return { error: "Field 'queryConfig.measure.field' is required for avg." };
+  }
+  if ((measureType === "count_where" || measureType === "percentage") && (
+    typeof measure.whereField !== "string" || !measure.whereField.trim() ||
+    typeof measure.whereValue !== "string" || !measure.whereValue.trim()
+  )) {
+    return { error: "Fields 'queryConfig.measure.whereField' and 'whereValue' are required for conditional measures." };
+  }
+
+  const groupBy = queryConfig.groupBy;
+  if (groupBy !== undefined) {
+    if (!isRecord(groupBy) || typeof groupBy.field !== "string" || !groupBy.field.trim()) {
+      return { error: "Field 'queryConfig.groupBy.field' must be a non-empty string when groupBy is used." };
+    }
+    if (groupBy.timeGrain !== undefined && !["day", "week", "month"].includes(String(groupBy.timeGrain))) {
+      return { error: "Field 'queryConfig.groupBy.timeGrain' must be one of: day, week, month." };
+    }
+  }
+
+  const rawFilters = queryConfig.filters;
+  if (!Array.isArray(rawFilters)) return { error: "Field 'queryConfig.filters' must be an array." };
+  for (let i = 0; i < rawFilters.length; i += 1) {
+    const f = rawFilters[i];
+    if (!isRecord(f)) return { error: `Filter ${i + 1} must be an object.` };
+    if (typeof f.field !== "string" || !f.field.trim()) return { error: `Filter ${i + 1} field is required.` };
+    if (typeof f.value !== "string") return { error: `Filter ${i + 1} value must be a string.` };
+    if (typeof f.operator !== "string" || !FILTER_OPERATORS.includes(f.operator as QueryFilter["operator"])) {
+      return { error: `Filter ${i + 1} operator is invalid.` };
+    }
+  }
+
+  return { data: parsed as WidgetDraft };
+}
 
 const STEPS = [
   { label: "Data", icon: Database },
@@ -98,6 +178,9 @@ export default function WidgetBuilderPage() {
   // Step 3: Label + description
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
+  const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
+  const [jsonDraft, setJsonDraft] = useState("");
+  const [jsonError, setJsonError] = useState<string | null>(null);
 
   const fields = DATA_SOURCE_FIELDS[dataSource] ?? [];
   const numericFields = NUMERIC_FIELDS[dataSource] ?? [];
@@ -115,6 +198,36 @@ export default function WidgetBuilderPage() {
     filters,
   };
 
+  const formDraft: WidgetDraft = useMemo(() => ({
+    label: label.trim(),
+    ...(description.trim() ? { description: description.trim() } : {}),
+    visualType,
+    queryConfig,
+  }), [description, label, queryConfig, visualType]);
+
+  const jsonParseResult = useMemo(
+    () => (jsonEditorOpen && jsonDraft.trim() ? parseWidgetDraftJson(jsonDraft) : undefined),
+    [jsonDraft, jsonEditorOpen]
+  );
+
+  const effectiveDraft = jsonParseResult?.data ?? formDraft;
+
+  const applyDraftToForm = (draft: WidgetDraft) => {
+    setLabel(draft.label);
+    setDescription(draft.description ?? "");
+    setDataSource(draft.queryConfig.dataSource);
+    setFilters(draft.queryConfig.filters);
+
+    setMeasureType(draft.queryConfig.measure.type);
+    setMeasureField(draft.queryConfig.measure.field ?? "");
+    setWhereField(draft.queryConfig.measure.whereField ?? "");
+    setWhereValue(draft.queryConfig.measure.whereValue ?? "");
+
+    setGroupByField(draft.queryConfig.groupBy?.field ?? "");
+    setTimeGrain(draft.queryConfig.groupBy?.timeGrain ?? "day");
+    setVisualType(draft.visualType);
+  };
+
   const addFilter = () => {
     setFilters((prev) => [...prev, { field: fields[0] ?? "", operator: "eq", value: "" }]);
   };
@@ -128,8 +241,24 @@ export default function WidgetBuilderPage() {
   };
 
   const handleSave = () => {
-    if (!label.trim()) return;
-    saveCustomWidget({ label: label.trim(), description: description.trim() || undefined, queryConfig, visualType });
+    let draftToSave = formDraft;
+    if (jsonEditorOpen && jsonDraft.trim()) {
+      const parsed = parseWidgetDraftJson(jsonDraft);
+      if (!parsed.data) {
+        setJsonError(parsed.error ?? "Invalid JSON configuration.");
+        return;
+      }
+      draftToSave = parsed.data;
+      setJsonError(null);
+    }
+
+    if (!draftToSave.label.trim()) return;
+    saveCustomWidget({
+      label: draftToSave.label.trim(),
+      description: draftToSave.description?.trim() || undefined,
+      queryConfig: draftToSave.queryConfig,
+      visualType: draftToSave.visualType,
+    });
     router.back();
   };
 
@@ -141,6 +270,10 @@ export default function WidgetBuilderPage() {
       return true;
     }
     if (step === 2) return true;
+    if (jsonEditorOpen && jsonDraft.trim()) {
+      const parsed = parseWidgetDraftJson(jsonDraft);
+      return Boolean(parsed.data?.label.trim());
+    }
     return label.trim().length > 0;
   };
 
@@ -417,17 +550,92 @@ export default function WidgetBuilderPage() {
               />
             </div>
 
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Advanced JSON configuration</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!jsonEditorOpen) {
+                      setJsonDraft(JSON.stringify(formDraft, null, 2));
+                    }
+                    setJsonError(null);
+                    setJsonEditorOpen((v) => !v);
+                  }}
+                  className="text-xs rounded-lg px-2.5 py-1.5 border"
+                  style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
+                >
+                  {jsonEditorOpen ? "Hide JSON editor" : "Edit as JSON"}
+                </button>
+              </div>
+
+              {jsonEditorOpen && (
+                <div className="space-y-2">
+                  <textarea
+                    value={jsonDraft}
+                    onChange={(e) => {
+                      setJsonDraft(e.target.value);
+                      setJsonError(null);
+                    }}
+                    rows={12}
+                    spellCheck={false}
+                    className="w-full rounded-lg border px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2"
+                    style={{ background: "var(--color-card)", borderColor: "var(--color-border)", color: "var(--color-text)" }}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setJsonDraft(JSON.stringify(formDraft, null, 2));
+                        setJsonError(null);
+                      }}
+                      className="text-xs rounded-lg px-2.5 py-1.5 border"
+                      style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
+                    >
+                      Reload from form
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const parsed = parseWidgetDraftJson(jsonDraft);
+                        if (!parsed.data) {
+                          setJsonError(parsed.error ?? "Invalid JSON configuration.");
+                          return;
+                        }
+                        applyDraftToForm(parsed.data);
+                        setJsonError(null);
+                      }}
+                      className="text-xs rounded-lg px-2.5 py-1.5"
+                      style={{ background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" }}
+                    >
+                      Apply JSON to form
+                    </button>
+                  </div>
+                  {(jsonError || jsonParseResult?.error) && (
+                    <p className="text-xs" style={{ color: "var(--color-error, #EF4444)" }}>
+                      {jsonError ?? jsonParseResult?.error}
+                    </p>
+                  )}
+                  {!jsonParseResult?.error && jsonDraft.trim() && (
+                    <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                      JSON is valid. Saving will use this JSON definition.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Summary */}
             <div
               className="rounded-xl p-4 space-y-2 text-xs"
               style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
             >
               <p className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>Summary</p>
-              <SummaryRow label="Data source" value={DATA_SOURCE_LABELS[queryConfig.dataSource]} />
-              <SummaryRow label="Measure" value={MEASURE_OPTIONS.find((m) => m.type === queryConfig.measure.type)?.label ?? ""} />
-              <SummaryRow label="Group by" value={queryConfig.groupBy ? (FIELD_LABELS[queryConfig.groupBy.field] ?? queryConfig.groupBy.field) : "None"} />
-              <SummaryRow label="Chart type" value={VISUAL_OPTIONS.find((v) => v.type === visualType)?.label ?? ""} />
-              <SummaryRow label="Filters" value={filters.length === 0 ? "None" : `${filters.length} filter(s)`} />
+              <SummaryRow label="Data source" value={DATA_SOURCE_LABELS[effectiveDraft.queryConfig.dataSource]} />
+              <SummaryRow label="Measure" value={MEASURE_OPTIONS.find((m) => m.type === effectiveDraft.queryConfig.measure.type)?.label ?? ""} />
+              <SummaryRow label="Group by" value={effectiveDraft.queryConfig.groupBy ? (FIELD_LABELS[effectiveDraft.queryConfig.groupBy.field] ?? effectiveDraft.queryConfig.groupBy.field) : "None"} />
+              <SummaryRow label="Chart type" value={VISUAL_OPTIONS.find((v) => v.type === effectiveDraft.visualType)?.label ?? ""} />
+              <SummaryRow label="Filters" value={effectiveDraft.queryConfig.filters.length === 0 ? "None" : `${effectiveDraft.queryConfig.filters.length} filter(s)`} />
             </div>
           </div>
         )}
