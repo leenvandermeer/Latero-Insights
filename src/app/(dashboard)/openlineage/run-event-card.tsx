@@ -1,18 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight, Code, GitBranch } from "lucide-react";
+import { ChevronDown, ChevronRight, Code, GitBranch, Search } from "lucide-react";
 import type { LineageHop } from "@/lib/adapters/types";
 
 interface RunEvent {
   run_id: string;
+  job_name: string;
   dataset_id: string;
   step: string;
+  layer: string;
   timestamp: string;
   hops: LineageHop[];
 }
+
+const LAYER_LABELS: Record<string, string> = {
+  landing: "Landing",
+  raw: "Raw",
+  bronze: "Bronze",
+  silver: "Silver",
+  gold: "Gold",
+};
 
 interface RunEventCardProps {
   event: RunEvent;
@@ -21,9 +31,27 @@ interface RunEventCardProps {
 
 export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [hopSearch, setHopSearch] = useState("");
+  const [showAllHops, setShowAllHops] = useState(false);
 
   const inputDatasets = new Set(event.hops.map((h) => h.source_entity));
   const outputDatasets = new Set(event.hops.map((h) => h.target_entity));
+  const filteredHops = useMemo(() => {
+    const q = hopSearch.trim().toLowerCase();
+    if (!q) return event.hops;
+    return event.hops.filter((hop) =>
+      [
+        hop.source_entity,
+        hop.source_ref,
+        hop.source_attribute,
+        hop.target_entity,
+        hop.target_ref,
+        hop.target_attribute,
+        hop.step,
+      ].some((value) => (value ?? "").toLowerCase().includes(q))
+    );
+  }, [event.hops, hopSearch]);
+  const visibleHops = showAllHops ? filteredHops : filteredHops.slice(0, 25);
 
   return (
     <Card>
@@ -44,9 +72,11 @@ export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-sm font-medium truncate">{event.run_id}</span>
-              <Badge variant="default">{event.step}</Badge>
+              <span className="text-sm font-semibold truncate" title={event.job_name}>{event.job_name}</span>
+              <Badge variant="default">{LAYER_LABELS[event.layer] ?? event.layer}</Badge>
+              <Badge variant="muted">{event.step}</Badge>
               <Badge variant="muted">{event.dataset_id}</Badge>
+              <Badge variant="muted" title={event.run_id}>Run {event.run_id.slice(0, 8)}</Badge>
             </div>
             <div className="mt-1 text-xs text-muted-foreground">
               {new Date(event.timestamp).toLocaleString()} · {event.hops.length} hop{event.hops.length !== 1 ? "s" : ""}
@@ -99,9 +129,27 @@ export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
 
             {/* Hop details */}
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                Lineage Hops
-              </p>
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Lineage Hops ({filteredHops.length})
+                </p>
+                <div
+                  className="flex items-center gap-1.5 rounded-md px-2 py-1"
+                  style={{ border: "1px solid var(--color-border)", background: "var(--color-card)" }}
+                >
+                  <Search className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <input
+                    value={hopSearch}
+                    onChange={(e) => {
+                      setHopSearch(e.target.value);
+                      setShowAllHops(false);
+                    }}
+                    placeholder="Search hops..."
+                    className="w-44 bg-transparent text-xs outline-none"
+                    style={{ color: "var(--color-text)" }}
+                  />
+                </div>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
@@ -113,7 +161,7 @@ export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {event.hops.map((hop, i) => (
+                    {visibleHops.map((hop, i) => (
                       <tr key={i} className="border-b border-border last:border-0">
                         <td className="py-1.5 pr-3 font-mono">{hop.source_entity}</td>
                         <td className="py-1.5 pr-3 text-muted-foreground">{hop.source_attribute ?? "—"}</td>
@@ -124,6 +172,15 @@ export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
                   </tbody>
                 </table>
               </div>
+              {filteredHops.length > visibleHops.length && (
+                <button
+                  onClick={() => setShowAllHops(true)}
+                  className="mt-2 rounded-md px-2 py-1 text-xs font-medium"
+                  style={{ border: "1px solid var(--color-border)", color: "var(--color-accent)" }}
+                >
+                  Show all {filteredHops.length} hops
+                </button>
+              )}
             </div>
           </div>
         )}

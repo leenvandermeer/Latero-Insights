@@ -7,6 +7,7 @@ import type { LineageHop } from "@/lib/adapters/types";
 
 interface RunEvent {
   run_id: string;
+  job_name: string;
   dataset_id: string;
   step: string;
   timestamp: string;
@@ -69,7 +70,7 @@ function toOpenLineageFormat(event: RunEvent) {
     },
     job: {
       namespace: "latero",
-      name: `${event.dataset_id}.${event.step}`,
+      name: event.job_name,
     },
     inputs: inputDatasets,
     outputs: outputDatasets,
@@ -113,7 +114,7 @@ export function JsonDrawer({ event, onClose }: JsonDrawerProps) {
           style={{ borderBottom: "1px solid var(--color-border)" }}
         >
           <h3 className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>
-            OpenLineage Event — {event.run_id.slice(0, 8)}
+            OpenLineage Event — {event.job_name}
           </h3>
           <div className="flex items-center gap-1">
             <button

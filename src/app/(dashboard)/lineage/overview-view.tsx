@@ -87,8 +87,14 @@ function uniqueEntities(entities: LineageEntity[]) {
   return [...byKey.values()];
 }
 
-function lineageGroup(entity: LineageEntity) {
-  return entity.lineage_group_id ?? entity.entity_fqn.split(".").filter(Boolean).at(-2) ?? entity.entity_fqn;
+const LAYER_NAMES = new Set(LAYER_ORDER);
+
+function datasetGroupKey(entity: LineageEntity) {
+  const parts = entity.entity_fqn.split(".").filter(Boolean);
+  const second = parts.at(-2);
+  if (second && !LAYER_NAMES.has(second.toLowerCase())) return second;
+  const last = parts.at(-1) ?? entity.entity_fqn;
+  return last.replace(/_(raw|bronze|silver|gold)$/i, "") || last;
 }
 
 function humanizeIdentifier(value: string) {
@@ -114,6 +120,22 @@ function readableChainName(chainEntities: LineageEntity[], fallback: string) {
   const rawName = preferred ? shortName(preferred.entity_fqn) : fallback;
   const readable = humanizeIdentifier(rawName);
   return readable || humanizeIdentifier(fallback) || fallback;
+}
+
+function resolveDatasetChainStatus(chainEntities: LineageEntity[]) {
+  const terminalEntities = chainEntities.filter((entity) =>
+    !entity.downstream_entity_fqns.some((ref) =>
+      chainEntities.some((candidate) => candidate.entity_fqn === ref)
+    )
+  );
+  const statusSource = terminalEntities.length > 0 ? terminalEntities : chainEntities;
+  const latestStatuses = statusSource.map((entity) => entity.latest_status.toUpperCase());
+  if (latestStatuses.includes("FAILED")) return "FAILED";
+  if (latestStatuses.includes("PARTIAL")) return "PARTIAL";
+  if (latestStatuses.includes("WARNING")) return "WARNING";
+  if (latestStatuses.includes("IN_PROGRESS")) return "IN_PROGRESS";
+  if (latestStatuses.length > 0 && latestStatuses.every((status) => status === "SUCCESS")) return "SUCCESS";
+  return "UNKNOWN";
 }
 
 function MetricCard({
@@ -255,7 +277,7 @@ function ChainReadinessRow({
             <StatusPill status={chain.status} />
           </div>
           <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-            Source group: {chain.id} ·{" "}
+            Dataset: {chain.id} ·{" "}
             {chain.entities} entities · {chain.layers.length} of {LAYER_ORDER.length} layers present
             {missingLayers.length > 0 ? ` · missing ${missingLayers.map(formatLayer).join(", ")}` : " · complete chain"}
           </p>
@@ -321,14 +343,13 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
 
     const chains = new Map<string, LineageEntity[]>();
     for (const entity of currentEntities) {
-      const key = lineageGroup(entity);
+      const key = datasetGroupKey(entity);
       chains.set(key, [...(chains.get(key) ?? []), entity]);
     }
 
     const chainRows = [...chains.entries()]
       .map(([id, chainEntities]) => {
-        const statuses = chainEntities.flatMap((entity) => [entity.end_to_end_status, entity.latest_status]);
-        const worst = statuses.sort((a, b) => statusRank(b) - statusRank(a))[0] ?? "UNKNOWN";
+        const worst = resolveDatasetChainStatus(chainEntities);
         const layers = [...new Set(chainEntities.map((entity) => entity.layer.toLowerCase()))];
         const coverage = pct(layers.length, LAYER_ORDER.length);
         const latest = chainEntities
@@ -336,7 +357,15 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
           .filter((value): value is string => Boolean(value))
           .sort((a, b) => b.localeCompare(a))[0] ?? null;
 
-        return { id, name: readableChainName(chainEntities, id), status: worst, entities: chainEntities.length, layers, coverage, latest };
+        return {
+          id,
+          name: readableChainName(chainEntities, id),
+          status: worst,
+          entities: chainEntities.length,
+          layers,
+          coverage,
+          latest,
+        };
       })
       .sort((a, b) => statusRank(b.status) - statusRank(a.status) || a.coverage - b.coverage || a.name.localeCompare(b.name));
 

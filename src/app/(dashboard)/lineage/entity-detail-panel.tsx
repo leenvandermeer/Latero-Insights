@@ -35,6 +35,14 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
   const parts = entity.entity_fqn.split(".");
   const shortName = parts[parts.length - 1] ?? entity.entity_fqn;
 
+  const layerNames = new Set(["landing", "raw", "bronze", "silver", "gold"]);
+  const datasetChainName = (() => {
+    const second = parts.at(-2);
+    if (second && !layerNames.has(second.toLowerCase())) return second;
+    const last = parts.at(-1) ?? entity.entity_fqn;
+    return last.replace(/_(raw|bronze|silver|gold)$/i, "") || last;
+  })();
+
   function refMatchesEntity(ref: string): boolean {
     const refLower = ref.toLowerCase();
     const entityLower = entity.entity_fqn.toLowerCase();
@@ -138,8 +146,11 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
         {/* Chain */}
         {entity.lineage_group_id && (
           <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)" }}>Chain</dt>
-            <dd className="text-xs font-mono break-all" style={{ color: "var(--color-text)" }}>{entity.lineage_group_id}</dd>
+            <dt className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)" }}>Dataset chain</dt>
+            <dd className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>{datasetChainName}</dd>
+            <p className="text-[10px] font-mono break-all mt-1" style={{ color: "var(--color-text-muted)" }} title={entity.lineage_group_id}>
+              Technical chain id: {entity.lineage_group_id}
+            </p>
             {entity.last_completed_layer && (
               <p className="text-[10px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
                 Last completed: <strong style={{ color: "var(--color-text)" }}>{entity.last_completed_layer}</strong>

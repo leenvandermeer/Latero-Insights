@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLineage, useDateRange } from "@/hooks";
 import {
   PageHeader,
@@ -19,10 +19,36 @@ import type { LineageHop } from "@/lib/adapters/types";
 
 interface RunEvent {
   run_id: string;
+  job_name: string;
   dataset_id: string;
   step: string;
+  layer: string;
   timestamp: string;
   hops: LineageHop[];
+}
+
+function buildJobName(datasetId: string, step: string): string {
+  return `${datasetId}.${step}`;
+}
+
+const STEP_LAYER_LABELS: Record<string, string> = {
+  landing: "Landing",
+  raw: "Raw",
+  bronze: "Bronze",
+  silver: "Silver",
+  gold: "Gold",
+};
+
+const STEP_LAYER_ORDER = ["landing", "raw", "bronze", "silver", "gold"];
+
+function stepToLayer(step: string): string {
+  const normalized = step.toLowerCase();
+  if (normalized.includes("to_gold") || normalized === "gold") return "gold";
+  if (normalized.includes("to_silver") || normalized === "silver") return "silver";
+  if (normalized.includes("to_bronze") || normalized === "bronze") return "bronze";
+  if (normalized.includes("to_raw") || normalized === "raw") return "raw";
+  if (normalized.includes("landing")) return "landing";
+  return normalized;
 }
 
 export function OpenLineageDashboard() {
@@ -42,8 +68,10 @@ export function OpenLineageDashboard() {
       if (!byRun.has(hop.run_id)) {
         byRun.set(hop.run_id, {
           run_id: hop.run_id,
+          job_name: buildJobName(hop.dataset_id, hop.step),
           dataset_id: hop.dataset_id,
           step: hop.step,
+          layer: stepToLayer(hop.step),
           timestamp: hop.timestamp_utc,
           hops: [],
         });
@@ -57,14 +85,26 @@ export function OpenLineageDashboard() {
   }, [hops]);
 
   const datasets = useMemo(() => [...new Set(runEvents.map(e => e.dataset_id))].sort(), [runEvents]);
-  const steps = useMemo(() => [...new Set(runEvents.map(e => e.step))].sort(), [runEvents]);
+  const layers = useMemo(() => {
+    const present = new Set(runEvents.map(e => e.layer));
+    return [
+      ...STEP_LAYER_ORDER.filter(layer => present.has(layer)),
+      ...[...present].filter(layer => !STEP_LAYER_ORDER.includes(layer)).sort(),
+    ];
+  }, [runEvents]);
+
+  useEffect(() => {
+    if (stepFilter !== "all" && !layers.includes(stepFilter)) {
+      setStepFilter("all");
+    }
+  }, [layers, stepFilter]);
 
   const filteredEvents = useMemo(() => {
     const q = search.trim().toLowerCase();
     return runEvents.filter(e => {
       if (datasetFilter !== "all" && e.dataset_id !== datasetFilter) return false;
-      if (stepFilter !== "all" && e.step !== stepFilter) return false;
-      if (q && !e.run_id.toLowerCase().includes(q) && !e.dataset_id.toLowerCase().includes(q) && !e.step.toLowerCase().includes(q)) return false;
+      if (stepFilter !== "all" && e.layer !== stepFilter) return false;
+      if (q && !e.job_name.toLowerCase().includes(q) && !e.run_id.toLowerCase().includes(q) && !e.dataset_id.toLowerCase().includes(q) && !e.step.toLowerCase().includes(q) && !e.layer.toLowerCase().includes(q)) return false;
       return true;
     });
   }, [runEvents, datasetFilter, stepFilter, search]);
@@ -107,7 +147,7 @@ export function OpenLineageDashboard() {
           <Search className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-text-muted)" }} />
           <input
             type="text"
-            placeholder="Search run ID, dataset, step…"
+            placeholder="Search job name, run ID, dataset, step..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="bg-transparent text-sm outline-none w-52"
@@ -124,9 +164,10 @@ export function OpenLineageDashboard() {
         />
         <SearchableSelect
           value={stepFilter}
-          options={steps}
-          allLabel="All steps"
-          placeholder="Search step…"
+          options={layers}
+          labels={STEP_LAYER_LABELS}
+          allLabel="All layers"
+          placeholder="Search layer…"
           onChange={setStepFilter}
           style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8, color: "var(--color-text)" }}
         />
