@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, AlertTriangle, XCircle, Clock, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Clock, ChevronDown, ChevronUp, Search, ArrowRight } from "lucide-react";
 import type { LineageEntity } from "@/lib/adapters/types";
+import { lineageEntityKey, resolveLineageRef } from "./lineage-utils";
 
 // ── Types & constants ─────────────────────────────────────────────────────────
 
@@ -12,6 +13,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   SUCCESS: { label: "Success", color: "#10B981", bg: "rgba(16,185,129,0.1)",  Icon: CheckCircle2 },
   WARNING: { label: "Warning", color: "#F59E0B", bg: "rgba(245,158,11,0.1)",  Icon: AlertTriangle },
   PARTIAL: { label: "Partial", color: "#F59E0B", bg: "rgba(245,158,11,0.1)",  Icon: AlertTriangle },
+  IN_PROGRESS: { label: "In progress", color: "#3B82F6", bg: "rgba(59,130,246,0.12)", Icon: Clock },
   FAILED:  { label: "Failed",  color: "#EF4444", bg: "rgba(239,68,68,0.1)",   Icon: XCircle },
   UNKNOWN: { label: "Unknown", color: "var(--color-text-muted)", bg: "rgba(128,128,128,0.08)", Icon: Clock },
 };
@@ -28,6 +30,36 @@ function StatusBadge({ status, size = "sm" }: { status: string; size?: "xs" | "s
       {cfg.label}
     </span>
   );
+}
+
+function statusRank(status: string) {
+  return { FAILED: 5, PARTIAL: 4, WARNING: 4, IN_PROGRESS: 3, UNKNOWN: 2, SUCCESS: 1 }[status.toUpperCase()] ?? 2;
+}
+
+function shortName(fqn: string) {
+  return fqn.split(".").filter(Boolean).at(-1) ?? fqn;
+}
+
+function humanizeIdentifier(value: string) {
+  return value
+    .replace(/\.[^.]+$/g, "")
+    .split(/[._\-\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function readableChainName(entities: LineageEntity[], fallback: string) {
+  const terminal = entities
+    .filter((entity) => entity.downstream_entity_fqns.length === 0)
+    .sort((a, b) => statusRank(b.end_to_end_status) - statusRank(a.end_to_end_status))[0];
+  const preferred = terminal ?? [...entities].sort((a, b) => {
+    const aLayer = LAYER_ORDER.indexOf(a.layer.toLowerCase());
+    const bLayer = LAYER_ORDER.indexOf(b.layer.toLowerCase());
+    return bLayer - aLayer || a.entity_fqn.localeCompare(b.entity_fqn);
+  })[0];
+
+  return humanizeIdentifier(preferred ? shortName(preferred.entity_fqn) : fallback) || fallback;
 }
 
 // ── Layer progress bar ────────────────────────────────────────────────────────
@@ -76,10 +108,91 @@ function LayerProgress({ presentLayers, lastCompletedLayer }: LayerProgressProps
 
 interface ChainGroup {
   groupId: string;
+  displayName: string;
   entities: LineageEntity[];
   endToEndStatus: string;
   lastCompletedLayer: string | null;
   presentLayers: string[];
+}
+
+const LAYER_NAMES_SET = new Set(LAYER_ORDER);
+
+function datasetKeyFromEntity(entity: LineageEntity): string {
+  const parts = entity.entity_fqn.split(".").filter(Boolean);
+  const second = parts.at(-2);
+  if (second && !LAYER_NAMES_SET.has(second.toLowerCase())) return second;
+  const last = parts.at(-1) ?? entity.entity_fqn;
+  return last.replace(/_(raw|bronze|silver|gold)$/i, "") || last;
+}
+
+function deriveChainLabel(entities: LineageEntity[], fallback: string): string {
+  const counts = new Map<string, number>();
+  for (const entity of entities) {
+    const key = datasetKeyFromEntity(entity);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  const winner = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0];
+
+  return winner ?? fallback;
+}
+
+function buildConnectedChains(entities: LineageEntity[]): Array<{ groupId: string; entities: LineageEntity[] }> {
+  const byKey = new Map(entities.map((entity) => [lineageEntityKey(entity), entity]));
+  const keysByFqn = new Map<string, string[]>();
+  const adjacency = new Map<string, Set<string>>();
+
+  for (const entity of entities) {
+    const key = lineageEntityKey(entity);
+    adjacency.set(key, new Set());
+    const fqnKeys = keysByFqn.get(entity.entity_fqn) ?? [];
+    fqnKeys.push(key);
+    keysByFqn.set(entity.entity_fqn, fqnKeys);
+  }
+
+  function connect(a: string, b: string) {
+    if (a === b) return;
+    adjacency.get(a)?.add(b);
+    adjacency.get(b)?.add(a);
+  }
+
+  for (const fqnKeys of keysByFqn.values()) {
+    for (let i = 1; i < fqnKeys.length; i++) connect(fqnKeys[i - 1], fqnKeys[i]);
+  }
+
+  for (const entity of entities) {
+    const key = lineageEntityKey(entity);
+    for (const ref of [...entity.upstream_entity_fqns, ...entity.downstream_entity_fqns]) {
+      const resolved = resolveLineageRef(ref, entities);
+      if (resolved) connect(key, lineageEntityKey(resolved));
+    }
+  }
+
+  const visited = new Set<string>();
+  const chains: Array<{ groupId: string; entities: LineageEntity[] }> = [];
+
+  for (const start of byKey.keys()) {
+    if (visited.has(start)) continue;
+    const queue = [start];
+    const component: LineageEntity[] = [];
+    visited.add(start);
+
+    for (let i = 0; i < queue.length; i++) {
+      const key = queue[i];
+      const entity = byKey.get(key);
+      if (entity) component.push(entity);
+      for (const next of adjacency.get(key) ?? []) {
+        if (visited.has(next)) continue;
+        visited.add(next);
+        queue.push(next);
+      }
+    }
+
+    chains.push({ groupId: deriveChainLabel(component, `chain-${chains.length + 1}`), entities: component });
+  }
+
+  return chains;
 }
 
 function ChainCard({ chain }: { chain: ChainGroup }) {
@@ -97,11 +210,11 @@ function ChainCard({ chain }: { chain: ChainGroup }) {
 
   const orderedLayers = LAYER_ORDER.filter((l) => byLayer.has(l));
 
-  const displayName = chain.groupId === "ungrouped"
+  const displayName = chain.displayName === "ungrouped"
     ? "Ungrouped entities"
-    : chain.groupId.length > 48
-      ? chain.groupId.slice(0, 48) + "…"
-      : chain.groupId;
+    : chain.displayName.length > 48
+      ? chain.displayName.slice(0, 48) + "..."
+      : chain.displayName;
 
   return (
     <div
@@ -146,23 +259,87 @@ function ChainCard({ chain }: { chain: ChainGroup }) {
                     {layerEntities.map((e) => {
                       const parts = e.entity_fqn.split(".");
                       const short = parts[parts.length - 1] ?? e.entity_fqn;
+                      const latestSuccess = e.latest_success_at
+                        ? (() => {
+                            try {
+                              return new Date(e.latest_success_at).toLocaleString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              });
+                            } catch {
+                              return e.latest_success_at;
+                            }
+                          })()
+                        : "No successful run";
                       return (
                         <div
                           key={e.entity_fqn}
-                          className="flex items-center justify-between gap-2 rounded-lg px-3 py-2"
+                          className="rounded-lg px-3 py-2"
                           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
                         >
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium truncate" style={{ color: "var(--color-text)" }} title={e.entity_fqn}>
-                              {short}
-                            </p>
-                            {e.latest_success_at && (
-                              <p className="text-[10px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-                                {(() => { try { return new Date(e.latest_success_at!).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return e.latest_success_at; } })()}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold truncate" style={{ color: "var(--color-text)" }} title={e.entity_fqn}>
+                                {short}
                               </p>
-                            )}
+                              <p className="text-[10px] font-mono truncate mt-0.5" style={{ color: "var(--color-text-muted)" }} title={e.entity_fqn}>
+                                {e.entity_fqn}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap justify-end gap-1.5 shrink-0">
+                              <StatusBadge status={e.latest_status} size="xs" />
+                              {e.end_to_end_status !== e.latest_status && (
+                                <StatusBadge status={e.end_to_end_status} size="xs" />
+                              )}
+                            </div>
                           </div>
-                          <StatusBadge status={e.latest_status} size="xs" />
+
+                          <div className="mt-2 grid gap-2 text-[10px] sm:grid-cols-3" style={{ color: "var(--color-text-muted)" }}>
+                            <div>
+                              <span className="font-semibold" style={{ color: "var(--color-text)" }}>Last success</span>
+                              <p>{latestSuccess}</p>
+                            </div>
+                            <div>
+                              <span className="font-semibold" style={{ color: "var(--color-text)" }}>Upstream</span>
+                              <p>{e.upstream_entity_fqns.length} source{e.upstream_entity_fqns.length === 1 ? "" : "s"}</p>
+                            </div>
+                            <div>
+                              <span className="font-semibold" style={{ color: "var(--color-text)" }}>Downstream</span>
+                              <p>{e.downstream_entity_fqns.length} target{e.downstream_entity_fqns.length === 1 ? "" : "s"}</p>
+                            </div>
+                          </div>
+
+                          {(e.upstream_entity_fqns.length > 0 || e.downstream_entity_fqns.length > 0) && (
+                            <div className="mt-2 grid gap-2 md:grid-cols-2">
+                              {e.upstream_entity_fqns.length > 0 && (
+                                <div>
+                                  <p className="mb-1 text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Incoming from</p>
+                                  <div className="space-y-1">
+                                    {e.upstream_entity_fqns.map((fqn) => (
+                                      <p key={fqn} className="truncate text-[10px] font-mono" style={{ color: "var(--color-text-muted)" }} title={fqn}>
+                                        {fqn.split(".").pop() ?? fqn}
+                                      </p>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {e.downstream_entity_fqns.length > 0 && (
+                                <div>
+                                  <p className="mb-1 text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Flows to</p>
+                                  <div className="space-y-1">
+                                    {e.downstream_entity_fqns.map((fqn) => (
+                                      <p key={fqn} className="flex min-w-0 items-center gap-1 truncate text-[10px] font-mono" style={{ color: "var(--color-text-muted)" }} title={fqn}>
+                                        <ArrowRight className="h-3 w-3 shrink-0" />
+                                        <span className="truncate">{fqn.split(".").pop() ?? fqn}</span>
+                                      </p>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -188,19 +365,21 @@ export function ChainsView({ entities }: ChainsViewProps) {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const chains = useMemo<ChainGroup[]>(() => {
-    const grouped = new Map<string, LineageEntity[]>();
-    for (const e of entities) {
-      const key = e.lineage_group_id ?? "ungrouped";
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key)!.push(e);
-    }
-
-    return [...grouped.entries()].map(([groupId, groupEntities]) => {
-      // Derive end_to_end_status: worst status in the group
-      const statuses = groupEntities.map((e) => e.end_to_end_status);
+    return buildConnectedChains(entities).map(({ groupId, entities: groupEntities }) => {
+      // Use terminal entities (those with no downstream refs pointing to another entity in this chain)
+      // to determine end-to-end status. Non-terminal entities may show e2e=IN_PROGRESS even after
+      // downstream entities succeeded, which would poison the whole chain's displayed status.
+      const terminalEntities = groupEntities.filter((e) =>
+        !e.downstream_entity_fqns.some((fqn) =>
+          groupEntities.some((ge) => ge.entity_fqn === fqn || fqn.endsWith(`.${ge.entity_fqn.split(".").at(-1)}`))
+        )
+      );
+      const statusSource = terminalEntities.length > 0 ? terminalEntities : groupEntities;
+      const statuses = statusSource.map((e) => e.latest_status);
       const worstStatus = statuses.includes("FAILED") ? "FAILED"
         : statuses.includes("PARTIAL") ? "PARTIAL"
         : statuses.includes("WARNING") ? "WARNING"
+        : statuses.includes("IN_PROGRESS") ? "IN_PROGRESS"
         : statuses.every((s) => s === "SUCCESS") ? "SUCCESS"
         : "UNKNOWN";
 
@@ -209,6 +388,7 @@ export function ChainsView({ entities }: ChainsViewProps) {
 
       return {
         groupId,
+        displayName: readableChainName(groupEntities, groupId),
         entities: groupEntities,
         endToEndStatus: worstStatus,
         lastCompletedLayer: lastCompleted,
@@ -216,7 +396,7 @@ export function ChainsView({ entities }: ChainsViewProps) {
       };
     }).sort((a, b) => {
       // Sort: FAILED first, then PARTIAL/WARNING, then SUCCESS, then UNKNOWN
-      const order = { FAILED: 0, PARTIAL: 1, WARNING: 2, SUCCESS: 3, UNKNOWN: 4 };
+      const order = { FAILED: 0, PARTIAL: 1, WARNING: 2, IN_PROGRESS: 3, SUCCESS: 4, UNKNOWN: 5 };
       return (order[a.endToEndStatus as keyof typeof order] ?? 4) - (order[b.endToEndStatus as keyof typeof order] ?? 4);
     });
   }, [entities]);
@@ -235,6 +415,7 @@ export function ChainsView({ entities }: ChainsViewProps) {
     total: chains.length,
     failed: chains.filter((c) => c.endToEndStatus === "FAILED").length,
     partial: chains.filter((c) => c.endToEndStatus === "PARTIAL" || c.endToEndStatus === "WARNING").length,
+    inProgress: chains.filter((c) => c.endToEndStatus === "IN_PROGRESS").length,
     success: chains.filter((c) => c.endToEndStatus === "SUCCESS").length,
   }), [chains]);
 
@@ -249,6 +430,7 @@ export function ChainsView({ entities }: ChainsViewProps) {
           <span style={{ color: "var(--color-text-muted)" }}>{summary.total} chains</span>
           {summary.failed > 0 && <span style={{ color: "#EF4444", fontWeight: 600 }}>✗ {summary.failed} failed</span>}
           {summary.partial > 0 && <span style={{ color: "#F59E0B", fontWeight: 600 }}>⚠ {summary.partial} partial</span>}
+          {summary.inProgress > 0 && <span style={{ color: "#3B82F6", fontWeight: 600 }}>● {summary.inProgress} in progress</span>}
           {summary.success > 0 && <span style={{ color: "#10B981", fontWeight: 600 }}>✓ {summary.success} success</span>}
         </div>
         <div className="flex items-center gap-2 ml-auto">
@@ -274,6 +456,7 @@ export function ChainsView({ entities }: ChainsViewProps) {
             <option value="all">All statuses</option>
             <option value="failed">Failed</option>
             <option value="partial">Partial</option>
+            <option value="in_progress">In progress</option>
             <option value="success">Success</option>
             <option value="unknown">Unknown</option>
           </select>
@@ -285,7 +468,7 @@ export function ChainsView({ entities }: ChainsViewProps) {
         {filtered.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              {chains.length === 0 ? "Geen chains gevonden." : "Geen resultaten voor dit filter."}
+              {chains.length === 0 ? "No chains found." : "No results for this filter."}
             </p>
           </div>
         ) : (
