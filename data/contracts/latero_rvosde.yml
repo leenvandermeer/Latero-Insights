@@ -1,0 +1,61 @@
+version: 1
+id: latero.rvosde
+display_name: Latero RVO SDE++
+
+bcbs239_principles:
+  - principle: P1
+    description: "RVO is de enige geautoriseerde bron voor SDE++ subsidiegegevens van duurzame energieprojecten in Nederland."
+  - principle: P2
+    description: "Data doorloopt het medallion-patroon (bronze → silver → gold) met data-kwaliteitscontroles bij elke stap."
+  - principle: P3
+    description: "ProjectNummer is verplicht en identificeert elk SDE++-project uniek."
+  - principle: P4
+    description: "Elke rij moet volledig zijn voor de verplichte kolommen; optionele kolommen mogen null zijn."
+
+schema:
+  columns:
+    - name: ProjectNummer
+      type: string
+      nullable: false
+    - name: ProjectNaam
+      type: string
+      nullable: true
+    - name: Categorie
+      type: string
+      nullable: true
+    - name: Technologie
+      type: string
+      nullable: true
+    - name: Provincie
+      type: string
+      nullable: true
+    - name: Gemeente
+      type: string
+      nullable: true
+    - name: Subsidieregeling
+      type: string
+      nullable: true
+    - name: JaarBeschikking
+      type: integer
+      nullable: true
+    - name: MaximaleLooptijdJaar
+      type: integer
+      nullable: true
+    - name: VermogenKW
+      type: double
+      nullable: true
+    - name: JaarlijkseProductieMWh
+      type: double
+      nullable: true
+    - name: BasisbedragEURMWh
+      type: double
+      nullable: true
+    - name: SubsidiebedragEUR
+      type: double
+      nullable: true
+    - name: Status
+      type: string
+      nullable: true
+    - name: DataSourceVersion
+      type: string
+      nullable: true

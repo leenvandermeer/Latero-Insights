@@ -91,5 +91,6 @@ export interface DataAdapter {
   getLineageEntities(): Promise<LineageEntity[]>;
   getLineageAttributes(): Promise<LineageAttribute[]>;
   getLineageSchemaInventory(): Promise<LineageSchemaInventory>;
+  getFieldValueReferences(): Promise<import("@/lib/widget-field-reference").FieldReference[]>;
   testConnection(): Promise<boolean>;
 }

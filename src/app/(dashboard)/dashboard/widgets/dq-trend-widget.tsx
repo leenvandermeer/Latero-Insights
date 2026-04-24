@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
 import { useQuality } from "@/hooks";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui";
@@ -10,6 +10,7 @@ import { STATUS_COLORS, normalizeStatus } from "@/lib/chart-colors";
 interface Props { from: string; to: string; titleOverride?: string; }
 
 export function DqTrendWidget({ from, to, titleOverride }: Props) {
+  const [target, setTarget] = useState(95);
   const { data: response, isLoading, error } = useQuality(from, to);
 
   const chartData = useMemo(() => {
@@ -35,7 +36,22 @@ export function DqTrendWidget({ from, to, titleOverride }: Props) {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader><CardTitle>{titleOverride ?? "DQ Pass Rate Trend"}</CardTitle></CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
+        <CardTitle>{titleOverride ?? "DQ Pass Rate Trend"}</CardTitle>
+        <label className="flex items-center gap-1.5 text-xs shrink-0" style={{ color: "var(--color-text-muted)" }}>
+          Target
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={target}
+            onChange={(e) => setTarget(Math.max(0, Math.min(100, Number(e.target.value))))}
+            className="w-12 rounded px-1.5 py-0.5 text-xs text-center outline-none"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+          />
+          %
+        </label>
+      </CardHeader>
       <CardContent className="flex-1 min-h-0 pb-4">
         {chartData.length === 0 ? (
           <p className="text-sm text-center py-8" style={{ color: "var(--color-text-muted)" }}>No data</p>
@@ -49,7 +65,7 @@ export function DqTrendWidget({ from, to, titleOverride }: Props) {
                 contentStyle={{ backgroundColor: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "8px", fontSize: "13px" }}
                 formatter={(value: number) => [`${value}%`, "Pass Rate"]}
               />
-              <ReferenceLine y={95} stroke={STATUS_COLORS.WARNING} strokeDasharray="5 5" label={{ value: "Target 95%", position: "insideTopRight", fontSize: 11 }} />
+              <ReferenceLine y={target} stroke={STATUS_COLORS.WARNING} strokeDasharray="5 5" label={{ value: `Target ${target}%`, position: "insideTopRight", fontSize: 11 }} />
               <Line type="monotone" dataKey="passRate" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
             </LineChart>
           </ResponsiveContainer>

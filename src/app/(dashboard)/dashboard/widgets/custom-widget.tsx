@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useDashboards } from "@/contexts/dashboard-context";
 import { useSharedWidgets } from "@/hooks/use-shared-widgets";
 import { executeQuery, getApiEndpoint } from "@/lib/query-engine";
+import { getWidgetDef } from "../registry";
 import { WidgetRenderer } from "./widget-renderer";
 import type { QueryConfig, VisualType } from "@/types/dashboard";
 
@@ -14,15 +15,37 @@ interface Props {
   titleOverride?: string;
 }
 
-type AnyWidgetDef = { id: string; label: string; queryConfig: QueryConfig; visualType: VisualType };
+type AnyWidgetDef = {
+  id: string;
+  label: string;
+  queryConfig?: QueryConfig;
+  visualType?: VisualType;
+  templateType?: string;
+};
 
 export function CustomWidgetRenderer({ customWidgetId, from, to, titleOverride }: Props) {
   const { customWidgets } = useDashboards();
   const { data: sharedWidgets = [] } = useSharedWidgets();
+
   const widget: AnyWidgetDef | undefined =
     customWidgets.find((w) => w.id === customWidgetId) ??
     sharedWidgets.find((w) => w.id === customWidgetId);
-  const endpoint = widget ? getApiEndpoint(widget.queryConfig.dataSource) : null;
+
+  // ── Template widgets: route directly to the registry component ─────────────
+  if (widget?.templateType) {
+    const def = getWidgetDef(widget.templateType);
+    if (!def) {
+      return (
+        <div className="h-full flex items-center justify-center text-sm" style={{ color: "var(--color-text-muted)" }}>
+          Unknown template type
+        </div>
+      );
+    }
+    return <def.component from={from} to={to} titleOverride={titleOverride ?? widget.label} />;
+  }
+
+  // ── Data-driven widgets: QueryEngine path ──────────────────────────────────
+  const endpoint = widget?.queryConfig ? getApiEndpoint(widget.queryConfig.dataSource) : null;
 
   const { data: rawData, isLoading, error } = useQuery<Record<string, unknown>[]>({
     queryKey: ["custom-widget", customWidgetId, from, to],
@@ -49,7 +72,7 @@ export function CustomWidgetRenderer({ customWidgetId, from, to, titleOverride }
     );
   }
 
-  if (error || !rawData) {
+  if (error || !rawData || !widget.queryConfig || !widget.visualType) {
     return (
       <div className="h-full flex items-center justify-center text-sm" style={{ color: "var(--color-error, #EF4444)" }}>
         Error loading data

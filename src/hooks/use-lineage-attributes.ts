@@ -6,7 +6,7 @@ import { fetchLineageAttributes, type ApiResponse } from "@/lib/api";
 
 export function useLineageAttributes() {
   return useQuery<ApiResponse<LineageAttribute[]>>({
-    queryKey: ["lineage", "attributes", "hops-merged"],
+    queryKey: ["lineage", "attributes", "current-only"],
     queryFn: fetchLineageAttributes,
     staleTime: 0,
     refetchOnMount: "always",

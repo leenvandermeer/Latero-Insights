@@ -117,8 +117,8 @@ export function DatasetsDashboard() {
     return (
       <div className="space-y-4">
         <PageHeader
-          eyebrow="Metadata" title="Dataset Health"
-          description="Per-dataset quality, lineage and run status"
+          eyebrow="Datasets" title="Dataset Health"
+          description="Operational health, quality signals and lineage context for each dataset."
           actions={<DateRangePicker from={from} to={to} onChange={setRange} />}
         />
         {isNoDataError(error)
@@ -132,8 +132,8 @@ export function DatasetsDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Metadata" title="Dataset Health"
-        description="Per-dataset quality, lineage and run status"
+        eyebrow="Datasets" title="Dataset Health"
+        description="Operational health, quality signals and lineage context for each dataset."
         actions={
           <div className="flex items-center gap-3">
             {source && <SourceIndicator source={source} cachedAt={cachedAt} />}

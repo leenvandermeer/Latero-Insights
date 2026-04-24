@@ -1,0 +1,49 @@
+version: 1
+id: latero.pblklimaat
+display_name: Latero PBL Klimaatmonitor Gemeentelijke Indicatoren
+
+bcbs239_principles:
+  - principle: P1
+    description: "PBL Klimaatmonitor is de enige geautoriseerde bron voor gemeentelijke energie- en klimaattransitie-indicatoren."
+  - principle: P2
+    description: "Data doorloopt het medallion-patroon (bronze → silver → gold) met data-kwaliteitscontroles bij elke stap."
+  - principle: P3
+    description: "GemeenteCode plus Jaar vormen de samengestelde primaire sleutel."
+  - principle: P4
+    description: "Elke rij moet volledig zijn voor de verplichte kolommen; optionele kolommen mogen null zijn."
+
+schema:
+  columns:
+    - name: GemeenteCode
+      type: string
+      nullable: false
+    - name: GemeenteNaam
+      type: string
+      nullable: true
+    - name: Provincie
+      type: string
+      nullable: true
+    - name: Jaar
+      type: integer
+      nullable: false
+    - name: AardgasVerbruik_m3
+      type: double
+      nullable: true
+    - name: ElectriciteitsVerbruik_kWh
+      type: double
+      nullable: true
+    - name: HernieuwbareEnergieAandeel_pct
+      type: double
+      nullable: true
+    - name: CO2EmissieGebouwde_omgeving_kton
+      type: double
+      nullable: true
+    - name: ZonnepanelenVermogen_kWp
+      type: double
+      nullable: true
+    - name: WarmtepompAantal
+      type: integer
+      nullable: true
+    - name: DataSourceVersion
+      type: string
+      nullable: true

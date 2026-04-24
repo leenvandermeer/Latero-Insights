@@ -14,6 +14,7 @@ import {
   Table2,
 } from "lucide-react";
 import type { LineageAttribute, LineageEntity } from "@/lib/adapters/types";
+import { lineageDatasetKey, lineageDatasetLabel } from "./lineage-utils";
 
 const LAYER_ORDER = ["landing", "raw", "bronze", "silver", "gold"];
 
@@ -36,11 +37,6 @@ type LineageOverviewProps = {
 function pct(part: number, total: number) {
   if (total === 0) return 0;
   return Math.round((part / total) * 100);
-}
-
-function shortName(fqn: string) {
-  const parts = fqn.split(".").filter(Boolean);
-  return parts.at(-1) ?? fqn;
 }
 
 function formatTime(value?: string | null) {
@@ -87,23 +83,8 @@ function uniqueEntities(entities: LineageEntity[]) {
   return [...byKey.values()];
 }
 
-const LAYER_NAMES = new Set(LAYER_ORDER);
-
 function datasetGroupKey(entity: LineageEntity) {
-  const parts = entity.entity_fqn.split(".").filter(Boolean);
-  const second = parts.at(-2);
-  if (second && !LAYER_NAMES.has(second.toLowerCase())) return second;
-  const last = parts.at(-1) ?? entity.entity_fqn;
-  return last.replace(/_(raw|bronze|silver|gold)$/i, "") || last;
-}
-
-function humanizeIdentifier(value: string) {
-  return value
-    .replace(/\.[^.]+$/g, "")
-    .split(/[._\-\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  return lineageDatasetKey(entity);
 }
 
 function readableChainName(chainEntities: LineageEntity[], fallback: string) {
@@ -117,9 +98,7 @@ function readableChainName(chainEntities: LineageEntity[], fallback: string) {
     return bLayer - aLayer || a.entity_fqn.localeCompare(b.entity_fqn);
   })[0];
 
-  const rawName = preferred ? shortName(preferred.entity_fqn) : fallback;
-  const readable = humanizeIdentifier(rawName);
-  return readable || humanizeIdentifier(fallback) || fallback;
+  return preferred ? lineageDatasetLabel(preferred) : fallback;
 }
 
 function resolveDatasetChainStatus(chainEntities: LineageEntity[]) {
@@ -328,10 +307,6 @@ function ChainReadinessRow({
 export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }: LineageOverviewProps) {
   const model = useMemo(() => {
     const currentAttributes = attributes.filter((attribute) => attribute.is_current);
-    const provenanceCounts = {
-      lineage_attributes_current: currentAttributes.filter((attribute) => (attribute.provenance ?? "lineage_attributes_current") === "lineage_attributes_current").length,
-      data_lineage_hop: currentAttributes.filter((attribute) => attribute.provenance === "data_lineage_hop").length,
-    };
     const currentEntities = uniqueEntities(entities);
     const total = currentEntities.length;
     const failed = currentEntities.filter((entity) => worstEntityStatus(entity) === "FAILED").length;
@@ -411,7 +386,6 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
       riskiestEntities,
       topConnected,
       currentAttributes,
-      provenanceCounts,
       uniqueSourceColumns: new Set(currentAttributes.map((attribute) => `${attribute.source_entity_fqn}.${attribute.source_attribute}`)).size,
       uniqueTargetColumns: new Set(currentAttributes.map((attribute) => `${attribute.target_entity_fqn}.${attribute.target_attribute}`)).size,
     };
@@ -467,7 +441,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
           <MetricCard
             label="Column flows"
             value={model.currentAttributes.length}
-            detail={`${model.provenanceCounts.lineage_attributes_current} current mappings and ${model.provenanceCounts.data_lineage_hop} fallback hops.`}
+            detail={`${model.uniqueSourceColumns} source columns mapped into ${model.uniqueTargetColumns} target columns.`}
             Icon={Columns3}
             tone="neutral"
           />
@@ -550,7 +524,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.entity_fqn}>
-                        {shortName(entity.entity_fqn)}
+                        {lineageDatasetLabel(entity)}
                       </p>
                       <StatusPill status={entity.end_to_end_status} />
                     </div>
@@ -584,7 +558,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
                         {entity.layer.toLowerCase() === "gold" ? <Table2 className="h-4 w-4" /> : <Database className="h-4 w-4" />}
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.entity_fqn}>{shortName(entity.entity_fqn)}</p>
+                        <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.entity_fqn}>{lineageDatasetLabel(entity)}</p>
                         <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>{formatLayer(entity.layer)}</p>
                       </div>
                     </div>

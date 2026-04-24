@@ -7,21 +7,16 @@ import { SeverityCategoryWidget } from "./widgets/severity-category-widget";
 import { StepDurationWidget } from "./widgets/step-duration-widget";
 import { Bcbs239ScoreWidget } from "./widgets/bcbs239-score-widget";
 import { FailedRunsWidget } from "./widgets/failed-runs-widget";
-import { SuccessRunsWidget } from "./widgets/success-runs-widget";
-import { WarningRunsWidget } from "./widgets/warning-runs-widget";
-import { TotalDqChecksWidget } from "./widgets/total-dq-checks-widget";
 import { FailedDqChecksWidget } from "./widgets/failed-dq-checks-widget";
 import { WarningDqChecksWidget } from "./widgets/warning-dq-checks-widget";
-import { SuccessDqChecksWidget } from "./widgets/success-dq-checks-widget";
 import { AvgRunDurationWidget } from "./widgets/avg-run-duration-widget";
-import { UniquePipelinesWidget } from "./widgets/unique-pipelines-widget";
-import { UniqueCheckTypesWidget } from "./widgets/unique-check-types-widget";
 import { RunsByPipelineWidget } from "./widgets/runs-by-pipeline-widget";
 import { DqByCategoryWidget } from "./widgets/dq-by-category-widget";
 import { PipelineRunsTableWidget } from "./widgets/pipeline-runs-table-widget";
 import { DqChecksTableWidget } from "./widgets/dq-checks-table-widget";
 import { EventLogWidget } from "./widgets/event-log-widget";
 import { DatasetOverviewWidget } from "./widgets/dataset-overview-widget";
+import { FailingDatasetsWidget } from "./widgets/failing-datasets-widget";
 
 export interface WidgetProps {
   from: string;
@@ -58,52 +53,12 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: FailedRunsWidget,
   },
   {
-    type: "success-runs",
-    label: "Successful Runs",
-    description: "Count of SUCCESS pipeline runs in the selected period",
-    category: "counter",
-    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
-    component: SuccessRunsWidget,
-  },
-  {
-    type: "warning-runs",
-    label: "Warning Runs",
-    description: "Count of WARNING pipeline runs in the selected period",
-    category: "counter",
-    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
-    component: WarningRunsWidget,
-  },
-  {
     type: "avg-run-duration",
     label: "Avg Run Duration",
     description: "Average duration of pipeline runs in the selected period",
     category: "counter",
     defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
     component: AvgRunDurationWidget,
-  },
-  {
-    type: "unique-pipelines",
-    label: "Unique Pipelines",
-    description: "Number of distinct pipelines active in the selected period",
-    category: "counter",
-    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
-    component: UniquePipelinesWidget,
-  },
-  {
-    type: "total-dq-checks",
-    label: "Total DQ Checks",
-    description: "Total number of data quality checks in the selected period",
-    category: "counter",
-    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
-    component: TotalDqChecksWidget,
-  },
-  {
-    type: "success-dq-checks",
-    label: "Passed DQ Checks",
-    description: "Count of PASSED data quality checks in the selected period",
-    category: "counter",
-    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
-    component: SuccessDqChecksWidget,
   },
   {
     type: "warning-dq-checks",
@@ -120,14 +75,6 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: "counter",
     defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
     component: FailedDqChecksWidget,
-  },
-  {
-    type: "unique-check-types",
-    label: "Unique Check Types",
-    description: "Number of distinct DQ check IDs active in the selected period",
-    category: "counter",
-    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
-    component: UniqueCheckTypesWidget,
   },
   {
     type: "pass-rate",
@@ -224,6 +171,14 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     category: "overview",
     defaultSize: { w: 4, h: 4, minW: 3, minH: 2 },
     component: DatasetOverviewWidget,
+  },
+  {
+    type: "failing-datasets",
+    label: "Failing Datasets",
+    description: "Top datasets ranked by DQ failure rate in the selected period",
+    category: "chart",
+    defaultSize: { w: 6, h: 4, minW: 4, minH: 3 },
+    component: FailingDatasetsWidget,
   },
 ];
 

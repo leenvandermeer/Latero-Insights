@@ -19,3 +19,10 @@
 | [LADR-017](20260422-lineage-dataset-titling-and-openlineage-job-label.md) | 2026-04-22 | Dataset-first titling in Lineage and job-name-first labels in OpenLineage | ACCEPTED |
 | [LADR-018](20260422-widget-builder-json-configuration-mode.md) | 2026-04-22 | Widget Builder JSON configuration mode for advanced users | ACCEPTED |
 | [LADR-019](20260422-dashboard-in-place-custom-widget-editing.md) | 2026-04-22 | In-place custom widget editing from dashboard settings | ACCEPTED |
+| [LADR-020](20260424-widget-registry-rationalization.md) | 2026-04-24 | Widget registry rationalization: verwijderen van redundante counter widgets | ACCEPTED |
+| [LADR-021](20260424-widget-scalability-improvements.md) | 2026-04-24 | Widget scalability: paginering, configureerbare drempel en failing datasets ranking | ACCEPTED |
+| [LADR-022](20260424-lineage-graph-entity-labels-and-dataset-focus.md) | 2026-04-24 | Lineage graph: layer-aware entity labels, dataset focus filter en virtual file node deduplicatie | ACCEPTED |
+| [LADR-023](20260424-mdcf-widget-field-values-table.md) | 2026-04-24 | MDCF `widget_field_values` tabel: specificatie en integratie met widget builder | ACCEPTED |
+| [LADR-024](20260424-widget-generator-first-architecture.md) | 2026-04-24 | Widget generator-first architectuur: geen out-of-the-box widgets, alles via shared library | ACCEPTED |
+| [LADR-025](20260424-insights-saas-ingest-backend.md) | 2026-04-24 | Insights SaaS ingest backend in Next.js with Postgres bootstrap | ACCEPTED |
+| [LADR-026](20260424-postgres-as-single-read-store.md) | 2026-04-24 | Postgres als enige read-store voor webapp API routes | ACCEPTED |

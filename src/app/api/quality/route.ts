@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DatabricksAdapter } from "@/lib/adapters/databricks";
 import { rateLimit } from "@/lib/rate-limit";
 import { writeToCache, isCacheOnly, getFromCache } from "@/lib/cache";
-
-const adapter = new DatabricksAdapter();
+import { getDataQualityChecksFromSaaS } from "@/lib/insights-saas-read";
 
 export async function GET(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -18,6 +16,7 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const from = params.get("from");
   const to = params.get("to");
+  const installationId = params.get("installation_id");
 
   if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
     return NextResponse.json({ error: "Missing or invalid 'from' and 'to' date parameters (YYYY-MM-DD)" }, { status: 400 });
@@ -40,23 +39,29 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Live mode: query Databricks directly and fail fast on errors.
+  // Live mode: read from Insights SaaS store and keep a fresh snapshot for fallback.
   try {
-    const checks = await adapter.getDataQualityChecks({ from, to });
+    const checks = await getDataQualityChecksFromSaaS({ from, to, installationId });
     writeToCache("quality", cacheParams, checks);
-    const response = NextResponse.json({ data: checks, source: "databricks" });
+    const response = NextResponse.json({ data: checks, source: "insights-saas" });
     response.headers.set("X-RateLimit-Remaining", String(remaining));
     response.headers.set("X-Cache", "BYPASS");
     return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[API /quality]", message);
-    return NextResponse.json(
-      {
-        error: "Failed to fetch live quality data. Cache fallback is disabled in Live mode to avoid showing stale or demo results.",
-        detail: message,
-      },
-      { status: 502 }
-    );
+    const cached = getFromCache("quality", cacheParams);
+    if (cached) {
+      const response = NextResponse.json({
+        data: cached.data,
+        cachedAt: cached.cachedAt,
+        source: "fallback",
+        warning: message,
+      });
+      response.headers.set("X-RateLimit-Remaining", String(remaining));
+      response.headers.set("X-Cache", "FALLBACK");
+      return response;
+    }
+    return NextResponse.json({ error: "Failed to fetch live data and no snapshot is available", detail: message }, { status: 502 });
   }
 }

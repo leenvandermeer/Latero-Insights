@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
-import { usePipelines, useQuality, useLineage } from "@/hooks";
+import { usePipelines, useQuality, useLineageEntities } from "@/hooks";
 import { normalizeStatus } from "@/lib/chart-colors";
+import { latestPipelineStepRuns } from "@/lib/pipeline-runs";
 import { CheckCircle, AlertTriangle, XCircle, GitBranch, Clock, ChevronDown } from "lucide-react";
 import type { WidgetProps } from "../registry";
 
@@ -49,18 +50,25 @@ function timeAgo(iso: string): string {
 export function DatasetOverviewWidget({ from, to, titleOverride }: WidgetProps) {
   const { data: pipelineRes, isLoading: loadingP } = usePipelines(from, to);
   const { data: qualityRes,  isLoading: loadingQ } = useQuality(from, to);
-  const { data: lineageRes,  isLoading: loadingL } = useLineage(from, to);
+  const { data: lineageRes,  isLoading: loadingL } = useLineageEntities();
 
   const isLoading = loadingP || loadingQ || loadingL;
 
-  const runs   = pipelineRes?.data ?? [];
-  const checks = qualityRes?.data  ?? [];
-  const hops   = lineageRes?.data  ?? [];
-
-  // Dataset filter state
+  const [envFilter, setEnvFilter] = useState<string>("__all__");
   const [selectedDataset, setSelectedDataset] = useState<string>("__all__");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const environments = useMemo(
+    () => [...new Set((pipelineRes?.data ?? []).map((r) => r.environment).filter(Boolean) as string[])].sort(),
+    [pipelineRes]
+  );
+
+  const allRawRuns = pipelineRes?.data ?? [];
+  const scopedRuns = envFilter === "__all__" ? allRawRuns : allRawRuns.filter((r) => r.environment === envFilter);
+  const runs   = latestPipelineStepRuns(scopedRuns);
+  const checks = qualityRes?.data  ?? [];
+  const entities = lineageRes?.data ?? [];
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -77,7 +85,7 @@ export function DatasetOverviewWidget({ from, to, titleOverride }: WidgetProps) 
     const ids = new Set([
       ...runs.map((r) => r.dataset_id),
       ...checks.map((c) => c.dataset_id),
-      ...hops.map((h) => h.dataset_id),
+      ...entities.map((entity) => entity.dataset_id).filter((value): value is string => Boolean(value)),
     ]);
 
     return Array.from(ids).sort().map((id) => {
@@ -92,10 +100,9 @@ export function DatasetOverviewWidget({ from, to, titleOverride }: WidgetProps) 
       const dqFail = datasetChecks.filter((c) => normalizeStatus(c.check_status) === "FAILED").length;
       const passRate = datasetChecks.length > 0 ? Math.round((dqPass / datasetChecks.length) * 100) : -1;
 
-      const datasetHops = hops.filter((h) => h.dataset_id === id);
-      const entities = new Set([
-        ...datasetHops.map((h) => h.source_entity),
-        ...datasetHops.map((h) => h.target_entity),
+      const datasetEntities = entities.filter((entity) => entity.dataset_id === id);
+      const lineageNodes = new Set([
+        ...datasetEntities.map((entity) => `${entity.layer.toLowerCase()}::${entity.entity_fqn}`),
       ]);
 
       let health: HealthStatus = "unknown";
@@ -120,10 +127,10 @@ export function DatasetOverviewWidget({ from, to, titleOverride }: WidgetProps) 
         dqFail,
         passRate,
         health,
-        lineageNodes: entities.size,
+        lineageNodes: lineageNodes.size,
       };
     });
-  }, [runs, checks, hops]);
+  }, [runs, checks, entities]);
 
   const datasets = useMemo(() => {
     if (selectedDataset === "__all__") return allDatasets;
@@ -135,13 +142,27 @@ export function DatasetOverviewWidget({ from, to, titleOverride }: WidgetProps) 
   return (
     <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
       {/* Widget header row */}
-      <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
+      <div className="flex items-center justify-between gap-2 mb-3 shrink-0 flex-wrap">
         <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
           {titleOverride ?? "Dataset Health"}
         </p>
 
-        {/* Dataset filter dropdown */}
-        {!isLoading && datasetIds.length > 0 && (
+        <div className="flex items-center gap-2">
+          {/* Environment filter */}
+          {!isLoading && environments.length > 0 && (
+            <select
+              value={envFilter}
+              onChange={(e) => { setEnvFilter(e.target.value); setSelectedDataset("__all__"); }}
+              className="text-xs rounded-md px-2 py-1 outline-none"
+              style={{ background: "var(--color-card)", border: `1px solid ${envFilter !== "__all__" ? "var(--color-accent)" : "var(--color-border)"}`, color: envFilter !== "__all__" ? "var(--color-accent)" : "var(--color-text-muted)", fontWeight: envFilter !== "__all__" ? 600 : 400 }}
+            >
+              <option value="__all__">All envs</option>
+              {environments.map((env) => <option key={env} value={env}>{env}</option>)}
+            </select>
+          )}
+
+          {/* Dataset filter dropdown */}
+          {!isLoading && datasetIds.length > 0 && (
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen((o) => !o)}
@@ -188,7 +209,8 @@ export function DatasetOverviewWidget({ from, to, titleOverride }: WidgetProps) 
               </div>
             )}
           </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Scrollable list */}

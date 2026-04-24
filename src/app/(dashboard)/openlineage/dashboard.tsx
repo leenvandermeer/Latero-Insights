@@ -116,8 +116,8 @@ export function OpenLineageDashboard() {
     return (
       <div className="space-y-4">
         <PageHeader
-          eyebrow="OpenLineage" title="OpenLineage Viewer"
-          description="Run events and lineage facets in OpenLineage format"
+          eyebrow="Run Evidence" title="OpenLineage Viewer"
+          description="Inspect run events, flow hops and technical lineage evidence in OpenLineage format."
           actions={<DateRangePicker from={from} to={to} onChange={setRange} />}
         />
         {isNoDataError(error)
@@ -131,8 +131,8 @@ export function OpenLineageDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="OpenLineage" title="OpenLineage Viewer"
-        description="Run events and lineage facets in OpenLineage format"
+        eyebrow="Run Evidence" title="OpenLineage Viewer"
+        description="Inspect run events, flow hops and technical lineage evidence in OpenLineage format."
         actions={
           <div className="flex items-center gap-3">
             {response && <SourceIndicator source={response.source} cachedAt={response.cachedAt} />}

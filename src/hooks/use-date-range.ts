@@ -12,6 +12,10 @@ function defaultTo(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+export function today(): string {
+  return defaultTo();
+}
+
 export function useDateRange(initialFrom?: string, initialTo?: string) {
   const [from, setFrom] = useState(initialFrom ?? defaultFrom);
   const [to, setTo] = useState(initialTo ?? defaultTo);

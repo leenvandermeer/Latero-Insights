@@ -1,0 +1,734 @@
+{
+  "datasets": [
+    {
+      "displayName": "P2 Accuracy",
+      "name": "ds_p2_accuracy",
+      "queryLines": [
+        "SELECT COALESCE(ROUND(100.0 * SUM(CASE WHEN check_status = 'PASS' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN check_status IN ('PASS', 'FAIL') THEN 1 ELSE 0 END), 0), 1), 0) AS score_pct, COALESCE(SUM(CASE WHEN check_status IN ('PASS', 'FAIL') THEN 1 ELSE 0 END), 0) AS total, COALESCE(SUM(CASE WHEN check_status = 'FAIL' THEN 1 ELSE 0 END), 0) AS failures, CASE WHEN COALESCE(ROUND(100.0 * SUM(CASE WHEN check_status = 'PASS' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN check_status IN ('PASS', 'FAIL') THEN 1 ELSE 0 END), 0), 1), 0) >= 99 THEN 'On Track' WHEN COALESCE(ROUND(100.0 * SUM(CASE WHEN check_status = 'PASS' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN check_status IN ('PASS', 'FAIL') THEN 1 ELSE 0 END), 0), 1), 0) >= 95 THEN 'Attention' ELSE 'Insufficient' END AS score_band FROM workspace.meta.data_quality_checks WHERE check_category IN ('validity', 'integrity', 'referential') AND event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd')"
+      ]
+    },
+    {
+      "displayName": "P3 Completeness",
+      "name": "ds_p3_completeness",
+      "queryLines": [
+        "SELECT COALESCE(ROUND(100.0 * SUM(CASE WHEN check_status = 'PASS' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN check_status IN ('PASS', 'FAIL') THEN 1 ELSE 0 END), 0), 1), 0) AS score_pct, COALESCE(SUM(CASE WHEN check_status IN ('PASS', 'FAIL') THEN 1 ELSE 0 END), 0) AS total, COALESCE(SUM(CASE WHEN check_status = 'FAIL' THEN 1 ELSE 0 END), 0) AS failures, CASE WHEN COALESCE(ROUND(100.0 * SUM(CASE WHEN check_status = 'PASS' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN check_status IN ('PASS', 'FAIL') THEN 1 ELSE 0 END), 0), 1), 0) >= 99 THEN 'On Track' WHEN COALESCE(ROUND(100.0 * SUM(CASE WHEN check_status = 'PASS' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN check_status IN ('PASS', 'FAIL') THEN 1 ELSE 0 END), 0), 1), 0) >= 95 THEN 'Attention' ELSE 'Insufficient' END AS score_band FROM workspace.meta.data_quality_checks WHERE check_category = 'completeness' AND event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd')"
+      ]
+    },
+    {
+      "displayName": "P4 Timeliness",
+      "name": "ds_p4_timeliness",
+      "queryLines": [
+        "SELECT COALESCE(ROUND(100.0 * SUM(CASE WHEN run_status = 'SUCCESS' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1), 0) AS score_pct, COALESCE(COUNT(*), 0) AS total_runs, COALESCE(SUM(CASE WHEN run_status = 'FAILED' THEN 1 ELSE 0 END), 0) AS failed_runs, CASE WHEN COALESCE(ROUND(100.0 * SUM(CASE WHEN run_status = 'SUCCESS' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1), 0) >= 99 THEN 'On Track' WHEN COALESCE(ROUND(100.0 * SUM(CASE WHEN run_status = 'SUCCESS' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1), 0) >= 95 THEN 'Attention' ELSE 'Insufficient' END AS score_band FROM workspace.meta.pipeline_runs WHERE event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd')"
+      ]
+    },
+    {
+      "displayName": "P6 Lineage",
+      "name": "ds_p6_lineage",
+      "queryLines": [
+        "WITH pipeline AS (SELECT COUNT(DISTINCT run_id) AS total_runs FROM workspace.meta.pipeline_runs WHERE event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd')), lineage AS (SELECT COUNT(DISTINCT run_id) AS runs_with_lineage, COUNT(*) AS total_hops, COUNT(DISTINCT step) AS steps_covered, COUNT(DISTINCT dataset_id) AS datasets_covered FROM workspace.meta.data_lineage WHERE event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd')) SELECT COALESCE(lineage.runs_with_lineage, 0) AS runs_with_lineage, COALESCE(pipeline.total_runs, 0) AS total_runs, COALESCE(pipeline.total_runs, 0) - COALESCE(lineage.runs_with_lineage, 0) AS missing_runs, CASE WHEN COALESCE(pipeline.total_runs, 0) = 0 THEN 0 ELSE ROUND(100.0 * COALESCE(lineage.runs_with_lineage, 0) / pipeline.total_runs, 1) END AS coverage_pct, COALESCE(lineage.total_hops, 0) AS total_hops, COALESCE(lineage.steps_covered, 0) AS steps_covered, COALESCE(lineage.datasets_covered, 0) AS datasets_covered, CASE WHEN CASE WHEN COALESCE(pipeline.total_runs, 0) = 0 THEN 0 ELSE ROUND(100.0 * COALESCE(lineage.runs_with_lineage, 0) / pipeline.total_runs, 1) END >= 99 THEN 'On Track' WHEN CASE WHEN COALESCE(pipeline.total_runs, 0) = 0 THEN 0 ELSE ROUND(100.0 * COALESCE(lineage.runs_with_lineage, 0) / pipeline.total_runs, 1) END >= 95 THEN 'Attention' ELSE 'Insufficient' END AS coverage_band FROM pipeline CROSS JOIN lineage"
+      ]
+    },
+    {
+      "displayName": "Accuracy Trend",
+      "name": "ds_p2_accuracy_trend",
+      "queryLines": [
+        "WITH band_domain AS (SELECT 1 AS band_order, 'Attention' AS status_band UNION ALL SELECT 2 AS band_order, 'Insufficient' AS status_band UNION ALL SELECT 3 AS band_order, 'Good' AS status_band), dates AS (SELECT EXPLODE(SEQUENCE(DATE_SUB(CURRENT_DATE(), 6), CURRENT_DATE(), INTERVAL 1 DAY)) AS d), actuals AS (SELECT event_date, COALESCE(ROUND(100.0 * SUM(CASE WHEN check_status = 'PASS' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN check_status IN ('PASS', 'FAIL') THEN 1 ELSE 0 END), 0), 1), 0) AS accuracy_pct FROM workspace.meta.data_quality_checks WHERE check_category IN ('validity', 'integrity', 'referential') AND event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd') GROUP BY event_date), actual_rows AS (SELECT DATE_FORMAT(d, 'yyyy-MM-dd') AS event_date, COALESCE(actuals.accuracy_pct, 0) AS accuracy_pct, CASE WHEN COALESCE(actuals.accuracy_pct, 0) >= 99 THEN 'Good' WHEN COALESCE(actuals.accuracy_pct, 0) >= 95 THEN 'Attention' ELSE 'Insufficient' END AS status_band, 10 AS row_group FROM dates LEFT JOIN actuals ON actuals.event_date = DATE_FORMAT(d, 'yyyy-MM-dd')), seed_rows AS (SELECT NULL AS event_date, CAST(NULL AS DOUBLE) AS accuracy_pct, status_band, band_order AS row_group FROM band_domain) SELECT event_date, accuracy_pct, status_band FROM seed_rows UNION ALL SELECT event_date, accuracy_pct, status_band FROM actual_rows"
+      ]
+    },
+    {
+      "displayName": "Completeness Trend",
+      "name": "ds_p3_completeness_trend",
+      "queryLines": [
+        "WITH band_domain AS (SELECT 1 AS band_order, 'Attention' AS status_band UNION ALL SELECT 2 AS band_order, 'Insufficient' AS status_band UNION ALL SELECT 3 AS band_order, 'Good' AS status_band), dates AS (SELECT EXPLODE(SEQUENCE(DATE_SUB(CURRENT_DATE(), 6), CURRENT_DATE(), INTERVAL 1 DAY)) AS d), actuals AS (SELECT event_date, COALESCE(ROUND(100.0 * SUM(CASE WHEN check_status = 'PASS' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN check_status IN ('PASS', 'FAIL') THEN 1 ELSE 0 END), 0), 1), 0) AS completeness_pct FROM workspace.meta.data_quality_checks WHERE check_category = 'completeness' AND event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd') GROUP BY event_date), actual_rows AS (SELECT DATE_FORMAT(d, 'yyyy-MM-dd') AS event_date, COALESCE(actuals.completeness_pct, 0) AS completeness_pct, CASE WHEN COALESCE(actuals.completeness_pct, 0) >= 99 THEN 'Good' WHEN COALESCE(actuals.completeness_pct, 0) >= 95 THEN 'Attention' ELSE 'Insufficient' END AS status_band, 10 AS row_group FROM dates LEFT JOIN actuals ON actuals.event_date = DATE_FORMAT(d, 'yyyy-MM-dd')), seed_rows AS (SELECT NULL AS event_date, CAST(NULL AS DOUBLE) AS completeness_pct, status_band, band_order AS row_group FROM band_domain) SELECT event_date, completeness_pct, status_band FROM seed_rows UNION ALL SELECT event_date, completeness_pct, status_band FROM actual_rows"
+      ]
+    },
+    {
+      "displayName": "Timeliness Trend",
+      "name": "ds_p4_timeliness_trend",
+      "queryLines": [
+        "WITH band_domain AS (SELECT 1 AS band_order, 'Attention' AS status_band UNION ALL SELECT 2 AS band_order, 'Insufficient' AS status_band UNION ALL SELECT 3 AS band_order, 'Good' AS status_band), dates AS (SELECT EXPLODE(SEQUENCE(DATE_SUB(CURRENT_DATE(), 6), CURRENT_DATE(), INTERVAL 1 DAY)) AS d), actuals AS (SELECT event_date, COALESCE(ROUND(100.0 * SUM(CASE WHEN run_status = 'SUCCESS' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1), 0) AS success_pct FROM workspace.meta.pipeline_runs WHERE event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd') GROUP BY event_date), actual_rows AS (SELECT DATE_FORMAT(d, 'yyyy-MM-dd') AS event_date, COALESCE(actuals.success_pct, 0) AS success_pct, CASE WHEN COALESCE(actuals.success_pct, 0) >= 99 THEN 'Good' WHEN COALESCE(actuals.success_pct, 0) >= 95 THEN 'Attention' ELSE 'Insufficient' END AS status_band, 10 AS row_group FROM dates LEFT JOIN actuals ON actuals.event_date = DATE_FORMAT(d, 'yyyy-MM-dd')), seed_rows AS (SELECT NULL AS event_date, CAST(NULL AS DOUBLE) AS success_pct, status_band, band_order AS row_group FROM band_domain) SELECT event_date, success_pct, status_band FROM seed_rows UNION ALL SELECT event_date, success_pct, status_band FROM actual_rows"
+      ]
+    },
+    {
+      "displayName": "High Severity Open",
+      "name": "ds_high_severity_open",
+      "queryLines": [
+        "SELECT check_id, COALESCE(check_category, 'uncategorized') AS category, step, dataset_id, COUNT(*) AS occurrences, MAX(event_date) AS last_seen FROM workspace.meta.data_quality_checks WHERE check_status = 'FAIL' AND event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd') GROUP BY check_id, check_category, step, dataset_id ORDER BY occurrences DESC LIMIT 20"
+      ]
+    },
+    {
+      "displayName": "Lineage per Step",
+      "name": "ds_lineage_coverage_by_step",
+      "queryLines": [
+        "WITH band_domain AS (SELECT 1 AS band_order, 'Attention' AS band_name UNION ALL SELECT 2 AS band_order, 'Insufficient' AS band_name UNION ALL SELECT 3 AS band_order, 'Good' AS band_name), expected_steps AS (SELECT 'landing_to_raw' AS step UNION ALL SELECT 'raw_to_bronze' AS step UNION ALL SELECT 'bronze_to_silver' AS step UNION ALL SELECT 'silver_to_gold' AS step), runs AS (SELECT step, COUNT(DISTINCT run_id) AS total_runs FROM workspace.meta.pipeline_runs WHERE event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd') GROUP BY step), lineage AS (SELECT step, COUNT(DISTINCT run_id) AS runs_with_lineage FROM workspace.meta.data_lineage WHERE event_date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), 6), 'yyyy-MM-dd') GROUP BY step), actual_rows AS (SELECT expected_steps.step, COALESCE(runs.total_runs, 0) AS total_runs, COALESCE(lineage.runs_with_lineage, 0) AS runs_with_lineage, COALESCE(runs.total_runs, 0) - COALESCE(lineage.runs_with_lineage, 0) AS missing_runs, CASE WHEN COALESCE(runs.total_runs, 0) = 0 THEN 0 ELSE ROUND(100.0 * COALESCE(lineage.runs_with_lineage, 0) / runs.total_runs, 1) END AS coverage_pct, CASE WHEN CASE WHEN COALESCE(runs.total_runs, 0) = 0 THEN 0 ELSE ROUND(100.0 * COALESCE(lineage.runs_with_lineage, 0) / runs.total_runs, 1) END >= 99 THEN 'Good' WHEN CASE WHEN COALESCE(runs.total_runs, 0) = 0 THEN 0 ELSE ROUND(100.0 * COALESCE(lineage.runs_with_lineage, 0) / runs.total_runs, 1) END >= 95 THEN 'Attention' ELSE 'Insufficient' END AS coverage_band, CASE WHEN COALESCE(runs.total_runs, 0) - COALESCE(lineage.runs_with_lineage, 0) = 0 THEN 'Good' WHEN COALESCE(runs.total_runs, 0) - COALESCE(lineage.runs_with_lineage, 0) <= 1 THEN 'Attention' ELSE 'Insufficient' END AS missing_band FROM expected_steps LEFT JOIN runs ON runs.step = expected_steps.step LEFT JOIN lineage ON lineage.step = expected_steps.step), seed_rows AS (SELECT NULL AS step, CAST(NULL AS BIGINT) AS total_runs, CAST(NULL AS BIGINT) AS runs_with_lineage, CAST(NULL AS BIGINT) AS missing_runs, CAST(NULL AS DOUBLE) AS coverage_pct, band_name AS coverage_band, NULL AS missing_band, band_order AS row_group FROM band_domain UNION ALL SELECT NULL AS step, CAST(NULL AS BIGINT) AS total_runs, CAST(NULL AS BIGINT) AS runs_with_lineage, CAST(NULL AS BIGINT) AS missing_runs, CAST(NULL AS DOUBLE) AS coverage_pct, NULL AS coverage_band, band_name AS missing_band, band_order + 10 AS row_group FROM band_domain) SELECT step, total_runs, runs_with_lineage, missing_runs, coverage_pct, coverage_band, missing_band FROM seed_rows UNION ALL SELECT step, total_runs, runs_with_lineage, missing_runs, coverage_pct, coverage_band, missing_band FROM actual_rows"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "displayName": "BCBS 239",
+      "layout": [
+        {
+          "position": {
+            "height": 2,
+            "width": 2,
+            "x": 0,
+            "y": 0
+          },
+          "widget": {
+            "name": "w_p2_score",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_p2_accuracy",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`score_pct`",
+                      "name": "score_pct"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "value": {
+                  "displayName": "Score %",
+                  "fieldName": "score_pct"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P2 Accuracy %"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 2,
+            "width": 2,
+            "x": 2,
+            "y": 0
+          },
+          "widget": {
+            "name": "w_p2_failures",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_p2_accuracy",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`failures`",
+                      "name": "failures"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "value": {
+                  "displayName": "Failures",
+                  "fieldName": "failures"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P2 Failures"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 2,
+            "width": 2,
+            "x": 4,
+            "y": 0
+          },
+          "widget": {
+            "name": "w_p3_score",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_p3_completeness",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`score_pct`",
+                      "name": "score_pct"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "value": {
+                  "displayName": "Score %",
+                  "fieldName": "score_pct"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P3 Completeness %"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 2,
+            "width": 2,
+            "x": 6,
+            "y": 0
+          },
+          "widget": {
+            "name": "w_p3_failures",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_p3_completeness",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`failures`",
+                      "name": "failures"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "value": {
+                  "displayName": "Failures",
+                  "fieldName": "failures"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P3 Failures"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 2,
+            "width": 2,
+            "x": 8,
+            "y": 0
+          },
+          "widget": {
+            "name": "w_p4_score",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_p4_timeliness",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`score_pct`",
+                      "name": "score_pct"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "value": {
+                  "displayName": "Score %",
+                  "fieldName": "score_pct"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P4 Timeliness %"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 2,
+            "width": 2,
+            "x": 10,
+            "y": 0
+          },
+          "widget": {
+            "name": "w_p6_coverage",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_p6_lineage",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`coverage_pct`",
+                      "name": "coverage_pct"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "value": {
+                  "displayName": "Coverage %",
+                  "fieldName": "coverage_pct"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P6 Lineage Coverage %"
+              },
+              "version": 2,
+              "widgetType": "counter"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 3,
+            "width": 4,
+            "x": 0,
+            "y": 2
+          },
+          "widget": {
+            "name": "w_accuracy_trend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_p2_accuracy_trend",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`event_date`",
+                      "name": "event_date"
+                    },
+                    {
+                      "expression": "`accuracy_pct`",
+                      "name": "accuracy_pct"
+                    },
+                    {
+                      "expression": "`status_band`",
+                      "name": "status_band"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "color": {
+                  "displayName": "Band",
+                  "fieldName": "status_band",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "x": {
+                  "displayName": "Date",
+                  "fieldName": "event_date",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "displayName": "Accuracy %",
+                  "fieldName": "accuracy_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P2 Accuracy Trend (7d)"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 3,
+            "width": 4,
+            "x": 4,
+            "y": 2
+          },
+          "widget": {
+            "name": "w_completeness_trend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_p3_completeness_trend",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`event_date`",
+                      "name": "event_date"
+                    },
+                    {
+                      "expression": "`completeness_pct`",
+                      "name": "completeness_pct"
+                    },
+                    {
+                      "expression": "`status_band`",
+                      "name": "status_band"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "color": {
+                  "displayName": "Band",
+                  "fieldName": "status_band",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "x": {
+                  "displayName": "Date",
+                  "fieldName": "event_date",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "displayName": "Completeness %",
+                  "fieldName": "completeness_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P3 Completeness Trend (7d)"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 3,
+            "width": 4,
+            "x": 8,
+            "y": 2
+          },
+          "widget": {
+            "name": "w_timeliness_trend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_p4_timeliness_trend",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`event_date`",
+                      "name": "event_date"
+                    },
+                    {
+                      "expression": "`success_pct`",
+                      "name": "success_pct"
+                    },
+                    {
+                      "expression": "`status_band`",
+                      "name": "status_band"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "color": {
+                  "displayName": "Band",
+                  "fieldName": "status_band",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "x": {
+                  "displayName": "Date",
+                  "fieldName": "event_date",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "displayName": "Success %",
+                  "fieldName": "success_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P4 Timeliness Trend (7d)"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 3,
+            "width": 6,
+            "x": 0,
+            "y": 5
+          },
+          "widget": {
+            "name": "w_lineage_by_step",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_lineage_coverage_by_step",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`step`",
+                      "name": "step"
+                    },
+                    {
+                      "expression": "`coverage_pct`",
+                      "name": "coverage_pct"
+                    },
+                    {
+                      "expression": "`total_runs`",
+                      "name": "total_runs"
+                    },
+                    {
+                      "expression": "`coverage_band`",
+                      "name": "coverage_band"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "color": {
+                  "displayName": "Band",
+                  "fieldName": "coverage_band",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "x": {
+                  "displayName": "Step",
+                  "fieldName": "step",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "displayName": "Coverage %",
+                  "fieldName": "coverage_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P6 Lineage Coverage by Step (7d)"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 3,
+            "width": 6,
+            "x": 6,
+            "y": 5
+          },
+          "widget": {
+            "name": "w_p6_stats",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_lineage_coverage_by_step",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "expression": "`step`",
+                      "name": "step"
+                    },
+                    {
+                      "expression": "`missing_runs`",
+                      "name": "missing_runs"
+                    },
+                    {
+                      "expression": "`missing_band`",
+                      "name": "missing_band"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "color": {
+                  "displayName": "Band",
+                  "fieldName": "missing_band",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "x": {
+                  "displayName": "Step",
+                  "fieldName": "step",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "displayName": "Missing Runs",
+                  "fieldName": "missing_runs",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "P6 Missing Lineage Runs by Step (7d)"
+              },
+              "version": 3,
+              "widgetType": "bar"
+            }
+          }
+        },
+        {
+          "position": {
+            "height": 4,
+            "width": 12,
+            "x": 0,
+            "y": 8
+          },
+          "widget": {
+            "name": "w_high_severity_open",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_high_severity_open",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "expression": "`check_id`",
+                      "name": "check_id"
+                    },
+                    {
+                      "expression": "`category`",
+                      "name": "category"
+                    },
+                    {
+                      "expression": "`step`",
+                      "name": "step"
+                    },
+                    {
+                      "expression": "`dataset_id`",
+                      "name": "dataset_id"
+                    },
+                    {
+                      "expression": "`occurrences`",
+                      "name": "occurrences"
+                    },
+                    {
+                      "expression": "`last_seen`",
+                      "name": "last_seen"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "check_id"
+                  },
+                  {
+                    "fieldName": "category"
+                  },
+                  {
+                    "fieldName": "step"
+                  },
+                  {
+                    "fieldName": "dataset_id"
+                  },
+                  {
+                    "fieldName": "occurrences"
+                  },
+                  {
+                    "fieldName": "last_seen"
+                  }
+                ]
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Open High Severity Findings (7d)"
+              },
+              "version": 2,
+              "widgetType": "table"
+            }
+          }
+        }
+      ],
+      "layoutVersion": "GRID_V1",
+      "name": "page_bcbs239",
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ]
+}

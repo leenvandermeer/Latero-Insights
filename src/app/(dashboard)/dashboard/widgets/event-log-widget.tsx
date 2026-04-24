@@ -47,8 +47,7 @@ export function EventLogWidget({ from, to, titleOverride }: Props) {
   );
 
   const events = [...(response?.data ?? [])]
-    .sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc))
-    .slice(0, 20);
+    .sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc));
 
   return (
     <Card className="h-full flex flex-col overflow-hidden">

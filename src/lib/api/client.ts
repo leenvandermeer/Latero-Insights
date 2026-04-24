@@ -90,10 +90,6 @@ export function fetchLineageAttributes(): Promise<ApiResponse<LineageAttribute[]
   return request("/lineage/attributes");
 }
 
-export function fetchCanonicalLineage(): Promise<ApiResponse<LineageHop[]>> {
-  return request("/lineage/canonical");
-}
-
 // ── Health & cache endpoints ────────────────────────────────────
 
 export function fetchHealth(): Promise<ApiHealthResponse> {

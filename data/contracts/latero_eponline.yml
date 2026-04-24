@@ -1,0 +1,67 @@
+version: 1
+id: latero.eponline
+display_name: Latero EP-Online Energiecertificaten
+
+bcbs239_principles:
+  - principle: P1
+    description: "EP-Online (RVO) is de enige geautoriseerde bron voor individuele energieprestatiecertificaten van gebouwen in Nederland."
+  - principle: P2
+    description: "Data doorloopt het medallion-patroon (bronze → silver → gold) met data-kwaliteitscontroles bij elke stap."
+  - principle: P3
+    description: "PandIdentificatie (BAG-id) is verplicht en koppelt het certificaat aan het Basisregistraties Adressen en Gebouwen."
+  - principle: P4
+    description: "Elke rij moet volledig zijn voor de verplichte kolommen; optionele kolommen mogen null zijn."
+
+schema:
+  columns:
+    - name: PandIdentificatie
+      type: string
+      nullable: false
+    - name: Postcode
+      type: string
+      nullable: true
+    - name: Huisnummer
+      type: string
+      nullable: true
+    - name: HuisnummerToevoeging
+      type: string
+      nullable: true
+    - name: Woonplaats
+      type: string
+      nullable: true
+    - name: Provincie
+      type: string
+      nullable: true
+    - name: Gebruiksdoel
+      type: string
+      nullable: true
+    - name: EnergieLabel
+      type: string
+      nullable: true
+    - name: EnergieIndex
+      type: double
+      nullable: true
+    - name: EnergieKlasse
+      type: string
+      nullable: true
+    - name: Registratiedatum
+      type: string
+      nullable: true
+    - name: GeldigTot
+      type: string
+      nullable: true
+    - name: Gebouwtype
+      type: string
+      nullable: true
+    - name: Bouwjaar
+      type: integer
+      nullable: true
+    - name: Oppervlakte
+      type: double
+      nullable: true
+    - name: BerekeningsMethode
+      type: string
+      nullable: true
+    - name: DataSourceVersion
+      type: string
+      nullable: true

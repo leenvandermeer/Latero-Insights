@@ -34,6 +34,25 @@ export function usePublishWidget() {
   });
 }
 
+export function useUpdateSharedWidget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<SharedWidgetDef, "id" | "publishedAt">> }) => {
+      const res = await fetch(`/api/widgets/shared/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { error: string };
+        throw new Error(err.error ?? "Update failed");
+      }
+      return res.json() as Promise<SharedWidgetDef>;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+}
+
 export function useWithdrawWidget() {
   const qc = useQueryClient();
   return useMutation({

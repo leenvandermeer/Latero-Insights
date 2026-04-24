@@ -1,0 +1,55 @@
+version: 1
+id: latero.cbs_arbeid
+display_name: Latero CBS Arbeidsparticipatie per Gemeente
+
+bcbs239_principles:
+  - principle: P1
+    description: "CBS StatLine is de enige geautoriseerde bron voor arbeidsparticipatie- en werkgelegenheidsstatistieken per gemeente."
+  - principle: P2
+    description: "Data doorloopt het medallion-patroon (bronze → silver → gold) met data-kwaliteitscontroles bij elke stap."
+  - principle: P3
+    description: "GemeenteCode plus Jaar vormen de samengestelde primaire sleutel."
+  - principle: P4
+    description: "Elke rij moet volledig zijn voor de verplichte kolommen; optionele kolommen mogen null zijn."
+
+schema:
+  columns:
+    - name: GemeenteCode
+      type: string
+      nullable: false
+    - name: GemeenteNaam
+      type: string
+      nullable: true
+    - name: Provincie
+      type: string
+      nullable: true
+    - name: Jaar
+      type: integer
+      nullable: false
+    - name: NettoArbeidsparticipatie_pct
+      type: double
+      nullable: true
+    - name: BrutoArbeidsparticipatie_pct
+      type: double
+      nullable: true
+    - name: WerkloosheidsPercentage
+      type: double
+      nullable: true
+    - name: AantalWerkzamePersonen
+      type: integer
+      nullable: true
+    - name: AantalWerkzamePersonenM
+      type: integer
+      nullable: true
+    - name: AantalWerkzamePersonenV
+      type: integer
+      nullable: true
+    - name: GemiddeldeArbeidsduur_uur
+      type: double
+      nullable: true
+    - name: AantalZZP
+      type: integer
+      nullable: true
+    - name: DataSourceVersion
+      type: string
+      nullable: true

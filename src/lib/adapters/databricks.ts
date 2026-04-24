@@ -320,6 +320,32 @@ export class DatabricksAdapter implements DataAdapter {
     }));
   }
 
+  async getFieldValueReferences(): Promise<import("@/lib/widget-field-reference").FieldReference[]> {
+    // Queries widget_field_values when the MDCF table exists; returns [] otherwise.
+    // Expected columns: field_name, field_value, label (all VARCHAR).
+    try {
+      const columns = await describeColumns("widget_field_values");
+      if (columns.length === 0) return [];
+      const sql = `SELECT field_name, field_value, label FROM ${fqTable("widget_field_values")} ORDER BY field_name, field_value`;
+      const resp = await executeStatement(sql);
+      const rows = mapRows(resp, (row, cols) => ({
+        field: col(row, cols, "field_name") ?? "",
+        value: col(row, cols, "field_value") ?? "",
+        label: col(row, cols, "label") ?? "",
+      })).filter((r) => r.field && r.value);
+
+      const grouped = new Map<string, { value: string; label: string }[]>();
+      for (const r of rows) {
+        const existing = grouped.get(r.field) ?? [];
+        existing.push({ value: r.value, label: r.label || r.value });
+        grouped.set(r.field, existing);
+      }
+      return [...grouped.entries()].map(([field, values]) => ({ field, label: field, values }));
+    } catch {
+      return [];
+    }
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       const sql = `SELECT 1 AS ok FROM ${fqTable("pipeline_runs")} LIMIT 1`;

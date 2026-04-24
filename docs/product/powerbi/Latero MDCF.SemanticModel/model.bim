@@ -1,0 +1,220 @@
+{
+  "name": "Latero MDCF",
+  "compatibilityLevel": 1567,
+  "model": {
+    "culture": "en-US",
+    "dataAccessOptions": {
+      "legacyRedirects": true,
+      "returnErrorValuesAsNull": true
+    },
+    "defaultPowerBIDataSourceVersion": "powerBI_V3",
+    "sourceQueryCulture": "en-US",
+    "tables": [
+      {
+        "name": "PipelineRuns",
+        "columns": [
+          {"name": "event_type",      "dataType": "string", "sourceColumn": "event_type"},
+          {"name": "timestamp_utc",   "dataType": "string", "sourceColumn": "timestamp_utc"},
+          {"name": "event_date",      "dataType": "string", "sourceColumn": "event_date"},
+          {"name": "dataset_id",      "dataType": "string", "sourceColumn": "dataset_id"},
+          {"name": "source_system",   "dataType": "string", "sourceColumn": "source_system"},
+          {"name": "step",            "dataType": "string", "sourceColumn": "step"},
+          {"name": "run_id",          "dataType": "string", "sourceColumn": "run_id"},
+          {"name": "installation_id", "dataType": "string", "sourceColumn": "installation_id"},
+          {"name": "environment",     "dataType": "string", "sourceColumn": "environment"},
+          {"name": "schema_version",  "dataType": "string", "sourceColumn": "schema_version"},
+          {"name": "run_status",      "dataType": "string", "sourceColumn": "run_status"},
+          {"name": "duration_ms",     "dataType": "int64",  "sourceColumn": "duration_ms"},
+          {"name": "parent_run_id",   "dataType": "string", "sourceColumn": "parent_run_id"}
+        ],
+        "measures": [
+          {
+            "name": "Total Runs",
+            "expression": "COUNTROWS(PipelineRuns)"
+          },
+          {
+            "name": "Failed Runs",
+            "expression": "CALCULATE(COUNTROWS(PipelineRuns), PipelineRuns[run_status] = \"FAILED\")"
+          },
+          {
+            "name": "Success Rate %",
+            "expression": "DIVIDE(CALCULATE(COUNTROWS(PipelineRuns), PipelineRuns[run_status] = \"SUCCESS\"), COUNTROWS(PipelineRuns)) * 100",
+            "formatString": "0.00"
+          },
+          {
+            "name": "Avg Duration Sec",
+            "expression": "AVERAGE(PipelineRuns[duration_ms]) / 1000",
+            "formatString": "0.00"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "PipelineRuns",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Databricks.Catalogs(DatabaseServer, HttpPath, [Catalog = \"workspace\", Database = \"meta\"]),",
+                "    meta_db = Source{[Name=\"meta\"]}[Data],",
+                "    pipeline_runs_table = meta_db{[Name=\"pipeline_runs\"]}[Data]",
+                "in",
+                "    pipeline_runs_table"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "DataQualityChecks",
+        "columns": [
+          {"name": "event_type",      "dataType": "string", "sourceColumn": "event_type"},
+          {"name": "timestamp_utc",   "dataType": "string", "sourceColumn": "timestamp_utc"},
+          {"name": "event_date",      "dataType": "string", "sourceColumn": "event_date"},
+          {"name": "dataset_id",      "dataType": "string", "sourceColumn": "dataset_id"},
+          {"name": "source_system",   "dataType": "string", "sourceColumn": "source_system"},
+          {"name": "step",            "dataType": "string", "sourceColumn": "step"},
+          {"name": "run_id",          "dataType": "string", "sourceColumn": "run_id"},
+          {"name": "installation_id", "dataType": "string", "sourceColumn": "installation_id"},
+          {"name": "environment",     "dataType": "string", "sourceColumn": "environment"},
+          {"name": "schema_version",  "dataType": "string", "sourceColumn": "schema_version"},
+          {"name": "parent_run_id",   "dataType": "string", "sourceColumn": "parent_run_id"},
+          {"name": "check_id",        "dataType": "string", "sourceColumn": "check_id"},
+          {"name": "check_status",    "dataType": "string", "sourceColumn": "check_status"},
+          {"name": "policy_version",  "dataType": "string", "sourceColumn": "policy_version"},
+          {"name": "check_category",  "dataType": "string", "sourceColumn": "check_category"}
+        ],
+        "measures": [
+          {
+            "name": "Total Checks",
+            "expression": "COUNTROWS(DataQualityChecks)"
+          },
+          {
+            "name": "Failed Checks",
+            "expression": "CALCULATE(COUNTROWS(DataQualityChecks), DataQualityChecks[check_status] = \"FAIL\")"
+          },
+          {
+            "name": "Pass Rate %",
+            "expression": "DIVIDE(CALCULATE(COUNTROWS(DataQualityChecks), DataQualityChecks[check_status] = \"PASS\"), COUNTROWS(DataQualityChecks)) * 100",
+            "formatString": "0.00"
+          },
+          {
+            "name": "Warn Count",
+            "expression": "CALCULATE(COUNTROWS(DataQualityChecks), DataQualityChecks[check_status] = \"WARN\")"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "DataQualityChecks",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Databricks.Catalogs(DatabaseServer, HttpPath, [Catalog = \"workspace\", Database = \"meta\"]),",
+                "    meta_db = Source{[Name=\"meta\"]}[Data],",
+                "    data_quality_checks_table = meta_db{[Name=\"data_quality_checks\"]}[Data]",
+                "in",
+                "    data_quality_checks_table"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "DataLineage",
+        "columns": [
+          {"name": "event_type",       "dataType": "string", "sourceColumn": "event_type"},
+          {"name": "timestamp_utc",    "dataType": "string", "sourceColumn": "timestamp_utc"},
+          {"name": "event_date",       "dataType": "string", "sourceColumn": "event_date"},
+          {"name": "dataset_id",       "dataType": "string", "sourceColumn": "dataset_id"},
+          {"name": "source_system",    "dataType": "string", "sourceColumn": "source_system"},
+          {"name": "step",             "dataType": "string", "sourceColumn": "step"},
+          {"name": "run_id",           "dataType": "string", "sourceColumn": "run_id"},
+          {"name": "installation_id",  "dataType": "string", "sourceColumn": "installation_id"},
+          {"name": "environment",      "dataType": "string", "sourceColumn": "environment"},
+          {"name": "schema_version",   "dataType": "string", "sourceColumn": "schema_version"},
+          {"name": "parent_run_id",    "dataType": "string", "sourceColumn": "parent_run_id"},
+          {"name": "source_entity",    "dataType": "string", "sourceColumn": "source_entity"},
+          {"name": "source_type",      "dataType": "string", "sourceColumn": "source_type"},
+          {"name": "source_ref",       "dataType": "string", "sourceColumn": "source_ref"},
+          {"name": "source_attribute", "dataType": "string", "sourceColumn": "source_attribute"},
+          {"name": "target_entity",    "dataType": "string", "sourceColumn": "target_entity"},
+          {"name": "target_type",      "dataType": "string", "sourceColumn": "target_type"},
+          {"name": "target_attribute", "dataType": "string", "sourceColumn": "target_attribute"}
+        ],
+        "measures": [
+          {
+            "name": "Total Lineage Hops",
+            "expression": "COUNTROWS(DataLineage)"
+          },
+          {
+            "name": "Distinct Source Entities",
+            "expression": "DISTINCTCOUNT(DataLineage[source_entity])"
+          },
+          {
+            "name": "Distinct Target Entities",
+            "expression": "DISTINCTCOUNT(DataLineage[target_entity])"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "DataLineage",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Databricks.Catalogs(DatabaseServer, HttpPath, [Catalog = \"workspace\", Database = \"meta\"]),",
+                "    meta_db = Source{[Name=\"meta\"]}[Data],",
+                "    data_lineage_table = meta_db{[Name=\"data_lineage\"]}[Data]",
+                "in",
+                "    data_lineage_table"
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "name": "rel_runs_dq",
+        "fromTable": "DataQualityChecks",
+        "fromColumn": "run_id",
+        "toTable": "PipelineRuns",
+        "toColumn": "run_id",
+        "crossFilteringBehavior": "oneDirection"
+      },
+      {
+        "name": "rel_runs_lineage",
+        "fromTable": "DataLineage",
+        "fromColumn": "run_id",
+        "toTable": "PipelineRuns",
+        "toColumn": "run_id",
+        "crossFilteringBehavior": "oneDirection"
+      }
+    ],
+    "expressions": [
+      {
+        "name": "DatabaseServer",
+        "kind": "m",
+        "expression": [
+          "let",
+          "    Source = \"dbc-2f5a2381-e7df.cloud.databricks.com\"",
+          "in",
+          "    Source"
+        ]
+      },
+      {
+        "name": "HttpPath",
+        "kind": "m",
+        "expression": [
+          "let",
+          "    Source = \"/sql/1.0/warehouses/your-warehouse-id\"",
+          "in",
+          "    Source"
+        ]
+      }
+    ]
+  }
+}

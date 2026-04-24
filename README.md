@@ -1,6 +1,17 @@
 # Layer2 Meta Insights
 
-Self-service metadata observability portal for the Latero Meta Data Control Framework.
+SaaS-first metadata operations platform for the Latero Meta Data Control Framework.
+
+## Architecture (Current)
+
+Layer2 Meta Insights now runs on a push-based SaaS architecture:
+
+1. Databricks/Snowflake runtimes push events to `/api/v1/*`
+2. Insights persists events in Postgres (`pipeline_runs`, `data_quality_checks`, `data_lineage`)
+3. Dashboard read APIs (`/api/pipelines`, `/api/quality`, `/api/lineage`) read from Postgres first
+4. Dashboard data is served from the Insights SaaS store (with cache fallback during outages)
+
+This means client-side pipelines do not need a direct Postgres connector.
 
 ## Prerequisites
 
@@ -24,6 +35,170 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Local Azure-Parity Development (MacBook)
+
+Use this mode when you want to develop locally and promote to Azure later with
+minimal surprises.
+
+### 1. Install Docker Desktop (one-time)
+
+`npm run infra:up` uses Docker Compose. Install Docker Desktop first:
+
+```bash
+brew install --cask docker
+open -a Docker
+```
+
+Notes:
+
+- During `brew install --cask docker`, macOS may ask for `Password:` to create
+    CLI symlinks. Enter your Mac login password and press Enter.
+- Wait until Docker Desktop shows `Docker is running`.
+
+Verify:
+
+```bash
+docker --version
+docker compose version
+```
+
+### 2. Start local infrastructure
+
+```bash
+npm run infra:up
+```
+
+This starts:
+
+- Postgres on `localhost:5432`
+- Redis on `localhost:6379`
+- Azurite (Azure Storage emulator) on `localhost:10000-10002`
+
+Database bootstrap:
+
+- On first startup, Postgres automatically executes SQL files in `sql/init/`.
+- The file `sql/init/001_insights_saas_init.sql` creates the SaaS ingestion schema:
+    - `insights_installations`
+    - `pipeline_runs`
+    - `data_quality_checks`
+    - `data_lineage`
+    - `ingest_audit`
+- If you need to re-run initialization from scratch, remove the Postgres volume first:
+
+```bash
+docker compose -f docker-compose.local.yml down -v
+npm run infra:up
+```
+
+Of gebruik de shortcut:
+
+```bash
+npm run infra:reset-db
+```
+
+Important:
+
+- `docker-compose.local.yml` starts local infrastructure only.
+- The Next.js app itself still runs as a local process via `npm run dev`.
+- The default `npm run infra:up` flow is intended for local infra parity while keeping hot reload for the web app.
+
+### 3. Configure local env
+
+```bash
+cp .env.example .env.local
+```
+
+For local infrastructure parity, keep these values in `.env.local`:
+
+```env
+POSTGRES_URL=postgresql://insights:insights@localhost:5432/insights
+REDIS_URL=redis://localhost:6379
+AZURE_STORAGE_BLOB_ENDPOINT=http://127.0.0.1:10000/devstoreaccount1
+AZURE_STORAGE_QUEUE_ENDPOINT=http://127.0.0.1:10001/devstoreaccount1
+```
+
+The app now reads dashboard/runtime metadata from local Postgres (SaaS ingest
+store).
+
+### 4. Start app
+
+```bash
+npm run dev
+```
+
+Optional: run the web app in a dev container while keeping local infra in Docker
+
+```bash
+npm run dev:docker:up
+```
+
+This starts:
+
+- Postgres, Redis, and Azurite from `docker-compose.local.yml`
+- the Next.js dev server from `docker-compose.dev.yml`
+
+The app is still a development server with hot reload. Open:
+
+- `http://localhost:3010`
+
+Important dev-container behavior:
+
+- the repository is bind-mounted into the container (`.:/app`)
+- your source code still lives on the host
+- `.cache`, `data`, and `.next` stay on the host because they are part of the bind mount
+- only `node_modules` lives in Docker via a named volume
+
+Useful commands:
+
+```bash
+npm run dev:docker:logs   # Follow app logs
+npm run dev:docker:down   # Stop app + infra containers
+```
+
+### 5. Useful local infra commands
+
+```bash
+npm run infra:logs   # Follow Postgres/Redis/Azurite logs
+npm run infra:down   # Stop and remove local infra containers
+```
+
+### 6. Promotion path to Azure
+
+Use the same app configuration keys per environment (`local`, `staging`,
+`production`) and only change values:
+
+- `POSTGRES_URL` -> Azure PostgreSQL Flexible Server connection string
+- `REDIS_URL` -> Azure Cache for Redis connection string
+- `AZURE_STORAGE_*` -> Azure Blob/Queue endpoints
+- secrets move from `.env.local` -> Azure Key Vault references
+
+## Daily Development Workflow
+
+Use this sequence for day-to-day development on macOS:
+
+```bash
+# 1) Start local infrastructure (Docker)
+npm run infra:up
+
+# 2) Start Next.js app (local process with hot reload)
+npm run dev
+```
+
+Then:
+
+1. Open the app URL shown by Next.js (usually `http://localhost:3000`).
+2. Verify API health at `http://localhost:3000/api/health`.
+3. Develop and test your feature with hot reload.
+
+When done:
+
+```bash
+# Stop app: Ctrl+C in the dev terminal
+
+# Stop local infrastructure
+npm run infra:down
+```
 
 ## Databricks Connection Setup
 
@@ -108,6 +283,31 @@ If you see `"databricks": false`, check:
 | `/api/pipelines` | GET | `from`, `to` (YYYY-MM-DD) | Pipeline run data |
 | `/api/quality` | GET | `from`, `to` (YYYY-MM-DD) | Data quality check results |
 | `/api/lineage` | GET | `from`, `to` (YYYY-MM-DD) | Lineage hop data |
+
+### SaaS ingest API (`/api/v1`)
+
+These endpoints are intended for Latero runtime adapters (Databricks/Snowflake jobs)
+to push metadata events into Insights-managed Postgres storage.
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/v1/health` | GET | none | API + DB health for ingest path |
+| `/api/v1/pipeline-runs` | POST | Bearer token | Ingest pipeline run events |
+| `/api/v1/dq-checks` | POST | Bearer token | Ingest DQ check events |
+| `/api/v1/lineage` | POST | Bearer token | Ingest lineage events |
+| `/api/v1/installations/{installation_id}/status` | GET | Bearer token | Tenant status/counts |
+
+Auth behavior:
+
+- For `/api/v1/*`, `Authorization: Bearer <token>` is used.
+- Token + `installation_id` are validated against `insights_installations`.
+- If `INSIGHTS_AUTH_DISABLED=true`, token validation is bypassed (local dev only).
+
+SaaS ingestion datastore:
+
+- The Docker Postgres instance now initializes the Insights SaaS event tables automatically.
+- This enables running the backend as one SaaS product with Databricks ingestion clients writing events into Insights-managed storage.
+- Framework-side adapters can target the Insights SaaS API while notebooks only keep source-system execution config.
 
 Example:
 ```bash
@@ -194,7 +394,7 @@ To rename a user dashboard, hover over the title — a pencil icon (✎) appears
 
 ### Widget Library
 
-The widget library opens as a **right-side drawer** when edit mode is active. Click **Aanpassen** (edit button) in the dashboard header to enter edit mode — the drawer slides in automatically from the right. The library is part of the canvas editing surface, not the sidebar.
+The widget library opens as a **right-side drawer** when edit mode is active. Click **+ Add Widget** in the dashboard header to enter edit mode — the drawer slides in automatically from the right. The library is part of the canvas editing surface, not the sidebar.
 
 Available widget categories:
 
@@ -203,7 +403,7 @@ Available widget categories:
 | Counters | Total Runs, Failed Runs, DQ Pass Rate, BCBS239 Score |
 | Charts | Run Status Trend, DQ Pass Rate Trend, Results by Category, Avg Duration by Step, Event Log |
 | Tables | Recent Pipeline Runs, DQ Check Results |
-| My Widgets | Custom widgets created via the widget builder wizard |
+| My Widgets | Custom widgets created from the drawer and saved to your local store |
 
 ### Adding Widgets
 
@@ -224,7 +424,9 @@ Click **+ Add Widget** in the dashboard header to enter edit mode. In edit mode:
 
 ### Custom Widgets
 
-Click **Build custom widget** (empty canvas state or via the widget builder link) to open the 4-step wizard at `/dashboard/widget-builder`. Custom widgets are saved to the store and appear in the "My Widgets" section of the library panel on all dashboards.
+Click **Create widget** in the right-side drawer to switch the drawer from the widget library to the inline custom-widget builder. You can configure the widget while keeping the dashboard canvas visible, then use **Save and place** to add it directly to the current dashboard.
+
+Custom widgets are saved to the local dashboard store and appear in the **My Widgets** section of the library drawer on all dashboards. The standalone `/dashboard/widget-builder` page still exists as an advanced builder flow, but the primary dashboard UX is now in-place creation and placement.
 
 ## Scripts
 
@@ -233,6 +435,12 @@ npm run dev      # Start dev server (localhost:3000)
 npm run build    # Production build
 npm run start    # Start production server
 npm run lint     # Run ESLint
+npm run infra:up    # Start local Postgres/Redis/Azurite
+npm run infra:logs  # Follow local infra logs
+npm run infra:down  # Stop local Postgres/Redis/Azurite
+npm run dev:docker:up    # Run app + infra in Docker for development
+npm run dev:docker:logs  # Follow dev app logs
+npm run dev:docker:down  # Stop dev app + infra containers
 ```
 
 ## Troubleshooting

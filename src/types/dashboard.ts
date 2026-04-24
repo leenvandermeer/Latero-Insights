@@ -19,6 +19,8 @@ export type MeasureType = "count" | "count_where" | "percentage" | "avg";
 
 export type VisualType = "counter" | "bar" | "line" | "area" | "donut" | "table";
 
+export type WidgetCategory = "counter" | "charts" | "tables" | "overview";
+
 export interface Measure {
   type: MeasureType;
   field?: string;    // for avg: "duration_ms"
@@ -50,6 +52,8 @@ export interface CustomWidget {
   description?: string;
   queryConfig: QueryConfig;
   visualType: VisualType;
+  templateType?: string;
+  category?: WidgetCategory;
   createdAt: string;
 }
 
@@ -59,8 +63,12 @@ export interface SharedWidgetDef {
   id: string;
   label: string;
   description?: string;
-  queryConfig: QueryConfig;
-  visualType: VisualType;
+  // Only present for data-driven (QueryEngine) widgets; absent for template widgets.
+  queryConfig?: QueryConfig;
+  visualType?: VisualType;
+  // Registry key for prebuilt template widgets (pipeline-status, dq-trend, etc.).
+  templateType?: string;
+  category?: WidgetCategory;
   defaultSize: { w: number; h: number; minW: number; minH: number };
   publishedAt: string;
   publishedBy?: string;

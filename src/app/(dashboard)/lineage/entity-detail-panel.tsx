@@ -2,6 +2,7 @@
 
 import { X, Table2, ArrowRight, CheckCircle2, AlertTriangle, XCircle, Clock, Columns3 } from "lucide-react";
 import type { LineageEntity, LineageAttribute } from "@/lib/adapters/types";
+import { lineageDatasetLabel, lineageRefLabel } from "./lineage-utils";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; Icon: React.ComponentType<{ className?: string }> }> = {
   SUCCESS: { label: "Success", color: "#10B981", Icon: CheckCircle2 },
@@ -32,16 +33,7 @@ interface EntityDetailPanelProps {
 }
 
 export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, onOpenColumns }: EntityDetailPanelProps) {
-  const parts = entity.entity_fqn.split(".");
-  const shortName = parts[parts.length - 1] ?? entity.entity_fqn;
-
-  const layerNames = new Set(["landing", "raw", "bronze", "silver", "gold"]);
-  const datasetChainName = (() => {
-    const second = parts.at(-2);
-    if (second && !layerNames.has(second.toLowerCase())) return second;
-    const last = parts.at(-1) ?? entity.entity_fqn;
-    return last.replace(/_(raw|bronze|silver|gold)$/i, "") || last;
-  })();
+  const datasetLabel = lineageDatasetLabel(entity);
 
   function refMatchesEntity(ref: string): boolean {
     const refLower = ref.toLowerCase();
@@ -58,21 +50,10 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
 
   const outgoing = attributes.filter((a) => a.is_current && refMatchesEntity(a.source_entity_fqn));
   const incoming = attributes.filter((a) => a.is_current && refMatchesEntity(a.target_entity_fqn));
-  const provenanceCounts = {
-    lineage_attributes_current: [...outgoing, ...incoming].filter((a) => (a.provenance ?? "lineage_attributes_current") === "lineage_attributes_current").length,
-    data_lineage_hop: [...outgoing, ...incoming].filter((a) => a.provenance === "data_lineage_hop").length,
-  };
   const attributePreviewLimit = 14;
   const hasManyAttributes = outgoing.length + incoming.length > attributePreviewLimit;
   const outgoingPreview = hasManyAttributes ? outgoing.slice(0, Math.ceil(attributePreviewLimit / 2)) : outgoing;
   const incomingPreview = hasManyAttributes ? incoming.slice(0, Math.floor(attributePreviewLimit / 2)) : incoming;
-
-  function provenanceStyle(provenance?: string) {
-    if (provenance === "data_lineage_hop") {
-      return { background: "rgba(245,158,11,0.12)", color: "#B45309", label: "Fallback" };
-    }
-    return { background: "rgba(16,185,129,0.12)", color: "#047857", label: "Current" };
-  }
 
   function formatTs(ts: string | null): string {
     if (!ts) return "—";
@@ -100,7 +81,7 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
           <Table2 className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "var(--color-primary)" }} />
           <div className="min-w-0">
             <p className="text-sm font-semibold leading-tight truncate" style={{ color: "var(--color-text)" }} title={entity.entity_fqn}>
-              {shortName}
+              {datasetLabel}
             </p>
             <p className="text-[10px] font-mono truncate mt-0.5" style={{ color: "var(--color-text-muted)" }} title={entity.entity_fqn}>
               {entity.entity_fqn}
@@ -147,7 +128,7 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
         {entity.lineage_group_id && (
           <div>
             <dt className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)" }}>Dataset chain</dt>
-            <dd className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>{datasetChainName}</dd>
+            <dd className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>{datasetLabel}</dd>
             <p className="text-[10px] font-mono break-all mt-1" style={{ color: "var(--color-text-muted)" }} title={entity.lineage_group_id}>
               Technical chain id: {entity.lineage_group_id}
             </p>
@@ -174,7 +155,7 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
                   style={{ color: "var(--color-primary)", border: "1px solid var(--color-border)" }}
                   title={fqn}
                 >
-                  {fqn.split(".").pop() ?? fqn}
+                  {lineageRefLabel(fqn)}
                 </button>
               ))}
             </dd>
@@ -196,7 +177,7 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
                   style={{ color: "var(--color-accent)", border: "1px solid var(--color-border)" }}
                   title={fqn}
                 >
-                  {fqn.split(".").pop() ?? fqn}
+                  {lineageRefLabel(fqn)}
                 </button>
               ))}
             </dd>
@@ -210,15 +191,12 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
               Column Lineage
             </dt>
             <p className="mb-2 text-[10px]" style={{ color: "var(--color-text-muted)" }}>
-              {provenanceCounts.lineage_attributes_current} current mappings · {provenanceCounts.data_lineage_hop} fallback hops
+              {outgoing.length + incoming.length} current mappings from `lineage_attributes_current`.
             </p>
             {outgoing.length > 0 && (
               <div className="space-y-1 mb-2">
                 <p className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: "var(--color-text-muted)" }}>Outgoing ({outgoing.length})</p>
                 {outgoingPreview.map((a, i) => (
-                  (() => {
-                    const p = provenanceStyle(a.provenance);
-                    return (
                   <div
                     key={i}
                     className="grid grid-cols-[minmax(0,1fr)_14px_minmax(0,1fr)_auto] items-center gap-1.5 text-[10px] rounded-md px-2 py-1"
@@ -227,12 +205,10 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
                     <span className="font-mono font-medium truncate" style={{ color: "var(--color-accent)" }} title={`${a.source_entity_fqn}.${a.source_attribute}`}>{a.source_attribute}</span>
                     <ArrowRight className="h-3 w-3 shrink-0" style={{ color: "var(--color-text-muted)" }} />
                     <span className="font-mono truncate" style={{ color: "var(--color-text)" }} title={`${a.target_entity_fqn}.${a.target_attribute}`}>{a.target_attribute}</span>
-                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: p.background, color: p.color }} title={a.evidence ?? ""}>
-                      {p.label}
+                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: "rgba(16,185,129,0.12)", color: "#047857" }} title={a.evidence ?? ""}>
+                      Current
                     </span>
                   </div>
-                    );
-                  })()
                 ))}
               </div>
             )}
@@ -240,9 +216,6 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
               <div className="space-y-1">
                 <p className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: "var(--color-text-muted)" }}>Incoming ({incoming.length})</p>
                 {incomingPreview.map((a, i) => (
-                  (() => {
-                    const p = provenanceStyle(a.provenance);
-                    return (
                   <div
                     key={i}
                     className="grid grid-cols-[minmax(0,1fr)_14px_minmax(0,1fr)_auto] items-center gap-1.5 text-[10px] rounded-md px-2 py-1"
@@ -251,19 +224,17 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
                     <span className="font-mono truncate" style={{ color: "var(--color-text-muted)" }} title={`${a.source_entity_fqn}.${a.source_attribute}`}>{a.source_attribute}</span>
                     <ArrowRight className="h-3 w-3 shrink-0" style={{ color: "var(--color-text-muted)" }} />
                     <span className="font-mono font-medium truncate" style={{ color: "var(--color-accent)" }} title={`${a.target_entity_fqn}.${a.target_attribute}`}>{a.target_attribute}</span>
-                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: p.background, color: p.color }} title={a.evidence ?? ""}>
-                      {p.label}
+                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: "rgba(16,185,129,0.12)", color: "#047857" }} title={a.evidence ?? ""}>
+                      Current
                     </span>
                   </div>
-                    );
-                  })()
                 ))}
               </div>
             )}
             {hasManyAttributes && onOpenColumns && (
               <button
                 type="button"
-                onClick={() => onOpenColumns(shortName)}
+                onClick={() => onOpenColumns(datasetLabel)}
                 className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold"
                 style={{ border: "1px solid var(--color-border)", color: "var(--color-brand)", background: "var(--color-surface)" }}
               >

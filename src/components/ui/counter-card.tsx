@@ -41,13 +41,18 @@ export function CounterCard({ label, value, trend, icon, className }: CounterCar
   return (
     <Card className={cn("relative overflow-hidden card-hover cursor-default h-full flex flex-col justify-center", className)}>
       <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>{label}</p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm font-medium leading-snug" style={{ color: "var(--color-text-muted)" }}>{label}</p>
           {icon && (
-            <div style={{ color: "var(--color-accent)" }}>{icon}</div>
+            <div className="shrink-0" style={{ color: "var(--color-accent)" }}>{icon}</div>
           )}
         </div>
-        <p className="mt-2 text-3xl font-bold tracking-tight font-display">{value}</p>
+        <p
+          className="mt-2 font-display font-bold tracking-normal leading-none break-words"
+          style={{ fontSize: "clamp(1.55rem, 3.2vw, 2rem)", color: "var(--color-text)" }}
+        >
+          {value}
+        </p>
         {trend && TrendIcon && (
           <div className={cn("mt-2 flex items-center gap-1 text-sm", trendColor)} style={trendStyle}>
             <TrendIcon className="h-4 w-4" />

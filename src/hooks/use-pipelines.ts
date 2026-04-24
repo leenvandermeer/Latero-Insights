@@ -7,10 +7,12 @@ import type { ApiResponse } from "@/lib/api";
 
 export function usePipelines(from: string, to: string) {
   return useQuery<ApiResponse<PipelineRun[]>>({
-    queryKey: ["pipelines", from, to],
+    queryKey: ["pipelines", from, to, "latest-live"],
     queryFn: () => fetchPipelineRuns({ from, to }),
     enabled: !!from && !!to,
-    staleTime: 5 * 60 * 1000, // 5 minutes — server cache handles longer TTL
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { usePipelines, useQuality, useLineage } from "@/hooks";
+import { usePipelines, useQuality, useLineageEntities } from "@/hooks";
 import { CounterCard, CounterCardSkeleton } from "@/components/ui";
 import { ClipboardCheck } from "lucide-react";
+import { latestPipelineStepRuns } from "@/lib/pipeline-runs";
 
 interface Props {
   from: string;
@@ -13,13 +14,13 @@ interface Props {
 export function Bcbs239ScoreWidget({ from, to, titleOverride }: Props) {
   const { data: pipelineRes, isLoading: lp } = usePipelines(from, to);
   const { data: qualityRes, isLoading: lq } = useQuality(from, to);
-  const { data: lineageRes, isLoading: ll } = useLineage(from, to);
+  const { data: lineageRes, isLoading: ll } = useLineageEntities();
 
   if (lp || lq || ll) return <CounterCardSkeleton />;
 
-  const runs = pipelineRes?.data ?? [];
+  const runs = latestPipelineStepRuns(pipelineRes?.data ?? []);
   const checks = qualityRes?.data ?? [];
-  const hops = lineageRes?.data ?? [];
+  const entities = lineageRes?.data ?? [];
 
   const totalRuns = runs.length;
   const successRuns = runs.filter((r) => ["SUCCESS", "PASS"].includes(r.run_status.toUpperCase())).length;
@@ -27,7 +28,7 @@ export function Bcbs239ScoreWidget({ from, to, titleOverride }: Props) {
   const passedChecks = checks.filter((c) => ["SUCCESS", "PASS"].includes(c.check_status.toUpperCase())).length;
 
   const datasets = new Set([...runs.map((r) => r.dataset_id), ...checks.map((c) => c.dataset_id)]);
-  const lineageDatasets = new Set([...hops.map((h) => h.source_entity), ...hops.map((h) => h.target_entity)]);
+  const lineageDatasets = new Set(entities.map((entity) => entity.dataset_id).filter((value): value is string => Boolean(value)));
 
   const scores = [
     totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : 0,

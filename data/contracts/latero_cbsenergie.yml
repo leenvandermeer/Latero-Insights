@@ -1,0 +1,52 @@
+version: 1
+id: latero.cbsenergie
+display_name: Latero CBS Energielabels
+
+bcbs239_principles:
+  - principle: P1
+    description: "CBS StatLine is de enige geautoriseerde bron voor energielabelgegevens van de Nederlandse woningvoorraad."
+  - principle: P2
+    description: "Data doorloopt het medallion-patroon (bronze → silver → gold) met data-kwaliteitscontroles bij elke stap."
+  - principle: P3
+    description: "RegionCode is verplicht en vormt de primaire sleutel voor aggregatie op gebiedsniveau."
+  - principle: P4
+    description: "Elke rij moet volledig zijn voor de verplichte kolommen; optionele kolommen mogen null zijn."
+
+schema:
+  columns:
+    - name: ReportingPeriod
+      type: string
+      nullable: true
+    - name: RegionCode
+      type: string
+      nullable: false
+    - name: RegionName
+      type: string
+      nullable: true
+    - name: EnergyLabelClass
+      type: string
+      nullable: true
+    - name: BuildingType
+      type: string
+      nullable: true
+    - name: ConstructionYearClass
+      type: string
+      nullable: true
+    - name: TotalDwellings
+      type: integer
+      nullable: true
+    - name: LabelledDwellings
+      type: integer
+      nullable: true
+    - name: LabelledDwellingsPct
+      type: double
+      nullable: true
+    - name: AverageEnergyIndex
+      type: double
+      nullable: true
+    - name: TotalFloorAreaM2
+      type: double
+      nullable: true
+    - name: DataSourceVersion
+      type: string
+      nullable: true

@@ -1,0 +1,55 @@
+version: 1
+id: latero.rvo_warmtepomp
+display_name: Latero RVO ISDE Warmtepomp Subsidies
+
+bcbs239_principles:
+  - principle: P1
+    description: "RVO is de geautoriseerde bron voor ISDE-subsidiedata voor warmtepompen in de gebouwde omgeving."
+  - principle: P2
+    description: "Data doorloopt het medallion-patroon (bronze → silver → gold) met data-kwaliteitscontroles bij elke stap."
+  - principle: P3
+    description: "SubsidieReferentie is de primaire sleutel voor elke subsidieaanvraag."
+  - principle: P4
+    description: "Elke rij moet volledig zijn voor de verplichte kolommen; optionele kolommen mogen null zijn."
+
+schema:
+  columns:
+    - name: SubsidieReferentie
+      type: string
+      nullable: false
+    - name: JaarAanvraag
+      type: integer
+      nullable: true
+    - name: Provincie
+      type: string
+      nullable: true
+    - name: Gemeente
+      type: string
+      nullable: true
+    - name: Postcode
+      type: string
+      nullable: true
+    - name: WoningType
+      type: string
+      nullable: true
+    - name: SoortWarmtepomp
+      type: string
+      nullable: true
+    - name: FabrikantType
+      type: string
+      nullable: true
+    - name: VermogenKW
+      type: double
+      nullable: true
+    - name: SPF
+      type: double
+      nullable: true
+    - name: SubsidieBedragEUR
+      type: double
+      nullable: true
+    - name: Status
+      type: string
+      nullable: true
+    - name: DataSourceVersion
+      type: string
+      nullable: true

@@ -3,6 +3,7 @@
 import { usePipelines } from "@/hooks";
 import { CounterCard, CounterCardSkeleton } from "@/components/ui";
 import { XCircle } from "lucide-react";
+import { latestPipelineStepRuns } from "@/lib/pipeline-runs";
 
 interface Props {
   from: string;
@@ -20,7 +21,7 @@ export function FailedRunsWidget({ from, to, titleOverride }: Props) {
     </div>
   );
 
-  const failed = (response?.data ?? []).filter(
+  const failed = latestPipelineStepRuns(response?.data ?? []).filter(
     (r) => ["FAILED", "FAIL", "ERROR"].includes(r.run_status.toUpperCase())
   ).length;
 

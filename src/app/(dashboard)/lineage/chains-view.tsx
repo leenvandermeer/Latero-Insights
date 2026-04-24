@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, AlertTriangle, XCircle, Clock, ChevronDown, ChevronUp, Search, ArrowRight } from "lucide-react";
 import type { LineageEntity } from "@/lib/adapters/types";
-import { lineageEntityKey, resolveLineageRef } from "./lineage-utils";
+import { lineageDatasetKey, lineageDatasetLabel, lineageEntityKey, lineageRefLabel, resolveLineageRef } from "./lineage-utils";
 
 // ── Types & constants ─────────────────────────────────────────────────────────
 
@@ -36,19 +36,6 @@ function statusRank(status: string) {
   return { FAILED: 5, PARTIAL: 4, WARNING: 4, IN_PROGRESS: 3, UNKNOWN: 2, SUCCESS: 1 }[status.toUpperCase()] ?? 2;
 }
 
-function shortName(fqn: string) {
-  return fqn.split(".").filter(Boolean).at(-1) ?? fqn;
-}
-
-function humanizeIdentifier(value: string) {
-  return value
-    .replace(/\.[^.]+$/g, "")
-    .split(/[._\-\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 function readableChainName(entities: LineageEntity[], fallback: string) {
   const terminal = entities
     .filter((entity) => entity.downstream_entity_fqns.length === 0)
@@ -59,7 +46,7 @@ function readableChainName(entities: LineageEntity[], fallback: string) {
     return bLayer - aLayer || a.entity_fqn.localeCompare(b.entity_fqn);
   })[0];
 
-  return humanizeIdentifier(preferred ? shortName(preferred.entity_fqn) : fallback) || fallback;
+  return preferred ? lineageDatasetLabel(preferred) : fallback;
 }
 
 // ── Layer progress bar ────────────────────────────────────────────────────────
@@ -115,14 +102,8 @@ interface ChainGroup {
   presentLayers: string[];
 }
 
-const LAYER_NAMES_SET = new Set(LAYER_ORDER);
-
 function datasetKeyFromEntity(entity: LineageEntity): string {
-  const parts = entity.entity_fqn.split(".").filter(Boolean);
-  const second = parts.at(-2);
-  if (second && !LAYER_NAMES_SET.has(second.toLowerCase())) return second;
-  const last = parts.at(-1) ?? entity.entity_fqn;
-  return last.replace(/_(raw|bronze|silver|gold)$/i, "") || last;
+  return lineageDatasetKey(entity);
 }
 
 function deriveChainLabel(entities: LineageEntity[], fallback: string): string {
@@ -257,8 +238,6 @@ function ChainCard({ chain }: { chain: ChainGroup }) {
                   </p>
                   <div className="space-y-1.5">
                     {layerEntities.map((e) => {
-                      const parts = e.entity_fqn.split(".");
-                      const short = parts[parts.length - 1] ?? e.entity_fqn;
                       const latestSuccess = e.latest_success_at
                         ? (() => {
                             try {
@@ -282,7 +261,7 @@ function ChainCard({ chain }: { chain: ChainGroup }) {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="text-xs font-semibold truncate" style={{ color: "var(--color-text)" }} title={e.entity_fqn}>
-                                {short}
+                                {lineageDatasetLabel(e)}
                               </p>
                               <p className="text-[10px] font-mono truncate mt-0.5" style={{ color: "var(--color-text-muted)" }} title={e.entity_fqn}>
                                 {e.entity_fqn}
@@ -319,7 +298,7 @@ function ChainCard({ chain }: { chain: ChainGroup }) {
                                   <div className="space-y-1">
                                     {e.upstream_entity_fqns.map((fqn) => (
                                       <p key={fqn} className="truncate text-[10px] font-mono" style={{ color: "var(--color-text-muted)" }} title={fqn}>
-                                        {fqn.split(".").pop() ?? fqn}
+                                        {lineageRefLabel(fqn)}
                                       </p>
                                     ))}
                                   </div>
@@ -332,7 +311,7 @@ function ChainCard({ chain }: { chain: ChainGroup }) {
                                     {e.downstream_entity_fqns.map((fqn) => (
                                       <p key={fqn} className="flex min-w-0 items-center gap-1 truncate text-[10px] font-mono" style={{ color: "var(--color-text-muted)" }} title={fqn}>
                                         <ArrowRight className="h-3 w-3 shrink-0" />
-                                        <span className="truncate">{fqn.split(".").pop() ?? fqn}</span>
+                                        <span className="truncate">{lineageRefLabel(fqn)}</span>
                                       </p>
                                     ))}
                                   </div>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, ArrowRight } from "lucide-react";
 import type { LineageAttribute } from "@/lib/adapters/types";
+import { lineageRefLabel } from "./lineage-utils";
 
 interface ColumnsViewProps {
   attributes: LineageAttribute[];
@@ -12,12 +13,10 @@ interface ColumnsViewProps {
 export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps) {
   const [search, setSearch] = useState("");
   const [entityFilter, setEntityFilter] = useState("all");
-  const [provenanceFilter, setProvenanceFilter] = useState("all");
 
   useEffect(() => {
     setSearch(initialSearch);
     setEntityFilter("all");
-    setProvenanceFilter("all");
   }, [initialSearch]);
 
   // Only show is_current=true rows (server already filters, but belt+suspenders)
@@ -32,7 +31,6 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
     const q = search.toLowerCase().trim();
     return current.filter((a) => {
       const matchEntity = entityFilter === "all" || a.source_entity_fqn === entityFilter;
-      const matchProvenance = provenanceFilter === "all" || (a.provenance ?? "lineage_attributes_current") === provenanceFilter;
       const matchSearch =
         !q ||
         a.source_entity_fqn.toLowerCase().includes(q) ||
@@ -40,31 +38,9 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
         a.target_entity_fqn.toLowerCase().includes(q) ||
         a.target_attribute.toLowerCase().includes(q) ||
         (a.evidence ?? "").toLowerCase().includes(q);
-      return matchEntity && matchProvenance && matchSearch;
+      return matchEntity && matchSearch;
     });
-  }, [current, search, entityFilter, provenanceFilter]);
-
-  const provenanceCounts = useMemo(() => {
-    const counts = {
-      lineage_attributes_current: 0,
-      data_lineage_hop: 0,
-    };
-    for (const attribute of current) {
-      const key = attribute.provenance ?? "lineage_attributes_current";
-      if (key === "data_lineage_hop") counts.data_lineage_hop++;
-      else counts.lineage_attributes_current++;
-    }
-    return counts;
-  }, [current]);
-
-  function provenanceLabel(provenance?: string) {
-    return provenance === "data_lineage_hop" ? "Fallback hop" : "Current mapping";
-  }
-
-  function shortName(fqn: string) {
-    const parts = fqn.split(".");
-    return parts[parts.length - 1] ?? fqn;
-  }
+  }, [current, search, entityFilter]);
 
   return (
     <div className="flex flex-col h-full">
@@ -78,22 +54,7 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
           {current.length !== filtered.length && ` of ${current.length}`}
         </span>
 
-        <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
-          {provenanceCounts.lineage_attributes_current} current · {provenanceCounts.data_lineage_hop} fallback
-        </span>
-
         <div className="flex items-center gap-2 ml-auto flex-wrap">
-          <select
-            value={provenanceFilter}
-            onChange={(e) => setProvenanceFilter(e.target.value)}
-            className="text-xs rounded-lg px-2.5 py-1.5 outline-none"
-            style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
-          >
-            <option value="all">All provenance</option>
-            <option value="lineage_attributes_current">Current mappings</option>
-            <option value="data_lineage_hop">Fallback hops</option>
-          </select>
-
           {/* Entity filter */}
           <select
             value={entityFilter}
@@ -103,7 +64,7 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
           >
             <option value="all">All source entities</option>
             {sourceEntities.map((e) => (
-              <option key={e} value={e} title={e}>{shortName(e)}</option>
+              <option key={e} value={e} title={e}>{lineageRefLabel(e)}</option>
             ))}
           </select>
 
@@ -159,7 +120,7 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
                 <tr
                   key={i}
                   style={{
-                    borderBottom: "1px solid var(--color-border)",
+                        borderBottom: "1px solid var(--color-border)",
                     background: i % 2 === 0 ? "var(--color-card)" : "var(--color-surface)",
                   }}
                   className="transition-colors hover:bg-muted/40"
@@ -170,7 +131,7 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
                       style={{ background: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)" }}
                       title={a.source_entity_fqn}
                     >
-                      {shortName(a.source_entity_fqn)}
+                      {lineageRefLabel(a.source_entity_fqn)}
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
@@ -187,7 +148,7 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
                       style={{ background: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)" }}
                       title={a.target_entity_fqn}
                     >
-                      {shortName(a.target_entity_fqn)}
+                      {lineageRefLabel(a.target_entity_fqn)}
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
@@ -198,13 +159,10 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
                   <td className="px-3 py-2.5">
                     <span
                       className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                      style={{
-                        background: (a.provenance ?? "lineage_attributes_current") === "data_lineage_hop" ? "rgba(245,158,11,0.15)" : "rgba(16,185,129,0.14)",
-                        color: (a.provenance ?? "lineage_attributes_current") === "data_lineage_hop" ? "#B45309" : "#047857",
-                      }}
+                      style={{ background: "rgba(16,185,129,0.14)", color: "#047857" }}
                       title={a.evidence ?? ""}
                     >
-                      {provenanceLabel(a.provenance)}
+                      Current mapping
                     </span>
                   </td>
                 </tr>

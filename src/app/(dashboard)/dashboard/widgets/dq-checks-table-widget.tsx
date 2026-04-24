@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuality } from "@/hooks";
 import { TableSkeleton } from "@/components/ui/loading-skeleton";
 import { normalizeStatus } from "@/lib/chart-colors";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, X, ChevronLeft, ChevronRight } from "lucide-react";
+import type { DataQualityCheck } from "@/lib/adapters/types";
 
 interface Props {
   from: string;
@@ -36,30 +37,35 @@ const COLS: { k: Col; l: string }[] = [
 
 export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
   const { data: res, isLoading, error } = useQuality(from, to);
+  const PAGE_SIZE = 50;
   const [col, setCol] = useState<Col>("timestamp_utc");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(0);
+  const [selectedCheck, setSelectedCheck] = useState<DataQualityCheck | null>(null);
 
   const sort = (k: Col) => {
     if (k === col) setDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setCol(k); setDir(k === "timestamp_utc" ? "desc" : "asc"); }
+    else { setCol(k); setDir(k === "timestamp_utc" ? "desc" : "asc"); setPage(0); }
   };
 
   if (isLoading) return <TableSkeleton rows={6} />;
   if (error) return <div className="h-full flex items-center justify-center text-xs" style={{ color: "var(--color-text-muted)" }}>Failed to load</div>;
 
-  const rows = [...(res?.data ?? [])]
-    .sort((a, b) => {
-      const va = (a[col] ?? "") as string, vb = (b[col] ?? "") as string;
-      return dir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
-    })
-    .slice(0, 50);
+  const sorted = useMemo(() => [...(res?.data ?? [])].sort((a, b) => {
+    const va = (a[col] ?? "") as string, vb = (b[col] ?? "") as string;
+    return dir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+  }), [res, col, dir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const rows = sorted.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden rounded-xl" style={{ border: "1px solid var(--color-border)", background: "var(--color-card)" }}>
+    <div className="relative h-full flex flex-col overflow-hidden rounded-xl" style={{ border: "1px solid var(--color-border)", background: "var(--color-card)" }}>
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-1.5 shrink-0" style={{ borderBottom: "1px solid var(--color-border)" }}>
         <span className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>{titleOverride ?? "DQ Check Results"}</span>
-        <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>{rows.length} checks</span>
+        <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>{sorted.length} checks</span>
       </div>
 
       {/* Table */}
@@ -85,7 +91,8 @@ export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
               const norm = normalizeStatus(c.check_status);
               const { bg, color } = ss(norm);
               return (
-                <tr key={c.run_id + c.check_id + i} style={{ borderBottom: "1px solid var(--color-border)" }}
+                <tr key={c.run_id + c.check_id + i} style={{ borderBottom: "1px solid var(--color-border)", cursor: "pointer" }}
+                  onClick={() => setSelectedCheck(c)}
                   onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "var(--color-surface)")}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")}>
                   <td className="px-2 py-0.5 font-mono truncate max-w-[120px]" style={{ color: "var(--color-text)" }}>{c.check_id}</td>
@@ -105,6 +112,65 @@ export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
           </tbody>
         </table>
       </div>
+      {/* Pagination footer */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5 shrink-0" style={{ borderTop: "1px solid var(--color-border)" }}>
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={safePage === 0}
+            className="rounded p-0.5 disabled:opacity-30"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
+            {safePage + 1} / {totalPages} · {sorted.length} total
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={safePage === totalPages - 1}
+            className="rounded p-0.5 disabled:opacity-30"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {selectedCheck && (
+        <div
+          className="absolute right-0 top-0 bottom-0 z-20 w-full max-w-[340px] overflow-y-auto p-4"
+          style={{ background: "var(--color-card)", borderLeft: "1px solid var(--color-border)", boxShadow: "var(--shadow-drawer)" }}
+        >
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>Check detail</p>
+              <p className="truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>{selectedCheck.check_id}</p>
+            </div>
+            <button onClick={() => setSelectedCheck(null)} className="rounded-md p-1" aria-label="Close">
+              <X className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
+            </button>
+          </div>
+          <div className="space-y-3 text-xs">
+            <Detail label="Dataset" value={selectedCheck.dataset_id} />
+            <Detail label="Step" value={selectedCheck.step} />
+            <Detail label="Status" value={normalizeStatus(selectedCheck.check_status)} />
+            <Detail label="Category" value={selectedCheck.check_category ?? "—"} />
+            <Detail label="Policy version" value={selectedCheck.policy_version ?? "—"} />
+            <Detail label="Run ID" value={selectedCheck.run_id} mono />
+            <Detail label="Time" value={fmt(selectedCheck.timestamp_utc)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Detail({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>{label}</p>
+      <p className={mono ? "break-all font-mono" : "break-words"} style={{ color: "var(--color-text)" }}>{value}</p>
     </div>
   );
 }

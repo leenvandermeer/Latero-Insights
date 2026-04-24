@@ -18,14 +18,14 @@ export async function POST(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const from = params.get("from");
   const to = params.get("to");
-  const endpoint = params.get("endpoint"); // optional: pipelines, quality, lineage
+  const endpoint = params.get("endpoint"); // optional: pipelines, quality, lineage, lineage-entities, lineage-attributes
 
   if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
     return NextResponse.json({ error: "Missing or invalid 'from' and 'to' date parameters (YYYY-MM-DD)" }, { status: 400 });
   }
 
   const cacheParams = { from, to };
-  const endpoints = endpoint ? [endpoint] : ["pipelines", "quality", "lineage"];
+  const endpoints = endpoint ? [endpoint] : ["pipelines", "quality", "lineage", "lineage-entities", "lineage-attributes"];
   const results: Record<string, string> = {};
 
   for (const ep of endpoints) {
@@ -48,6 +48,18 @@ export async function POST(request: NextRequest) {
           const data = await adapter.getLineageHops({ from, to });
           writeToCache("lineage", cacheParams, data);
           results.lineage = `refreshed (${data.length} records)`;
+          break;
+        }
+        case "lineage-entities": {
+          const data = await adapter.getLineageEntities();
+          writeToCache("lineage-entities", { scope: "current" }, data);
+          results["lineage-entities"] = `refreshed (${data.length} records)`;
+          break;
+        }
+        case "lineage-attributes": {
+          const data = await adapter.getLineageAttributes();
+          writeToCache("lineage-attributes", { scope: "current" }, data);
+          results["lineage-attributes"] = `refreshed (${data.length} records)`;
           break;
         }
         default:

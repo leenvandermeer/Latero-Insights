@@ -127,22 +127,6 @@
 }
 
 /* ----------------------------------------------------------------
-   Lineage Canvas — full available height
-   ---------------------------------------------------------------- */
-.lineage-canvas {
-  width: 100%;
-  height: calc(100vh - var(--topbar-height) - var(--bottomnav-height) - var(--space-8));
-  min-height: 400px;
-}
-
-@media (min-width: 768px) {
-  .lineage-canvas {
-    height: calc(100vh - var(--space-16));
-    min-height: 500px;
-  }
-}
-
-/* ----------------------------------------------------------------
    Detail Panel / Drawer
    ---------------------------------------------------------------- */
 

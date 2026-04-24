@@ -32,6 +32,56 @@ interface CacheEntry<T> {
   params: Record<string, string>;
 }
 
+type CacheSummary = {
+  fileCount: number;
+  sourceCount: number;
+  sources: string[];
+  coverageFrom: string | null;
+  coverageTo: string | null;
+};
+
+function dataCacheFiles(): string[] {
+  ensureCacheDir();
+  return readdirSync(CACHE_DIR).filter((f) => f.endsWith(".json") && f !== "settings.json");
+}
+
+function summarizeCacheFiles(files: string[]): CacheSummary {
+  const sources = new Set<string>();
+  let coverageFrom: string | null = null;
+  let coverageTo: string | null = null;
+
+  for (const file of files) {
+    try {
+      const entry = JSON.parse(readFileSync(join(CACHE_DIR, file), "utf-8")) as CacheEntry<unknown>;
+      if (entry.endpoint) {
+        sources.add(entry.endpoint);
+      }
+      const from = entry.params?.from;
+      const to = entry.params?.to;
+      if (from) {
+        if (coverageFrom === null || from < coverageFrom) {
+          coverageFrom = from;
+        }
+      }
+      if (to) {
+        if (coverageTo === null || to > coverageTo) {
+          coverageTo = to;
+        }
+      }
+    } catch {
+      // ignore invalid files for summary
+    }
+  }
+
+  return {
+    fileCount: files.length,
+    sourceCount: sources.size,
+    sources: [...sources].sort(),
+    coverageFrom,
+    coverageTo,
+  };
+}
+
 export function getFromCache<T>(endpoint: string, params: Record<string, string>): { data: T; cachedAt: string } | null {
   ensureCacheDir();
   const key = cacheKey(endpoint, params);
@@ -132,7 +182,7 @@ export function clearCache(endpoint?: string): { cleared: number } {
   ensureCacheDir();
   let cleared = 0;
 
-  const files = readdirSync(CACHE_DIR).filter(f => f.endsWith(".json") && f !== "settings.json");
+  const files = dataCacheFiles();
 
   for (const file of files) {
     if (endpoint && !file.startsWith(`${endpoint}_`)) continue;
@@ -147,9 +197,20 @@ export function clearCache(endpoint?: string): { cleared: number } {
   return { cleared };
 }
 
-export function getCacheStatus(): { entries: number; oldestAge: number | null; newestAge: number | null; cacheOnly: boolean; ttlSeconds: number } {
+export function getCacheStatus(): {
+  entries: number;
+  oldestAge: number | null;
+  newestAge: number | null;
+  cacheOnly: boolean;
+  ttlSeconds: number;
+  fileCount: number;
+  sourceCount: number;
+  sources: string[];
+  coverageFrom: string | null;
+  coverageTo: string | null;
+} {
   ensureCacheDir();
-  const files = readdirSync(CACHE_DIR).filter(f => f.endsWith(".json"));
+  const files = dataCacheFiles();
   let oldest: number | null = null;
   let newest: number | null = null;
 
@@ -164,12 +225,19 @@ export function getCacheStatus(): { entries: number; oldestAge: number | null; n
     }
   }
 
+  const summary = summarizeCacheFiles(files);
+
   return {
-    entries: files.length,
+    entries: summary.fileCount,
     oldestAge: oldest ? Math.round(oldest) : null,
     newestAge: newest ? Math.round(newest) : null,
     cacheOnly: isCacheOnly(),
     ttlSeconds: getTtl(),
+    fileCount: summary.fileCount,
+    sourceCount: summary.sourceCount,
+    sources: summary.sources,
+    coverageFrom: summary.coverageFrom,
+    coverageTo: summary.coverageTo,
   };
 }
 

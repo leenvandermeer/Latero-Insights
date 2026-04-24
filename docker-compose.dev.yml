@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: insights-dev-app
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      HOST_PORT: 3010
+      NEXT_TELEMETRY_DISABLED: "1"
+      WATCHPACK_POLLING: "true"
+      POSTGRES_URL: "postgresql://insights:insights@postgres:5432/insights"
+    ports:
+      - "3010:3000"
+    volumes:
+      - .:/app
+      - insights_app_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  insights_app_node_modules:

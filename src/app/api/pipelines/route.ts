@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DatabricksAdapter } from "@/lib/adapters/databricks";
 import { rateLimit } from "@/lib/rate-limit";
-import { getFromCache, isCacheOnly } from "@/lib/cache";
-
-const adapter = new DatabricksAdapter();
+import { getFromCache, isCacheOnly, writeToCache } from "@/lib/cache";
+import { getPipelineRunsFromSaaS } from "@/lib/insights-saas-read";
 
 export async function GET(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -18,6 +16,7 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const from = params.get("from");
   const to = params.get("to");
+  const installationId = params.get("installation_id");
 
   if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
     return NextResponse.json({ error: "Missing or invalid 'from' and 'to' date parameters (YYYY-MM-DD)" }, { status: 400 });
@@ -40,22 +39,29 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Live mode: try Databricks first, cache as fallback
+  // Live mode: read from Insights SaaS store and keep a fresh snapshot for fallback.
   try {
-    const runs = await adapter.getPipelineRuns({ from, to });
-    const response = NextResponse.json({ data: runs, source: "databricks" });
+    const runs = await getPipelineRunsFromSaaS({ from, to, installationId });
+    writeToCache("pipelines", cacheParams, runs);
+    const response = NextResponse.json({ data: runs, source: "insights-saas" });
     response.headers.set("X-RateLimit-Remaining", String(remaining));
     response.headers.set("X-Cache", "BYPASS");
     return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[API /pipelines]", message);
-    return NextResponse.json(
-      {
-        error: "Failed to fetch live pipeline data. Cache fallback is disabled for pipeline counts to avoid showing stale run status.",
-        detail: message,
-      },
-      { status: 502 }
-    );
+    const cached = getFromCache("pipelines", cacheParams);
+    if (cached) {
+      const response = NextResponse.json({
+        data: cached.data,
+        cachedAt: cached.cachedAt,
+        source: "fallback",
+        warning: message,
+      });
+      response.headers.set("X-RateLimit-Remaining", String(remaining));
+      response.headers.set("X-Cache", "FALLBACK");
+      return response;
+    }
+    return NextResponse.json({ error: "Failed to fetch live data and no snapshot is available", detail: message }, { status: 502 });
   }
 }

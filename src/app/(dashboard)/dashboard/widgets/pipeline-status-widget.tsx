@@ -6,6 +6,7 @@ import { usePipelines } from "@/hooks";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui";
 import { ChartSkeleton } from "@/components/ui";
 import { STATUS_COLORS, normalizeStatus } from "@/lib/chart-colors";
+import { latestPipelineStepRunsByDate } from "@/lib/pipeline-runs";
 
 interface Props { from: string; to: string; titleOverride?: string; }
 
@@ -13,7 +14,7 @@ export function PipelineStatusWidget({ from, to, titleOverride }: Props) {
   const { data: response, isLoading, error } = usePipelines(from, to);
 
   const chartData = useMemo(() => {
-    const runs = response?.data ?? [];
+    const runs = latestPipelineStepRunsByDate(response?.data ?? []);
     const byDate = new Map<string, { date: string; SUCCESS: number; WARNING: number; FAILED: number }>();
     for (const run of runs) {
       if (!byDate.has(run.event_date)) byDate.set(run.event_date, { date: run.event_date, SUCCESS: 0, WARNING: 0, FAILED: 0 });

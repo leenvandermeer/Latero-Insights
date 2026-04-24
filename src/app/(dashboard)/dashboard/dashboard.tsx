@@ -9,13 +9,14 @@ import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2
 import { useDateRange } from "@/hooks/use-date-range";
 import { DateRangePicker, Button } from "@/components/ui";
 import { useDashboards } from "@/contexts/dashboard-context";
+import { useSharedWidgets, useUpdateSharedWidget } from "@/hooks/use-shared-widgets";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
 import { DashboardSettingsDialog } from "@/components/dashboard/dashboard-settings-dialog";
 import { WidgetPickerDrawer } from "@/components/dashboard/widget-picker-modal";
 import { getWidgetDef, WIDGET_REGISTRY } from "./registry";
 import { WidgetConfigPanel } from "./widget-config-panel";
 import { CustomWidgetRenderer } from "./widgets/custom-widget";
-import type { WidgetSlot } from "@/types/dashboard";
+import type { WidgetSlot, SharedWidgetDef } from "@/types/dashboard";
 
 interface Props {
   dashboardId: string;
@@ -55,6 +56,8 @@ export function DashboardCanvas({ dashboardId }: Props) {
     dashboards,
     updateCustomWidget,
   } = useDashboards();
+  const { data: sharedWidgets = [] } = useSharedWidgets();
+  const { mutateAsync: updateSharedWidget } = useUpdateSharedWidget();
   const { from, to, setRange } = useDateRange();
   const [editMode, setEditMode] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -203,17 +206,30 @@ export function DashboardCanvas({ dashboardId }: Props) {
   };
 
   const hasOverride = Boolean(systemOverrides[dashboardId]);
-  const selectedCustomWidget = useMemo(() => {
-    if (!configTarget || configTarget.type !== "custom" || !configTarget.customWidgetId) return undefined;
-    return customWidgets.find((cw) => cw.id === configTarget.customWidgetId);
-  }, [configTarget, customWidgets]);
+  // Resolve the editable widget definition for any slot that has a customWidgetId
+  // (both "custom" personal widgets and "shared" org widgets).
+  const { selectedEditableWidget, isSharedEditable } = useMemo<{
+    selectedEditableWidget: (typeof customWidgets)[0] | SharedWidgetDef | undefined;
+    isSharedEditable: boolean;
+  }>(() => {
+    if (!configTarget?.customWidgetId) return { selectedEditableWidget: undefined, isSharedEditable: false };
+    if (configTarget.type === "custom") {
+      return { selectedEditableWidget: customWidgets.find((cw) => cw.id === configTarget.customWidgetId), isSharedEditable: false };
+    }
+    if (configTarget.type === "shared") {
+      return { selectedEditableWidget: sharedWidgets.find((sw) => sw.id === configTarget.customWidgetId), isSharedEditable: true };
+    }
+    return { selectedEditableWidget: undefined, isSharedEditable: false };
+  }, [configTarget, customWidgets, sharedWidgets]);
 
   const selectedCustomWidgetImpact = useMemo(() => {
-    if (!selectedCustomWidget) return 0;
+    if (!selectedEditableWidget) return 0;
+    const id = selectedEditableWidget.id;
+    const slotType = isSharedEditable ? "shared" : "custom";
     return dashboards.filter((d) =>
-      d.widgets.some((w) => w.type === "custom" && w.customWidgetId === selectedCustomWidget.id)
+      d.widgets.some((w) => w.type === slotType && w.customWidgetId === id)
     ).length;
-  }, [dashboards, selectedCustomWidget]);
+  }, [dashboards, selectedEditableWidget, isSharedEditable]);
 
   const handlePublish = async () => {
     setPublishing(true);
@@ -665,14 +681,21 @@ export function DashboardCanvas({ dashboardId }: Props) {
 
       <WidgetConfigPanel
         widget={configTarget}
-        customWidget={selectedCustomWidget}
+        editableWidget={selectedEditableWidget}
+        isSharedWidget={isSharedEditable}
         impactCount={selectedCustomWidgetImpact}
         currentSize={configTarget ? (() => {
           const item = (layoutsRef.current.lg ?? []).find((l) => l.i === configTarget.instanceId);
           return item ? { w: item.w, h: item.h } : undefined;
         })() : undefined}
         onClose={() => setConfigTarget(null)}
-        onUpdateCustomWidget={updateCustomWidget}
+        onUpdateWidget={async (id, patch) => {
+          if (isSharedEditable) {
+            await updateSharedWidget({ id, patch });
+          } else {
+            updateCustomWidget(id, patch);
+          }
+        }}
         onSave={(instanceId, patch, size) => { updateSlotConfig(instanceId, patch, size); setConfigTarget(null); }}
       />
 

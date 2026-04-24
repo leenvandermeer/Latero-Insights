@@ -3,6 +3,7 @@
 import { usePipelines } from "@/hooks";
 import { CounterCard, CounterCardSkeleton } from "@/components/ui";
 import { Activity } from "lucide-react";
+import { latestPipelineStepRuns } from "@/lib/pipeline-runs";
 
 interface Props {
   from: string;
@@ -20,7 +21,7 @@ export function TotalRunsWidget({ from, to, titleOverride }: Props) {
     </div>
   );
 
-  const total = response?.data?.length ?? 0;
+  const total = latestPipelineStepRuns(response?.data ?? []).length;
 
   return (
     <CounterCard

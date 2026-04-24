@@ -4,7 +4,6 @@ export {
   fetchLineageHops,
   fetchLineageEntities,
   fetchLineageAttributes,
-  fetchCanonicalLineage,
   fetchHealth,
   fetchCacheStatus,
   refreshCache,

@@ -9,27 +9,59 @@ import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
 export default function DashboardGalleryPage() {
   const { userDashboards } = useDashboards();
   const [newDashOpen, setNewDashOpen] = useState(false);
+  const totalWidgets = userDashboards.reduce((acc, dash) => acc + dash.widgets.length, 0);
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "var(--color-accent)", letterSpacing: "0.13em" }}>
-            My Dashboards
-          </p>
-          <h1 className="font-display font-light italic" style={{ fontSize: "clamp(1.5rem, 3vw, 2.25rem)", color: "var(--color-text)", letterSpacing: "-0.02em" }}>
-            Dashboard Gallery
-          </h1>
+    <div className="space-y-6 fade-in-up">
+      <div
+        className="relative overflow-hidden rounded-3xl p-6 md:p-8"
+        style={{
+          background: "radial-gradient(circle at 10% 10%, rgba(200,137,42,0.18), transparent 35%), radial-gradient(circle at 90% 80%, rgba(27,59,107,0.16), transparent 45%), var(--color-surface)",
+          border: "1px solid var(--color-border)",
+        }}
+      >
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "var(--color-accent)", letterSpacing: "0.13em" }}>
+              My Dashboards
+            </p>
+            <h1 className="font-display font-light italic" style={{ fontSize: "clamp(1.6rem, 3vw, 2.5rem)", color: "var(--color-text)", letterSpacing: "-0.02em" }}>
+              Dashboard Gallery
+            </h1>
+            <p className="text-sm mt-2" style={{ color: "var(--color-text-muted)", maxWidth: 560 }}>
+              Keep your operational views organized and jump straight into monitoring pipeline health, data quality, and lineage.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 min-w-[220px]">
+            <div className="rounded-xl px-3 py-2" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+              <p className="text-[11px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Dashboards</p>
+              <p className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>{userDashboards.length}</p>
+            </div>
+            <div className="rounded-xl px-3 py-2" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+              <p className="text-[11px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Widgets</p>
+              <p className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>{totalWidgets}</p>
+            </div>
+          </div>
         </div>
         <button
           onClick={() => setNewDashOpen(true)}
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium"
+          className="mt-5 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium"
           style={{ background: "var(--color-accent)", color: "#fff" }}
         >
           <Plus className="h-4 w-4" />
           New Dashboard
         </button>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+            Your Dashboard Collection
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+            Open a dashboard to inspect widgets and date-range scoped telemetry.
+          </p>
+        </div>
       </div>
 
       {/* Gallery grid */}
@@ -38,13 +70,11 @@ export default function DashboardGalleryPage() {
           <Link
             key={dash.id}
             href={`/dashboard/${dash.id}`}
-            className="group rounded-2xl p-5 transition-all block"
+            className="group rounded-2xl p-5 transition-all block card-hover"
             style={{
               background: "var(--color-card)",
               border: "1px solid var(--color-border)",
             }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--color-accent)")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--color-border)")}
           >
             {/* Preview area */}
             <div

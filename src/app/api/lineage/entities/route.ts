@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DatabricksAdapter } from "@/lib/adapters/databricks";
 import { rateLimit } from "@/lib/rate-limit";
 import { writeToCache, isCacheOnly, getFromCache } from "@/lib/cache";
+import { getLineageEntitiesFromSaaS } from "@/lib/insights-saas-read";
 import type { LineageEntity } from "@/lib/adapters/types";
 
-const adapter = new DatabricksAdapter();
 const CACHE_KEY = "lineage-entities";
 const CACHE_PARAMS = { scope: "current" };
 
@@ -32,17 +31,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [entities, schema] = await Promise.all([
-      adapter.getLineageEntities(),
-      adapter.getLineageSchemaInventory(),
-    ]);
+    const entities = await getLineageEntitiesFromSaaS();
     writeToCache(CACHE_KEY, CACHE_PARAMS, entities);
     const response = NextResponse.json({
       data: entities,
-      source: "databricks",
+      source: "postgres",
       meta: {
-        schema: schema.lineage_entities_current,
-        resolution: "lineage_entities_current",
+        resolution: "data_lineage_derived",
       },
     });
     response.headers.set("X-RateLimit-Remaining", String(remaining));
@@ -50,12 +45,18 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json(
-      {
-        error: "Failed to fetch live lineage entity data. Cache fallback is disabled in Live mode to avoid showing stale or demo results.",
-        detail: message,
-      },
-      { status: 502 }
-    );
+    const cached = getFromCache<LineageEntity[]>(CACHE_KEY, CACHE_PARAMS);
+    if (cached) {
+      const response = NextResponse.json({
+        data: cached.data,
+        cachedAt: cached.cachedAt,
+        source: "fallback",
+        warning: message,
+      });
+      response.headers.set("X-RateLimit-Remaining", String(remaining));
+      response.headers.set("X-Cache", "FALLBACK");
+      return response;
+    }
+    return NextResponse.json({ error: "Failed to fetch lineage entities and no snapshot is available", detail: message }, { status: 502 });
   }
 }

@@ -24,6 +24,11 @@ export interface ApiHealthResponse {
     newestAge: number | null;
     cacheOnly: boolean;
     ttlSeconds: number;
+    fileCount: number;
+    sourceCount: number;
+    sources: string[];
+    coverageFrom: string | null;
+    coverageTo: string | null;
   };
   timestamp: string;
 }
@@ -35,6 +40,11 @@ export interface CacheStatusResponse {
     newestAge: number | null;
     cacheOnly: boolean;
     ttlSeconds: number;
+    fileCount: number;
+    sourceCount: number;
+    sources: string[];
+    coverageFrom: string | null;
+    coverageTo: string | null;
   };
 }
 

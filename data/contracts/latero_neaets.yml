@@ -1,0 +1,58 @@
+version: 1
+id: latero.neaets
+display_name: Latero NEa ETS CO2-emissies per Installatie
+
+bcbs239_principles:
+  - principle: P1
+    description: "De Nederlandse Emissieautoriteit (NEa) is de enige geautoriseerde bron voor ETS CO2-emissiedata van industriële installaties."
+  - principle: P2
+    description: "Data doorloopt het medallion-patroon (bronze → silver → gold) met data-kwaliteitscontroles bij elke stap."
+  - principle: P3
+    description: "InstallatiePK (combinatie van InstallatieID en Jaar) is de primaire sleutel voor emissieregistraties."
+  - principle: P4
+    description: "Elke rij moet volledig zijn voor de verplichte kolommen; optionele kolommen mogen null zijn."
+
+schema:
+  columns:
+    - name: InstallatiePK
+      type: string
+      nullable: false
+    - name: InstallatieID
+      type: string
+      nullable: false
+    - name: InstallatieNaam
+      type: string
+      nullable: true
+    - name: Operator
+      type: string
+      nullable: true
+    - name: Activiteit
+      type: string
+      nullable: true
+    - name: Sector
+      type: string
+      nullable: true
+    - name: Provincie
+      type: string
+      nullable: true
+    - name: Gemeente
+      type: string
+      nullable: true
+    - name: Jaar
+      type: integer
+      nullable: false
+    - name: GeverifieerdeCO2Emissie_ton
+      type: double
+      nullable: true
+    - name: ToegewezenRechten_ton
+      type: double
+      nullable: true
+    - name: OverschrijdingRechten_ton
+      type: double
+      nullable: true
+    - name: VerificatieStatus
+      type: string
+      nullable: true
+    - name: DataSourceVersion
+      type: string
+      nullable: true

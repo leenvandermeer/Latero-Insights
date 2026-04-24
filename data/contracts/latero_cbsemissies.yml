@@ -1,0 +1,46 @@
+version: 1
+id: latero.cbsemissies
+display_name: Latero CBS Broeikasgasemissies per Gemeente
+
+bcbs239_principles:
+  - principle: P1
+    description: "CBS StatLine is de enige geautoriseerde bron voor broeikasgasemissies per gemeente in Nederland."
+  - principle: P2
+    description: "Data doorloopt het medallion-patroon (bronze → silver → gold) met data-kwaliteitscontroles bij elke stap."
+  - principle: P3
+    description: "GemeenteCode plus Jaar plus Sector vormen de samengestelde primaire sleutel."
+  - principle: P4
+    description: "Elke rij moet volledig zijn voor de verplichte kolommen; optionele kolommen mogen null zijn."
+
+schema:
+  columns:
+    - name: GemeenteCode
+      type: string
+      nullable: false
+    - name: GemeenteNaam
+      type: string
+      nullable: true
+    - name: Provincie
+      type: string
+      nullable: true
+    - name: Jaar
+      type: integer
+      nullable: false
+    - name: Sector
+      type: string
+      nullable: false
+    - name: CO2Emissie_kton
+      type: double
+      nullable: true
+    - name: CH4Emissie_kton
+      type: double
+      nullable: true
+    - name: N2OEmissie_kton
+      type: double
+      nullable: true
+    - name: TotaalCO2Equivalent_kton
+      type: double
+      nullable: true
+    - name: DataSourceVersion
+      type: string
+      nullable: true

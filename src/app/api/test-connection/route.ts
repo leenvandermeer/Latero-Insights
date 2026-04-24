@@ -36,13 +36,13 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         warehouse_id: settings.databricksWarehouseId,
         statement: "SELECT 1",
-        // Give the warehouse up to 25 s to start — it may be cold
-        wait_timeout: "25s",
+        // Give the warehouse up to 40 s to start — it may be cold
+        wait_timeout: "40s",
         disposition: "INLINE",
         format: "JSON_ARRAY",
       }),
-      // 30 s total budget per attempt (slightly more than wait_timeout)
-      signal: AbortSignal.timeout(30000),
+      // 45 s total budget per attempt (slightly more than wait_timeout)
+      signal: AbortSignal.timeout(45000),
     });
 
     if (!resp.ok) {

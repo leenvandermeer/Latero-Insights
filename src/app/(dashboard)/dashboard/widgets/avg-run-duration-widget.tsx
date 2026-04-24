@@ -3,6 +3,7 @@
 import { usePipelines } from "@/hooks";
 import { CounterCard, CounterCardSkeleton } from "@/components/ui";
 import { Timer } from "lucide-react";
+import { latestPipelineStepRuns } from "@/lib/pipeline-runs";
 
 interface Props {
   from: string;
@@ -28,7 +29,7 @@ export function AvgRunDurationWidget({ from, to, titleOverride }: Props) {
     </div>
   );
 
-  const runs = (response?.data ?? []).filter((r) => r.duration_ms != null);
+  const runs = latestPipelineStepRuns(response?.data ?? []).filter((r) => r.duration_ms != null);
   const avg = runs.length > 0
     ? runs.reduce((sum, r) => sum + (r.duration_ms ?? 0), 0) / runs.length
     : 0;

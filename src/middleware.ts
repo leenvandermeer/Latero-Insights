@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
+  // /api/v1 routes handle their own Bearer-token authentication.
+  if (path.startsWith("/api/v1/")) {
+    return NextResponse.next();
+  }
+
   // Skip auth for health, settings, and test-connection endpoints
   if (path === "/api/health" || path === "/api/settings" || path === "/api/test-connection" || path === "/api/cache/seed") {
     return NextResponse.next();

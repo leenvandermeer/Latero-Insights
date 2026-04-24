@@ -5,6 +5,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { usePipelines } from "@/hooks";
 import { Card, CardHeader, CardTitle, CardContent, ChartSkeleton } from "@/components/ui";
 import { STATUS_COLORS, normalizeStatus } from "@/lib/chart-colors";
+import { latestPipelineStepRuns } from "@/lib/pipeline-runs";
 
 interface Props { from: string; to: string; titleOverride?: string; }
 
@@ -15,7 +16,7 @@ export function RunsByPipelineWidget({ from, to, titleOverride }: Props) {
 
   const chartData = useMemo(() => {
     const counts = new Map<string, { total: number; failed: number }>();
-    for (const run of response?.data ?? []) {
+    for (const run of latestPipelineStepRuns(response?.data ?? [])) {
       const entry = counts.get(run.dataset_id) ?? { total: 0, failed: 0 };
       entry.total++;
       if (normalizeStatus(run.run_status) === "FAILED") entry.failed++;

@@ -21,5 +21,121 @@
     },
     "id": "f8d37fbf-322f-4558-b8ce-bcbd6ca5d7a2",
     "publishedAt": "2026-04-19T18:06:57.681Z"
+  },
+  {
+    "label": "Total Runs",
+    "description": "Count of pipeline runs in the selected period",
+    "templateType": "total-runs",
+    "category": "counter",
+    "defaultSize": {
+      "w": 3,
+      "h": 2,
+      "minW": 2,
+      "minH": 2
+    },
+    "id": "67bf87d3-aab8-43b5-a29f-dc6604c0c758",
+    "publishedAt": "2026-04-24T11:47:30.603Z"
+  },
+  {
+    "label": "Dataset Health",
+    "description": "Compact scrollable overview of all datasets with DQ status, lineage depth and last run time",
+    "templateType": "dataset-overview",
+    "category": "overview",
+    "defaultSize": {
+      "w": 4,
+      "h": 4,
+      "minW": 3,
+      "minH": 2
+    },
+    "id": "c3fdfca1-da79-49b4-9270-3987e2b22d09",
+    "publishedAt": "2026-04-24T11:48:02.010Z"
+  },
+  {
+    "label": "Recent Pipeline Runs",
+    "description": "Table of latest pipeline run results with status and duration",
+    "templateType": "pipeline-runs-table",
+    "category": "tables",
+    "defaultSize": {
+      "w": 12,
+      "h": 4,
+      "minW": 6,
+      "minH": 3
+    },
+    "id": "6cb1ce66-bddb-40f3-92ba-71b43fde77a0",
+    "publishedAt": "2026-04-24T11:57:11.545Z"
+  },
+  {
+    "label": "d",
+    "queryConfig": {
+      "dataSource": "pipeline_runs",
+      "measure": {
+        "type": "count"
+      },
+      "groupBy": {
+        "field": "step"
+      },
+      "filters": []
+    },
+    "visualType": "bar",
+    "category": "charts",
+    "defaultSize": {
+      "w": 3,
+      "h": 4,
+      "minW": 2,
+      "minH": 2
+    },
+    "id": "f47d8661-1a2c-46c9-a599-5527a876bcb7",
+    "publishedAt": "2026-04-24T12:10:15.446Z"
+  },
+  {
+    "label": "DQ Pass Rate Trend",
+    "description": "Line chart of data quality pass rate over time",
+    "templateType": "dq-trend",
+    "category": "charts",
+    "defaultSize": {
+      "w": 6,
+      "h": 4,
+      "minW": 4,
+      "minH": 3
+    },
+    "id": "807219cd-494f-4a40-befa-4941da59ac4a",
+    "publishedAt": "2026-04-24T12:26:56.535Z"
+  },
+  {
+    "label": "jkn",
+    "description": "k",
+    "queryConfig": {
+      "dataSource": "data_lineage",
+      "measure": {
+        "type": "count_where",
+        "whereField": "source_type",
+        "whereValue": "DATASET"
+      },
+      "filters": []
+    },
+    "visualType": "donut",
+    "category": "charts",
+    "defaultSize": {
+      "w": 3,
+      "h": 4,
+      "minW": 2,
+      "minH": 2
+    },
+    "id": "68de1df1-1b5a-4fbb-afc9-f498785bee3e",
+    "publishedAt": "2026-04-24T12:28:54.303Z"
+  },
+  {
+    "label": "Dataset Health1",
+    "description": "Compact scrollable overview of all datasets with DQ status, lineage depth and last run time",
+    "templateType": "dataset-overview",
+    "category": "overview",
+    "defaultSize": {
+      "w": 4,
+      "h": 4,
+      "minW": 3,
+      "minH": 2
+    },
+    "id": "29de2b78-84e2-4539-96ad-cbb59ed59150",
+    "publishedAt": "2026-04-24T12:58:15.764Z"
   }
 ]

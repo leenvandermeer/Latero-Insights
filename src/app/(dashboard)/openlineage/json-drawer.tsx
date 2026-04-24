@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
 import { X, Copy, Check } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { LineageHop } from "@/lib/adapters/types";
+import { toOpenLineageFormat } from "./openlineage-mapping";
 
 interface RunEvent {
   run_id: string;
@@ -17,64 +17,6 @@ interface RunEvent {
 interface JsonDrawerProps {
   event: RunEvent;
   onClose: () => void;
-}
-
-function toOpenLineageFormat(event: RunEvent) {
-  const inputDatasets = [...new Set(event.hops.map((h) => h.source_entity))].map((name) => ({
-    namespace: "latero",
-    name,
-    facets: {
-      columnLineage: {
-        fields: event.hops
-          .filter((h) => h.source_entity === name && h.source_attribute)
-          .map((h) => ({
-            name: h.source_attribute,
-            transformationType: "DIRECT",
-          })),
-      },
-    },
-  }));
-
-  const outputDatasets = [...new Set(event.hops.map((h) => h.target_entity))].map((name) => ({
-    namespace: "latero",
-    name,
-    facets: {
-      columnLineage: {
-        fields: event.hops
-          .filter((h) => h.target_entity === name && h.target_attribute)
-          .map((h) => ({
-            name: h.target_attribute,
-            inputFields: [
-              {
-                namespace: "latero",
-                name: h.source_entity,
-                field: h.source_attribute ?? "*",
-              },
-            ],
-          })),
-      },
-    },
-  }));
-
-  return {
-    eventType: "COMPLETE",
-    eventTime: event.timestamp,
-    run: {
-      runId: event.run_id,
-      facets: {
-        processing_engine: {
-          name: "latero-meta-data-controle-framework",
-          version: "1.0",
-        },
-      },
-    },
-    job: {
-      namespace: "latero",
-      name: event.job_name,
-    },
-    inputs: inputDatasets,
-    outputs: outputDatasets,
-  };
 }
 
 export function JsonDrawer({ event, onClose }: JsonDrawerProps) {

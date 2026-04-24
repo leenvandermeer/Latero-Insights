@@ -23,6 +23,7 @@ import { EntityDetailPanel } from "./entity-detail-panel";
 import {
   LINEAGE_LAYER_ORDER,
   areAdjacentLineageLayers,
+  lineageDatasetLabel,
   lineageEntityKey,
   lineageLayerIndex,
   resolveLineageRef,
@@ -60,11 +61,12 @@ type VirtualFileRef = {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const POSITIONS_KEY = "insights:lineage:entity-positions-v4";
-const X_SPACING = 440;
-const Y_SPACING = 160;
-const FILE_LANE_OFFSET = 220;
-const FILE_STACK_SPACING = 82;
+const POSITIONS_KEY = "insights:lineage:entity-positions-v5";
+const X_SPACING = 400;
+const Y_SPACING = 118;
+const FILE_LANE_OFFSET = 190;
+const FILE_STACK_SPACING = 68;
+const DEFAULT_FIT_VIEW_OPTIONS = { padding: 0.08, minZoom: 0.58, maxZoom: 1.05 };
 
 const LAYER_ORDER: string[] = [...LINEAGE_LAYER_ORDER];
 
@@ -137,6 +139,7 @@ function normalizeLineageEntities(entities: LineageEntity[]) {
 
     merged.set(key, {
       ...existing,
+      dataset_id: existing.dataset_id ?? entity.dataset_id,
       layer: existing.layer || entity.layer,
       latest_status: pickPreferredStatus(existing.latest_status, entity.latest_status),
       end_to_end_status: pickPreferredStatus(existing.end_to_end_status, entity.end_to_end_status),
@@ -180,14 +183,16 @@ function neighborBySameFqn(entity: LineageEntity, entities: LineageEntity[], dir
 const LAYER_NAME_SET = new Set(LAYER_ORDER);
 
 function datasetKey(entity: LineageEntity): string {
-  if (entity.lineage_group_id) return entity.lineage_group_id;
+  if (entity.dataset_id && entity.dataset_id.trim()) return entity.dataset_id.trim();
   const parts = entity.entity_fqn.split(".").filter(Boolean);
   // Live FQN format: "catalog.schema.table" — schema is the stable group key (e.g. "cbs_arbeid")
   const second = parts.at(-2);
   if (second && !LAYER_NAME_SET.has(second.toLowerCase())) return second;
   // Demo FQN format: "catalog.layer.table" — at(-2) IS a layer name; strip layer suffix from table name
   const last = parts.at(-1) ?? entity.entity_fqn;
-  return last.replace(/_(raw|bronze|silver|gold)$/i, "") || last;
+  return last
+    .replace(/^(raw|bronze|silver|gold)_/i, "")
+    .replace(/_(raw|bronze|silver|gold)$/i, "") || last;
 }
 
 function fileName(ref: string) {
@@ -217,19 +222,31 @@ function isFileRef(ref: string) {
   return FILE_REF_PATTERN.test(ref.split("/").pop() ?? ref);
 }
 
+function rowKey(entity: LineageEntity): string {
+  const layer = entity.layer.toLowerCase();
+  if (layer === "silver" || layer === "gold") return lineageEntityKey(entity);
+  return datasetKey(entity);
+}
+
 function chainSortKey(entity: LineageEntity) {
   return `${datasetKey(entity)}::${layerIndex(entity)}::${entity.entity_fqn}`;
 }
 
+function sameDataset(entity: LineageEntity, other: LineageEntity) {
+  return datasetKey(entity) === datasetKey(other);
+}
+
 function resolveRefForDirection(ref: string, entity: LineageEntity, entities: LineageEntity[], direction: "upstream" | "downstream") {
+  const scopedEntities = entities.filter((candidate) => sameDataset(entity, candidate));
+
   if (ref === entity.entity_fqn) {
-    return neighborBySameFqn(entity, entities, direction);
+    return neighborBySameFqn(entity, scopedEntities, direction);
   }
 
-  const resolved = resolveLineageRef(ref, entities, { expectedLayer: adjacentLayer(entity, direction) });
+  const resolved = resolveLineageRef(ref, scopedEntities, { expectedLayer: adjacentLayer(entity, direction) });
   if (!resolved) return null;
 
-  const matches = entities.filter((candidate) => candidate.entity_fqn === resolved.entity_fqn);
+  const matches = scopedEntities.filter((candidate) => candidate.entity_fqn === resolved.entity_fqn);
   if (matches.length <= 1) return resolved;
 
   const currentIdx = layerIndex(entity);
@@ -239,6 +256,28 @@ function resolveRefForDirection(ref: string, entity: LineageEntity, entities: Li
   }
 
   return sorted.reverse().find((candidate) => layerIndex(candidate) === currentIdx - 1) ?? resolved;
+}
+
+function resolveAttributeEntity(
+  ref: string,
+  layer: string | null | undefined,
+  datasetId: string | null | undefined,
+  entities: LineageEntity[]
+) {
+  if (!ref) return null;
+
+  const candidates = entities.filter((entity) => {
+    if (layer && entity.layer.toLowerCase() !== layer.toLowerCase()) return false;
+    if (datasetId && entity.dataset_id && entity.dataset_id !== datasetId) return false;
+    return true;
+  });
+
+  const exact =
+    candidates.find((entity) => entity.entity_fqn === ref) ??
+    candidates.find((entity) => entity.entity_fqn.toLowerCase().endsWith(`.${ref.toLowerCase()}`));
+  if (exact) return exact;
+
+  return resolveLineageRef(ref, candidates, { expectedLayer: layer ?? undefined });
 }
 
 function pushLayerEdge(edges: Edge[], edgeSet: Set<string>, sourceEntity: LineageEntity, targetEntity: LineageEntity) {
@@ -266,7 +305,7 @@ function pushLayerEdge(edges: Edge[], edgeSet: Set<string>, sourceEntity: Lineag
 
 // ── Graph builder ─────────────────────────────────────────────────────────────
 
-function buildGraph(entities: LineageEntity[]) {
+function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = []) {
   // Group by normalized layer
   const byLayer = new Map<string, LineageEntity[]>();
   for (const e of entities) {
@@ -283,8 +322,22 @@ function buildGraph(entities: LineageEntity[]) {
 
   const saved = loadPositions();
   const rowByDataset = new Map<string, number>();
-  const sortedDatasets = [...new Set(entities.map(datasetKey))].sort();
-  sortedDatasets.forEach((dataset, index) => rowByDataset.set(dataset, index));
+  // Silver/gold sort key groups them near their dataset so they visually align with their bronze parent.
+  const rowSortKey = (e: LineageEntity) => {
+    const base = datasetKey(e);
+    const layer = e.layer.toLowerCase();
+    return (layer === "silver" || layer === "gold")
+      ? `${base}::${String(layerIndex(e)).padStart(2, "0")}::${e.entity_fqn}`
+      : base;
+  };
+  const seenRowKeys = new Map<string, string>(); // rowKey → sortKey (first seen wins)
+  for (const e of entities) {
+    const rk = rowKey(e);
+    if (!seenRowKeys.has(rk)) seenRowKeys.set(rk, rowSortKey(e));
+  }
+  [...seenRowKeys.entries()]
+    .sort(([, a], [, b]) => a.localeCompare(b))
+    .forEach(([rk], index) => rowByDataset.set(rk, index));
   const virtualFileCountByTarget = new Map<string, number>();
 
   // Build nodes
@@ -294,11 +347,10 @@ function buildGraph(entities: LineageEntity[]) {
     const layerEntities = [...(byLayer.get(col) ?? [])].sort((a, b) => chainSortKey(a).localeCompare(chainSortKey(b)));
     const x = cols.indexOf(col) * X_SPACING;
     layerEntities.forEach((e, i) => {
-      const parts = e.entity_fqn.split(".");
       const nodeId = lineageEntityKey(e);
-      const row = rowByDataset.get(datasetKey(e)) ?? i;
+      const row = rowByDataset.get(rowKey(e)) ?? i;
       const data: GraphNodeData = {
-        label: parts[parts.length - 1] ?? e.entity_fqn,
+        label: lineageDatasetLabel(e),
         nodeId,
         fullFqn: e.entity_fqn,
         type: "table",
@@ -322,16 +374,21 @@ function buildGraph(entities: LineageEntity[]) {
       });
 
       if (e.layer.toLowerCase() === "bronze") {
-        const groupedRefs = new Map<string, string[]>();
-        e.upstream_entity_fqns.filter(isFileRef).forEach((ref) => {
-          const key = sourceGroupKey(ref);
-          groupedRefs.set(key, [...(groupedRefs.get(key) ?? []), ref]);
-        });
+        const hasRawEntity = entities.some(
+          (candidate) => candidate.layer.toLowerCase() === "raw" && datasetKey(candidate) === datasetKey(e)
+        );
+        if (!hasRawEntity) {
+          const groupedRefs = new Map<string, string[]>();
+          e.upstream_entity_fqns.filter(isFileRef).forEach((ref) => {
+            const key = sourceGroupKey(ref);
+            groupedRefs.set(key, [...(groupedRefs.get(key) ?? []), ref]);
+          });
 
-        for (const [ref, refs] of groupedRefs.entries()) {
-          const targetIndex = virtualFileCountByTarget.get(nodeId) ?? 0;
-          virtualFileCountByTarget.set(nodeId, targetIndex + 1);
-          virtualFiles.push({ ref, refs, targetKey: nodeId, targetEntity: e, targetIndex });
+          for (const [ref, refs] of groupedRefs.entries()) {
+            const targetIndex = virtualFileCountByTarget.get(nodeId) ?? 0;
+            virtualFileCountByTarget.set(nodeId, targetIndex + 1);
+            virtualFiles.push({ ref, refs, targetKey: nodeId, targetEntity: e, targetIndex });
+          }
         }
       }
     });
@@ -387,27 +444,45 @@ function buildGraph(entities: LineageEntity[]) {
     }
   }
 
-  // Build edges — prefer downstream refs, fall back to upstream refs.
+  // Build edges — prefer current attribute lineage, fall back to entity refs.
   // Databricks refs may use a physical table name such as workspace.bronze.foo_raw
   // while current entities expose the product FQN, so resolve through shared heuristics.
   const edges: Edge[] = [];
   const edgeSet = new Set<string>();
+  const attributeEdgeEntityIds = new Set<string>();
+
+  for (const attribute of attributes) {
+    if (!attribute.is_current) continue;
+    const sourceEntity = resolveAttributeEntity(attribute.source_entity_fqn, attribute.source_layer, attribute.dataset_id, entities);
+    const targetEntity = resolveAttributeEntity(attribute.target_entity_fqn, attribute.target_layer, attribute.dataset_id, entities);
+    if (!sourceEntity || !targetEntity) continue;
+    if (!areAdjacentLineageLayers(sourceEntity, targetEntity)) continue;
+
+    pushLayerEdge(edges, edgeSet, sourceEntity, targetEntity);
+    attributeEdgeEntityIds.add(lineageEntityKey(sourceEntity));
+    attributeEdgeEntityIds.add(lineageEntityKey(targetEntity));
+  }
 
   for (const e of entities) {
-    const sameFqnDownstream = neighborBySameFqn(e, entities, "downstream");
+    const sameFqnDownstream = neighborBySameFqn(e, entities.filter((candidate) => sameDataset(e, candidate)), "downstream");
     if (sameFqnDownstream) {
-      pushLayerEdge(edges, edgeSet, e, sameFqnDownstream);
+      const coveredByAttributes = attributeEdgeEntityIds.has(lineageEntityKey(e)) && attributeEdgeEntityIds.has(lineageEntityKey(sameFqnDownstream));
+      if (!coveredByAttributes) {
+        pushLayerEdge(edges, edgeSet, e, sameFqnDownstream);
+      }
     }
 
     // Edges from downstream refs (source = e, target = ds)
     for (const ds of e.downstream_entity_fqns) {
       const resolved = resolveRefForDirection(ds, e, entities, "downstream");
+      if (resolved && attributeEdgeEntityIds.has(lineageEntityKey(e)) && attributeEdgeEntityIds.has(lineageEntityKey(resolved))) continue;
       if (resolved) pushLayerEdge(edges, edgeSet, e, resolved);
     }
 
     // Edges from upstream refs (source = up, target = e)
     for (const up of e.upstream_entity_fqns) {
       const resolved = resolveRefForDirection(up, e, entities, "upstream");
+      if (resolved && attributeEdgeEntityIds.has(lineageEntityKey(resolved)) && attributeEdgeEntityIds.has(lineageEntityKey(e))) continue;
       if (resolved) pushLayerEdge(edges, edgeSet, resolved, e);
     }
   }
@@ -436,6 +511,39 @@ function buildGraph(entities: LineageEntity[]) {
   return { nodes, edges };
 }
 
+// ── Chain extraction ──────────────────────────────────────────────────────────
+
+function extractChain(anchor: string, allEntities: LineageEntity[]): LineageEntity[] {
+  const seeds = allEntities.filter((e) => datasetKey(e) === anchor);
+  const groupIds = new Set(seeds.map((e) => e.lineage_group_id).filter(Boolean) as string[]);
+  const fqnIndex = new Map(allEntities.map((e) => [e.entity_fqn, e]));
+
+  const result = new Map<string, LineageEntity>();
+  for (const e of allEntities) {
+    if (datasetKey(e) === anchor || (e.lineage_group_id && groupIds.has(e.lineage_group_id))) {
+      result.set(lineageEntityKey(e), e);
+    }
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const e of allEntities) {
+      const key = lineageEntityKey(e);
+      if (result.has(key)) continue;
+      const reachableViaUpstream = e.upstream_entity_fqns.some((ref) => {
+        const up = fqnIndex.get(ref);
+        return up && result.has(lineageEntityKey(up));
+      });
+      if (reachableViaUpstream) { result.set(key, e); changed = true; continue; }
+      const reachableViaDownstream = [...result.values()].some((re) => re.downstream_entity_fqns.includes(e.entity_fqn));
+      if (reachableViaDownstream) { result.set(key, e); changed = true; }
+    }
+  }
+
+  return [...result.values()];
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface GraphViewProps {
@@ -450,29 +558,44 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
   const [layerFilter, setLayerFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [datasetFocus, setDatasetFocus] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [flow, setFlow] = useState<ReactFlowInstance | null>(null);
 
   const normalizedEntities = useMemo(() => normalizeLineageEntities(entities), [entities]);
 
+  const datasetOptions = useMemo(() => {
+    const keys = new Set(
+      normalizedEntities
+        .filter((e) => !["silver", "gold"].includes(e.layer.toLowerCase()))
+        .map(datasetKey)
+    );
+    return [...keys].sort();
+  }, [normalizedEntities]);
+
+  const focusedEntities = useMemo(
+    () => datasetFocus ? extractChain(datasetFocus, normalizedEntities) : normalizedEntities,
+    [datasetFocus, normalizedEntities]
+  );
+
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () => buildGraph(normalizedEntities),
-    [normalizedEntities]
+    () => buildGraph(focusedEntities, attributes),
+    [focusedEntities, attributes]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   useEffect(() => {
-    const { nodes: n, edges: e } = buildGraph(normalizedEntities);
+    const { nodes: n, edges: e } = buildGraph(focusedEntities, attributes);
     setNodes(n);
     setEdges(e);
-  }, [normalizedEntities, setNodes, setEdges]);
+  }, [attributes, focusedEntities, setNodes, setEdges]);
 
   useEffect(() => {
     if (!flow) return;
     window.requestAnimationFrame(() => {
-      flow.fitView({ padding: 0.18, duration: 250 });
+      flow.fitView({ ...DEFAULT_FIT_VIEW_OPTIONS, duration: 250 });
     });
   }, [flow, initialNodes.length, initialEdges.length]);
 
@@ -485,28 +608,29 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
     if (typeof window !== "undefined") {
       localStorage.removeItem(POSITIONS_KEY);
     }
-    const { nodes: n, edges: e } = buildGraph(normalizedEntities);
+    const { nodes: n, edges: e } = buildGraph(focusedEntities, attributes);
     setNodes(n);
     setEdges(e);
     setSearch("");
     setLayerFilter("all");
     setStatusFilter("all");
+    setDatasetFocus(null);
     setSelectedNodeId(null);
     window.requestAnimationFrame(() => {
-      flow?.fitView({ padding: 0.18, duration: 300 });
+      flow?.fitView({ ...DEFAULT_FIT_VIEW_OPTIONS, duration: 300 });
     });
-  }, [flow, normalizedEntities, setNodes, setEdges]);
+  }, [attributes, flow, focusedEntities, setNodes, setEdges]);
 
   const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     const data = node.data as unknown as GraphNodeData;
     setSelectedNodeId((prev) => (prev === data.nodeId ? null : data.nodeId));
   }, []);
 
-  // Derive layer options from entities
+  // Derive layer options from focused entities
   const layerOptions = useMemo(() => {
-    const present = new Set(normalizedEntities.map((e) => e.layer.toLowerCase()));
+    const present = new Set(focusedEntities.map((e) => e.layer.toLowerCase()));
     return ["all", ...LAYER_ORDER.filter((l) => present.has(l)), ...[...present].filter((l) => !LAYER_ORDER.includes(l))];
-  }, [normalizedEntities]);
+  }, [focusedEntities]);
 
   // Apply filters as opacity on nodes
   const filteredNodes = useMemo(() => {
@@ -523,7 +647,7 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
 
   const selectedEntity = useMemo(
     () => {
-      const matchedEntity = normalizedEntities.find((e) => lineageEntityKey(e) === selectedNodeId);
+      const matchedEntity = focusedEntities.find((e) => lineageEntityKey(e) === selectedNodeId);
       if (matchedEntity) return matchedEntity;
 
       const selectedNode = nodes.find((node) => node.id === selectedNodeId);
@@ -540,18 +664,19 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
         downstream_entity_fqns: data.downstream_entity_fqns,
         lineage_group_id: data.lineage_group_id,
         last_completed_layer: null,
+        dataset_id: null,
       } satisfies LineageEntity;
     },
-    [nodes, normalizedEntities, selectedNodeId]
+    [nodes, focusedEntities, selectedNodeId]
   );
 
   // Navigate-to: select the adjacent layer node for refs shown in the detail panel.
   const handleNavigateTo = useCallback((fqn: string, direction: "upstream" | "downstream") => {
     const entity = selectedEntity
-      ? resolveRefForDirection(fqn, selectedEntity, normalizedEntities, direction)
-      : resolveLineageRef(fqn, normalizedEntities);
+      ? resolveRefForDirection(fqn, selectedEntity, focusedEntities, direction)
+      : resolveLineageRef(fqn, focusedEntities);
     setSelectedNodeId(entity ? lineageEntityKey(entity) : null);
-  }, [normalizedEntities, selectedEntity]);
+  }, [focusedEntities, selectedEntity]);
 
   return (
     <div className="flex flex-col h-full">
@@ -560,6 +685,17 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
         className="flex items-center gap-2 px-4 py-2 shrink-0 flex-wrap"
         style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}
       >
+        {/* Dataset focus */}
+        <select
+          value={datasetFocus ?? ""}
+          onChange={(e) => { setDatasetFocus(e.target.value || null); setSelectedNodeId(null); }}
+          className="text-xs rounded-lg px-2.5 py-1.5 outline-none max-w-[160px]"
+          style={{ background: "var(--color-card)", border: `1px solid ${datasetFocus ? "var(--color-brand)" : "var(--color-border)"}`, color: "var(--color-text)", fontWeight: datasetFocus ? 600 : undefined }}
+        >
+          <option value="">All datasets</option>
+          {datasetOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: "var(--color-text-muted)" }} />
@@ -628,7 +764,7 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
         </button>
 
         <span className="ml-auto text-xs" style={{ color: "var(--color-text-muted)" }}>
-          {normalizedEntities.length} entit{normalizedEntities.length === 1 ? "y" : "ies"}
+          {focusedEntities.length}{datasetFocus ? ` of ${normalizedEntities.length}` : ""} entit{focusedEntities.length === 1 ? "y" : "ies"}
           {refreshedAt && (
             <span> · updated {(() => { try { return new Date(refreshedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); } catch { return refreshedAt; } })()}</span>
           )}
@@ -647,7 +783,8 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
           onNodeClick={handleNodeClick}
           onInit={setFlow}
           fitView
-          minZoom={0.2}
+          fitViewOptions={DEFAULT_FIT_VIEW_OPTIONS}
+          minZoom={0.58}
           maxZoom={2}
           className="bg-[var(--color-surface)]"
         >

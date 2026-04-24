@@ -7,10 +7,12 @@ import type { ApiResponse } from "@/lib/api";
 
 export function useQuality(from: string, to: string) {
   return useQuery<ApiResponse<DataQualityCheck[]>>({
-    queryKey: ["quality", from, to],
+    queryKey: ["quality", from, to, "live"],
     queryFn: () => fetchDataQualityChecks({ from, to }),
     enabled: !!from && !!to,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 }

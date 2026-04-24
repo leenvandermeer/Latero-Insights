@@ -1,0 +1,58 @@
+version: 1
+id: latero.rivm_lucht
+display_name: Latero RIVM NSL Luchtkwaliteitsmetingen
+
+bcbs239_principles:
+  - principle: P1
+    description: "RIVM NSL-monitoringsprogramma is de geautoriseerde bron voor luchtkwaliteitsmetingen op Nederlandse meetstations."
+  - principle: P2
+    description: "Data doorloopt het medallion-patroon (bronze → silver → gold) met data-kwaliteitscontroles bij elke stap."
+  - principle: P3
+    description: "MeetpuntID plus Jaar plus Stof vormen de samengestelde primaire sleutel."
+  - principle: P4
+    description: "Elke rij moet volledig zijn voor de verplichte kolommen; optionele kolommen mogen null zijn."
+
+schema:
+  columns:
+    - name: MeetpuntID
+      type: string
+      nullable: false
+    - name: MeetpuntNaam
+      type: string
+      nullable: true
+    - name: Provincie
+      type: string
+      nullable: true
+    - name: Gemeente
+      type: string
+      nullable: true
+    - name: Locatietype
+      type: string
+      nullable: true
+    - name: WGS84_lat
+      type: double
+      nullable: true
+    - name: WGS84_lon
+      type: double
+      nullable: true
+    - name: Jaar
+      type: integer
+      nullable: false
+    - name: Stof
+      type: string
+      nullable: false
+    - name: GemJaarwaarde_ug_m3
+      type: double
+      nullable: true
+    - name: MaxDaggemiddelde_ug_m3
+      type: double
+      nullable: true
+    - name: OvschrijdingsdagenPM10
+      type: integer
+      nullable: true
+    - name: BeoordelingJaar
+      type: string
+      nullable: true
+    - name: DataSourceVersion
+      type: string
+      nullable: true

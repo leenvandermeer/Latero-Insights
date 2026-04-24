@@ -2,8 +2,8 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Database, Table2 } from "lucide-react";
-import type { HealthStatus } from "./lineage-canvas";
+import { Database, FileText, Table2 } from "lucide-react";
+import type { HealthStatus } from "./lineage-utils";
 
 interface EntityData {
   label: string;
@@ -13,7 +13,6 @@ interface EntityData {
   hopCount: number;
   health: HealthStatus;
   layer?: string;
-  end_to_end_status?: string;
 }
 
 const HEALTH_COLORS: Record<HealthStatus, { border: string; dot: string; bg: string }> = {
@@ -24,16 +23,13 @@ const HEALTH_COLORS: Record<HealthStatus, { border: string; dot: string; bg: str
 };
 
 function EntityNodeComponent({ data }: NodeProps) {
-  const { label, type, attributes, health, atRisk, layer, end_to_end_status } = data as unknown as EntityData & { atRisk?: boolean };
-  const Icon = type === "table" ? Table2 : Database;
+  const { label, type, attributes, health, atRisk, layer } = data as unknown as EntityData & { atRisk?: boolean };
+  const Icon = type === "table" ? Table2 : type === "file" ? FileText : Database;
   const colors = HEALTH_COLORS[health ?? "unknown"];
-
-  // Show end_to_end badge when it signals a different state than latest_status
-  const showE2eBadge = end_to_end_status && end_to_end_status !== "SUCCESS" && end_to_end_status !== "UNKNOWN";
 
   return (
     <div
-      className="rounded-lg shadow-sm min-w-[180px] max-w-[240px]"
+      className="rounded-lg shadow-sm min-w-[200px] max-w-[280px]"
       style={{
         background: "var(--color-surface)",
         border: `1.5px solid ${colors.border}`,
@@ -50,7 +46,7 @@ function EntityNodeComponent({ data }: NodeProps) {
         }}
       >
         <Icon className="h-4 w-4 shrink-0" style={{ color: "var(--color-primary)" }} />
-        <span className="text-sm font-medium truncate flex-1" style={{ color: "var(--color-text)" }}>
+        <span className="text-sm font-medium flex-1 leading-snug line-clamp-2" style={{ color: "var(--color-text)" }}>
           {label}
         </span>
         {layer && (
@@ -67,15 +63,6 @@ function EntityNodeComponent({ data }: NodeProps) {
             style={{ background: colors.dot }}
             title={health}
           />
-        )}
-        {showE2eBadge && (
-          <span
-            className="text-[9px] font-bold rounded px-1 shrink-0"
-            style={{ background: "rgba(239,68,68,0.15)", color: "#dc2626" }}
-            title={`End-to-end: ${end_to_end_status}`}
-          >
-            E2E {end_to_end_status}
-          </span>
         )}
         {atRisk && (
           <span

@@ -1,0 +1,495 @@
+"""OpenAPI 3.0 Contract for Latero Insights SaaS Event API.
+
+This document defines the API contract that Latero Insights SaaS must implement
+to receive events from Latero framework instances.
+
+All endpoints require Bearer token authentication.
+"""
+
+openapi: 3.0.0
+info:
+  title: Latero Insights Event API
+  version: 1.0.0
+  description: |
+    Ingest metadata events from Latero framework instances.
+    
+    Base URL: https://api.latero-insights.app/v1
+    
+    Authentication: Bearer token in Authorization header
+    
+servers:
+  - url: https://api.latero-insights.app/v1
+    description: Production
+  - url: https://staging-api.latero-insights.app/v1
+    description: Staging
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        API token format: sk_live_<random> or sk_test_<random>
+        Token must be associated with exactly one installation_id
+  
+  schemas:
+    PipelineRunEvent:
+      type: object
+      required:
+        - event_type
+        - timestamp_utc
+        - dataset_id
+        - run_id
+        - step
+        - status
+        - installation_id
+      properties:
+        event_type:
+          type: string
+          enum: [pipeline_run]
+        timestamp_utc:
+          type: string
+          format: date-time
+          description: ISO 8601 UTC timestamp
+        dataset_id:
+          type: string
+          description: Consumer-supplied dataset identifier
+        run_id:
+          type: string
+          description: Unique execution identifier
+        step:
+          type: string
+          description: Pipeline step name (e.g. landing_to_raw, raw_to_bronze)
+        status:
+          type: string
+          enum: [success, failed, warning]
+        installation_id:
+          type: string
+          description: Latero installation identifier (must match token)
+        environment:
+          type: string
+          description: Deployment environment (dev, staging, production)
+        source_system:
+          type: string
+          description: Data source system identifier
+        execution_seconds:
+          type: integer
+          nullable: true
+          description: How long the step took
+    
+    DQCheckEvent:
+      type: object
+      required:
+        - event_type
+        - timestamp_utc
+        - dataset_id
+        - check_id
+        - status
+        - severity
+        - installation_id
+      properties:
+        event_type:
+          type: string
+          enum: [data_quality_check]
+        timestamp_utc:
+          type: string
+          format: date-time
+        dataset_id:
+          type: string
+        check_id:
+          type: string
+          description: Unique check identifier
+        check_name:
+          type: string
+          nullable: true
+          description: Human-readable check name
+        status:
+          type: string
+          enum: [passed, failed, warning]
+        severity:
+          type: string
+          enum: [high, medium, low]
+        installation_id:
+          type: string
+        environment:
+          type: string
+          nullable: true
+        source_system:
+          type: string
+          nullable: true
+        run_id:
+          type: string
+          nullable: true
+          description: Associated pipeline run (if applicable)
+        step:
+          type: string
+          nullable: true
+          description: Associated pipeline step (if applicable)
+        message:
+          type: string
+          nullable: true
+          description: Error or warning message
+    
+    LineageEvent:
+      type: object
+      required:
+        - event_type
+        - timestamp_utc
+        - dataset_id
+        - input_entity
+        - output_entity
+        - run_id
+        - step
+        - installation_id
+      properties:
+        event_type:
+          type: string
+          enum: [data_lineage]
+        timestamp_utc:
+          type: string
+          format: date-time
+        dataset_id:
+          type: string
+        input_entity:
+          type: string
+          description: Source entity identifier
+        output_entity:
+          type: string
+          description: Target entity identifier
+        run_id:
+          type: string
+          description: Associated pipeline run
+        step:
+          type: string
+          description: Pipeline step where transformation occurred
+        hop_kind:
+          type: string
+          enum: [data_flow, context]
+          default: data_flow
+          description: |
+            data_flow: actual data transformation
+            context: metadata/reference relationship
+        installation_id:
+          type: string
+        environment:
+          type: string
+          nullable: true
+        source_system:
+          type: string
+          nullable: true
+    
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code (invalid_token, invalid_installation, rate_limit, etc)
+        message:
+          type: string
+          description: Human-readable error message
+        timestamp:
+          type: string
+          format: date-time
+    
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    
+    InstallationStatusResponse:
+      type: object
+      required:
+        - installation_id
+        - api_token_valid
+      properties:
+        installation_id:
+          type: string
+        api_token_valid:
+          type: boolean
+        last_event_received:
+          type: string
+          format: date-time
+          nullable: true
+        event_count_24h:
+          type: integer
+          nullable: true
+        events_by_type:
+          type: object
+          properties:
+            pipeline_runs:
+              type: integer
+            dq_checks:
+              type: integer
+            lineage:
+              type: integer
+        datasets:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: List of dataset_ids seen in events
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check API availability (no auth required)
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: API is degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  
+  /pipeline-runs:
+    post:
+      summary: Log a pipeline run
+      description: |
+        Submit a pipeline run event.
+        
+        The installation_id in the payload must match the token's associated installation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PipelineRunEvent'
+      responses:
+        '201':
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Event ID for reference
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid event payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Token does not belong to the installation_id in the event
+            or installation_id is not activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /dq-checks:
+    post:
+      summary: Log a data quality check result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DQCheckEvent'
+      responses:
+        '201':
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid event payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Token does not belong to the installation_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /lineage:
+    post:
+      summary: Log a lineage edge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineageEvent'
+      responses:
+        '201':
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid event payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Token does not belong to the installation_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /installations/{installation_id}/status:
+    get:
+      summary: Get installation status
+      parameters:
+        - name: installation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Installation status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallationStatusResponse'
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Token does not have permission to view this installation
+            (only your own installation or admin access)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Installation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+info:
+  x-implementation-notes: |
+    
+    ## Implementation Notes for Latero Insights Team
+    
+    ### Rate Limiting
+    - Recommended: 1000 events per minute per token
+    - Return 429 with Retry-After header
+    
+    ### Event Storage
+    - Store events with exact timestamp_utc (no modification)
+    - Partition by installation_id and date
+    - Ensure installation_id in token matches payload installation_id
+    
+    ### Idempotency
+    - Consider using (installation_id, event_type, run_id, check_id) composite key
+    - Allow retries without duplicating events
+    
+    ### Authorization
+    - Tokens are per-installation
+    - Token cannot write to other installations
+    - Token can read only its own installation status
+    
+    ### Data Model
+    Suggested schema (PostgreSQL example):
+    
+    ```sql
+    CREATE TABLE events (
+      id UUID PRIMARY KEY,
+      installation_id VARCHAR NOT NULL,
+      event_type VARCHAR NOT NULL,
+      event_date DATE NOT NULL,
+      timestamp_utc TIMESTAMP NOT NULL,
+      payload JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      INDEX (installation_id, event_date)
+    );
+    ```
+    
+    ### Testing
+    - Provide sandbox environment (sk_test_* tokens)
+    - Sandbox has separate storage, no rate limits
+    - Test token always belongs to installation "sandbox-test"

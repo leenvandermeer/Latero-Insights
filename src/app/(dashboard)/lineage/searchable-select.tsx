@@ -6,6 +6,7 @@ import { ChevronDown, Search } from "lucide-react";
 export interface SearchableSelectProps {
   value: string;
   options: string[];
+  labels?: Record<string, string>;
   /** If provided, an "All …" entry is prepended and value "all" maps to this label. */
   allLabel?: string;
   placeholder: string;
@@ -18,6 +19,7 @@ export interface SearchableSelectProps {
 export function SearchableSelect({
   value,
   options,
+  labels,
   allLabel,
   placeholder,
   onChange,
@@ -32,16 +34,16 @@ export function SearchableSelect({
   const displayLabel =
     value === "all"
       ? (allLabel ?? "All")
-      : value.length > 20
-        ? value.slice(0, 18) + "…"
-        : value;
+      : (labels?.[value] ?? value).length > 20
+        ? (labels?.[value] ?? value).slice(0, 18) + "…"
+        : (labels?.[value] ?? value);
 
   const isPlaceholder = value === "all" || !value;
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    return options.filter((o) => o.toLowerCase().includes(q));
-  }, [options, query]);
+    return options.filter((o) => o.toLowerCase().includes(q) || (labels?.[o] ?? "").toLowerCase().includes(q));
+  }, [labels, options, query]);
 
   useEffect(() => {
     if (open) {
@@ -66,7 +68,7 @@ export function SearchableSelect({
   const allOption = allLabel ? [{ id: "all", label: allLabel }] : [];
   const optionItems = [
     ...allOption,
-    ...filtered.map((o) => ({ id: o, label: o })),
+    ...filtered.map((o) => ({ id: o, label: labels?.[o] ?? o })),
   ];
 
   const handleSelect = useCallback(
