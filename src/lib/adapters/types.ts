@@ -44,9 +44,11 @@ export interface LineageHop {
   environment?: string | null;
   schema_version?: string | null;
   lineage_evidence?: string | null;
+  hop_kind?: string | null;
 }
 
 export interface LineageEntity {
+  dataset_id?: string | null;
   entity_fqn: string;
   layer: string;
   latest_status: string;          // "SUCCESS" | "FAILED" | "WARNING" | "UNKNOWN"
@@ -59,12 +61,15 @@ export interface LineageEntity {
 }
 
 export interface LineageAttribute {
+  dataset_id?: string | null;
   source_entity_fqn: string;
   source_attribute: string;
   target_entity_fqn: string;
   target_attribute: string;
+  source_layer?: string | null;
+  target_layer?: string | null;
   is_current: boolean;
-  provenance?: "lineage_attributes_current" | "data_lineage_hop";
+  provenance?: "lineage_attributes_current";
   evidence?: string | null;
 }
 

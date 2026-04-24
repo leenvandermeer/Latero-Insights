@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DatabricksAdapter } from "@/lib/adapters/databricks";
 import { rateLimit } from "@/lib/rate-limit";
-import { getFromCache, writeToCache, isCacheOnly } from "@/lib/cache";
+import { writeToCache, isCacheOnly, getFromCache } from "@/lib/cache";
 
 const adapter = new DatabricksAdapter();
 
@@ -40,24 +40,23 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Live mode: try Databricks first, cache as fallback
+  // Live mode: query Databricks directly and fail fast on errors.
   try {
     const checks = await adapter.getDataQualityChecks({ from, to });
     writeToCache("quality", cacheParams, checks);
     const response = NextResponse.json({ data: checks, source: "databricks" });
     response.headers.set("X-RateLimit-Remaining", String(remaining));
-    response.headers.set("X-Cache", "MISS");
+    response.headers.set("X-Cache", "BYPASS");
     return response;
   } catch (err) {
-    console.error("[API /quality]", err instanceof Error ? err.message : "Unknown error");
-    // Fallback to cache on Databricks error
-    const cached = getFromCache("quality", cacheParams);
-    if (cached) {
-      const response = NextResponse.json({ data: cached.data, cachedAt: cached.cachedAt, source: "fallback" });
-      response.headers.set("X-RateLimit-Remaining", String(remaining));
-      response.headers.set("X-Cache", "FALLBACK");
-      return response;
-    }
-    return NextResponse.json({ error: "Failed to fetch data and no cache available" }, { status: 502 });
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[API /quality]", message);
+    return NextResponse.json(
+      {
+        error: "Failed to fetch live quality data. Cache fallback is disabled in Live mode to avoid showing stale or demo results.",
+        detail: message,
+      },
+      { status: 502 }
+    );
   }
 }

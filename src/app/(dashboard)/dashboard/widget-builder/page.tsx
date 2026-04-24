@@ -706,8 +706,8 @@ function PreviewPanel({ queryConfig, visualType, label }: { queryConfig: QueryCo
       { dataset_id: "rvosde",     check_id: "uniq_check",  check_category: "uniqueness",    check_status: "PASS", step: "gold",   event_date: "2026-04-12" },
     ],
     data_lineage: [
-      { source_entity: "cbsenergie_raw", target_entity: "cbsenergie_bronze", step: "bronze", event_date: "2026-04-10" },
-      { source_entity: "eponline_raw",   target_entity: "eponline_bronze",   step: "bronze", event_date: "2026-04-11" },
+      { dataset_id: "cbsenergie", source_ref: "workspace.raw.cbsenergie_raw", target_ref: "workspace.bronze.cbsenergie_raw", source_type: "raw_file", target_type: "bronze_table", hop_kind: "data_flow", step: "raw_to_bronze", event_date: "2026-04-10" },
+      { dataset_id: "eponline", source_ref: "workspace.raw.eponline_raw", target_ref: "workspace.bronze.eponline_raw", source_type: "raw_file", target_type: "bronze_table", hop_kind: "data_flow", step: "raw_to_bronze", event_date: "2026-04-11" },
     ],
   };
 

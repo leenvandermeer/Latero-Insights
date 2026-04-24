@@ -17,7 +17,13 @@ type SchemaCacheEntry = {
   expiresAt: number;
 };
 
+type EnvironmentScopeCacheEntry = {
+  value: string | null;
+  expiresAt: number;
+};
+
 const schemaCache = new Map<string, SchemaCacheEntry>();
+const environmentScopeCache = new Map<string, EnvironmentScopeCacheEntry>();
 
 interface StatementResponse {
   statement_id: string;
@@ -119,6 +125,69 @@ function preferredColumn(columns: string[], ...names: string[]): string | null {
   return names.find((name) => hasColumn(columns, name)) ?? null;
 }
 
+function escapeSqlString(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+async function resolveEnvironmentScope(table: string, columns: string[]): Promise<string | null> {
+  if (!hasColumn(columns, "environment")) {
+    return null;
+  }
+
+  const settings = loadSettings();
+  const configured = settings.databricksEnvironment.trim();
+  if (configured) {
+    return configured;
+  }
+
+  const key = fqTable(table);
+  const now = Date.now();
+  const cached = environmentScopeCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
+  const resp = await executeStatement(
+    `SELECT DISTINCT environment FROM ${key} WHERE environment IS NOT NULL AND trim(environment) <> '' AND lower(environment) <> 'demo_dashboard' LIMIT 2`
+  );
+  const values = (resp.result?.data_array ?? [])
+    .map((row) => row[0]?.trim() ?? "")
+    .filter((value) => value.length > 0);
+  const resolved = values.length === 1 ? values[0] : null;
+
+  environmentScopeCache.set(key, { value: resolved, expiresAt: now + SCHEMA_CACHE_TTL_MS });
+  return resolved;
+}
+
+async function liveDataPredicate(table: string, columns: string[]): Promise<string> {
+  const predicates: string[] = [];
+  const environmentScope = await resolveEnvironmentScope(table, columns);
+
+  if (environmentScope) {
+    predicates.push(`environment = '${escapeSqlString(environmentScope)}'`);
+  }
+
+  if (hasColumn(columns, "environment")) {
+    predicates.push("(environment IS NULL OR lower(environment) <> 'demo_dashboard')");
+  }
+  if (hasColumn(columns, "run_id")) {
+    predicates.push("(run_id IS NULL OR lower(run_id) NOT LIKE 'demo_meta_%')");
+  }
+
+  return predicates.length > 0 ? ` AND ${predicates.join(" AND ")}` : "";
+}
+
+async function scopedWhereClause(table: string, columns: string[], basePredicates: string[] = []): Promise<string> {
+  const predicates = [...basePredicates];
+  const environmentScope = await resolveEnvironmentScope(table, columns);
+
+  if (environmentScope) {
+    predicates.push(`environment = '${escapeSqlString(environmentScope)}'`);
+  }
+
+  return predicates.length > 0 ? ` WHERE ${predicates.join(" AND ")}` : "";
+}
+
 export class DatabricksAdapter implements DataAdapter {
   async getLineageSchemaInventory(): Promise<LineageSchemaInventory> {
     const [entities, attributes, hops] = await Promise.all([
@@ -135,7 +204,8 @@ export class DatabricksAdapter implements DataAdapter {
   }
 
   async getPipelineRuns(range: DateRange): Promise<PipelineRun[]> {
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, source_system, step, run_id, run_status, duration_ms, environment FROM ${fqTable("pipeline_runs")} WHERE event_date >= :date_from AND event_date <= :date_to ORDER BY timestamp_utc DESC`;
+    const columns = await describeColumns("pipeline_runs");
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, source_system, step, run_id, run_status, duration_ms, environment FROM ${fqTable("pipeline_runs")} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("pipeline_runs", columns)} ORDER BY timestamp_utc DESC`;
     const resp = await executeStatement(sql, [
       { name: "date_from", value: range.from, type: "STRING" },
       { name: "date_to", value: range.to, type: "STRING" },
@@ -155,7 +225,8 @@ export class DatabricksAdapter implements DataAdapter {
   }
 
   async getDataQualityChecks(range: DateRange): Promise<DataQualityCheck[]> {
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, step, run_id, check_id, check_status, check_category, policy_version FROM ${fqTable("data_quality_checks")} WHERE event_date >= :date_from AND event_date <= :date_to ORDER BY timestamp_utc DESC`;
+    const columns = await describeColumns("data_quality_checks");
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, step, run_id, check_id, check_status, check_category, policy_version FROM ${fqTable("data_quality_checks")} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("data_quality_checks", columns)} ORDER BY timestamp_utc DESC`;
     const resp = await executeStatement(sql, [
       { name: "date_from", value: range.from, type: "STRING" },
       { name: "date_to", value: range.to, type: "STRING" },
@@ -176,9 +247,9 @@ export class DatabricksAdapter implements DataAdapter {
 
   async getLineageHops(range: DateRange): Promise<LineageHop[]> {
     const columns = await describeColumns("data_lineage");
-    const optional = ["source_system", "installation_id", "environment", "schema_version", "lineage_evidence"]
+    const optional = ["source_system", "installation_id", "environment", "schema_version", "lineage_evidence", "hop_kind"]
       .filter((name) => hasColumn(columns, name));
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, step, run_id, source_entity, source_type, source_ref, source_attribute, target_entity, target_type, target_ref, target_attribute${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("data_lineage")} WHERE event_date >= :date_from AND event_date <= :date_to ORDER BY timestamp_utc DESC`;
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, step, run_id, source_entity, source_type, source_ref, source_attribute, target_entity, target_type, target_ref, target_attribute${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("data_lineage")} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("data_lineage", columns)} ORDER BY timestamp_utc DESC`;
     const resp = await executeStatement(sql, [
       { name: "date_from", value: range.from, type: "STRING" },
       { name: "date_to", value: range.to, type: "STRING" },
@@ -203,6 +274,7 @@ export class DatabricksAdapter implements DataAdapter {
       environment: col(row, cols, "environment"),
       schema_version: col(row, cols, "schema_version"),
       lineage_evidence: col(row, cols, "lineage_evidence"),
+      hop_kind: col(row, cols, "hop_kind"),
     }));
   }
 
@@ -210,9 +282,11 @@ export class DatabricksAdapter implements DataAdapter {
     const columns = await describeColumns("lineage_entities_current");
     const lineageGroupColumn = preferredColumn(columns, "lineage_group_id", "latest_lineage_group_id");
     const lastCompletedColumn = preferredColumn(columns, "last_completed_layer");
-    const sql = `SELECT entity_fqn, layer, latest_status, end_to_end_status, latest_success_at, upstream_entity_fqns, downstream_entity_fqns${lineageGroupColumn ? `, ${lineageGroupColumn} AS lineage_group_id` : ", CAST(NULL AS STRING) AS lineage_group_id"}${lastCompletedColumn ? `, ${lastCompletedColumn} AS last_completed_layer` : ", CAST(NULL AS STRING) AS last_completed_layer"} FROM ${fqTable("lineage_entities_current")}`;
+    const datasetColumn = preferredColumn(columns, "dataset_id");
+    const sql = `SELECT ${datasetColumn ? `${datasetColumn} AS dataset_id, ` : "CAST(NULL AS STRING) AS dataset_id, "}entity_fqn, layer, latest_status, end_to_end_status, latest_success_at, upstream_entity_fqns, downstream_entity_fqns${lineageGroupColumn ? `, ${lineageGroupColumn} AS lineage_group_id` : ", CAST(NULL AS STRING) AS lineage_group_id"}${lastCompletedColumn ? `, ${lastCompletedColumn} AS last_completed_layer` : ", CAST(NULL AS STRING) AS last_completed_layer"} FROM ${fqTable("lineage_entities_current")}${await scopedWhereClause("lineage_entities_current", columns)}`;
     const resp = await executeStatement(sql);
     return mapRows(resp, (row, cols) => ({
+      dataset_id: col(row, cols, "dataset_id"),
       entity_fqn: col(row, cols, "entity_fqn") ?? "",
       layer: col(row, cols, "layer") ?? "",
       latest_status: (col(row, cols, "latest_status") ?? "UNKNOWN").toUpperCase(),
@@ -228,13 +302,19 @@ export class DatabricksAdapter implements DataAdapter {
   async getLineageAttributes(): Promise<LineageAttribute[]> {
     const columns = await describeColumns("lineage_attributes_current");
     const hasIsCurrent = hasColumn(columns, "is_current");
-    const sql = `SELECT source_entity_fqn, source_attribute, target_entity_fqn, target_attribute${hasIsCurrent ? ", is_current" : ", true AS is_current"} FROM ${fqTable("lineage_attributes_current")}${hasIsCurrent ? " WHERE is_current = true" : ""}`;
+    const datasetColumn = preferredColumn(columns, "dataset_id");
+    const sourceLayerColumn = preferredColumn(columns, "source_layer");
+    const targetLayerColumn = preferredColumn(columns, "target_layer");
+    const sql = `SELECT ${datasetColumn ? `${datasetColumn} AS dataset_id, ` : "CAST(NULL AS STRING) AS dataset_id, "}source_entity_fqn, source_attribute, target_entity_fqn, target_attribute${sourceLayerColumn ? `, ${sourceLayerColumn} AS source_layer` : ", CAST(NULL AS STRING) AS source_layer"}${targetLayerColumn ? `, ${targetLayerColumn} AS target_layer` : ", CAST(NULL AS STRING) AS target_layer"}${hasIsCurrent ? ", is_current" : ", true AS is_current"} FROM ${fqTable("lineage_attributes_current")}${await scopedWhereClause("lineage_attributes_current", columns, hasIsCurrent ? ["is_current = true"] : [])}`;
     const resp = await executeStatement(sql);
     return mapRows(resp, (row, cols) => ({
+      dataset_id: col(row, cols, "dataset_id"),
       source_entity_fqn: col(row, cols, "source_entity_fqn") ?? "",
       source_attribute: col(row, cols, "source_attribute") ?? "",
       target_entity_fqn: col(row, cols, "target_entity_fqn") ?? "",
       target_attribute: col(row, cols, "target_attribute") ?? "",
+      source_layer: col(row, cols, "source_layer"),
+      target_layer: col(row, cols, "target_layer"),
       is_current: parseBoolean(col(row, cols, "is_current")),
       provenance: "lineage_attributes_current",
     }));

@@ -50,6 +50,7 @@ export async function PUT(request: NextRequest) {
     databricksWarehouseId: body.databricksWarehouseId ?? current.databricksWarehouseId,
     databricksCatalog: body.databricksCatalog ?? current.databricksCatalog,
     databricksSchema: body.databricksSchema ?? current.databricksSchema,
+    databricksEnvironment: body.databricksEnvironment ?? current.databricksEnvironment,
     cacheTtlSeconds: body.cacheTtlSeconds ?? current.cacheTtlSeconds,
     cacheOnly: body.cacheOnly ?? current.cacheOnly,
   };

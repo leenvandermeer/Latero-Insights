@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DatabricksAdapter } from "@/lib/adapters/databricks";
 import { rateLimit } from "@/lib/rate-limit";
-import { getFromCache, writeToCache, isCacheOnly } from "@/lib/cache";
+import { getFromCache, isCacheOnly } from "@/lib/cache";
 
 const adapter = new DatabricksAdapter();
 
@@ -43,21 +43,19 @@ export async function GET(request: NextRequest) {
   // Live mode: try Databricks first, cache as fallback
   try {
     const runs = await adapter.getPipelineRuns({ from, to });
-    writeToCache("pipelines", cacheParams, runs);
     const response = NextResponse.json({ data: runs, source: "databricks" });
     response.headers.set("X-RateLimit-Remaining", String(remaining));
-    response.headers.set("X-Cache", "MISS");
+    response.headers.set("X-Cache", "BYPASS");
     return response;
   } catch (err) {
-    console.error("[API /pipelines]", err instanceof Error ? err.message : "Unknown error");
-    // Fallback to cache on Databricks error
-    const cached = getFromCache("pipelines", cacheParams);
-    if (cached) {
-      const response = NextResponse.json({ data: cached.data, cachedAt: cached.cachedAt, source: "fallback" });
-      response.headers.set("X-RateLimit-Remaining", String(remaining));
-      response.headers.set("X-Cache", "FALLBACK");
-      return response;
-    }
-    return NextResponse.json({ error: "Failed to fetch data and no cache available" }, { status: 502 });
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[API /pipelines]", message);
+    return NextResponse.json(
+      {
+        error: "Failed to fetch live pipeline data. Cache fallback is disabled for pipeline counts to avoid showing stale run status.",
+        detail: message,
+      },
+      { status: 502 }
+    );
   }
 }

@@ -266,6 +266,7 @@ Full required schema:
 | `target_ref` | STRING | no | Qualified target reference |
 | `target_attribute` | STRING | no | Attribute name for column-level lineage |
 | `lineage_evidence` | MAP\<STRING,STRING\> or VARIANT | no | Evidence dict — see LMETA-007 |
+| `hop_kind` | STRING | no | Semantic hop role: `data_flow` or `context`; NULL defaults to `data_flow` for historical rows |
 
 ### LMETA-007 — Fix Snowflake `data_lineage` missing `installation_id`
 
@@ -300,6 +301,53 @@ only the logical content.
 - A comment in each `bootstrap.sql` documents the choice
 - `latero/docs/requirements/meta-table-contract.md` (this file) states the deliberate difference
 - No code change required
+
+---
+
+### LMETA-012 — Semantic lineage hop role via `hop_kind`
+
+**Requirement:** `meta.data_lineage` must include a nullable `hop_kind STRING`
+column with the following semantics:
+
+| Value | Meaning |
+|-------|---------|
+| `data_flow` | A real source-to-target data transfer that counts for lineage inputs, outputs, sources, targets, and lineage depth |
+| `context` | A contextual or technical relation that may be shown as evidence, but must not count as a material lineage edge |
+| `NULL` | Treated as `data_flow` for backwards compatibility with historical rows |
+
+**Rationale:** Consumers must not infer material lineage from heuristics on
+`source_ref`, `target_ref`, or entity names. The producer must explicitly mark
+whether a hop represents real data movement or only context.
+
+**Breaking change:** additive — historical rows remain valid and default to
+`data_flow` semantics.
+
+**Acceptance criteria:**
+- Column present in Databricks and Snowflake DDL
+- Producer writes `hop_kind = 'data_flow'` for real dataset and column lineage
+- Producer writes `hop_kind = 'context'` for contextual edges
+- Hop-based consumers count only `data_flow`
+- Derived current lineage projections must be built from `data_flow` hops only
+  when they depend on `meta.data_lineage`
+
+---
+
+### LMETA-013 — Environment-scoped live reads
+
+**Requirement:** Installations that write multiple environments or demo data
+into the same physical meta tables must provide an explicit environment scope
+for live consumers. The `environment` column becomes part of the operational
+read contract, not only write-time metadata.
+
+**Rationale:** A live dashboard cannot safely distinguish demo from production
+data by filtering on naming conventions such as `demo_` prefixes. Live reads
+must be explicitly scoped to the intended `environment`.
+
+**Acceptance criteria:**
+- Live consumers can constrain reads by exact `environment`
+- Demo and live rows are never mixed in a single live dashboard response
+- If current lineage views are environment-specific, that scope is documented
+  and preserved in their build process
 
 ---
 

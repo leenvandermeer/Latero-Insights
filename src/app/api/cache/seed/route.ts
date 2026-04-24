@@ -208,6 +208,7 @@ function generateLineage(): unknown[] {
         target_type: "table",
         target_ref: `workspace.${layer.target_layer}.${targetName}`,
         target_attribute: null,
+        hop_kind: "data_flow",
       });
 
       if (layer.step === "bronze_to_silver" || layer.step === "silver_to_gold") {
@@ -228,6 +229,7 @@ function generateLineage(): unknown[] {
             target_type: "table",
             target_ref: `workspace.${layer.target_layer}.${targetName}`,
             target_attribute: cols.target[i],
+            hop_kind: "data_flow",
           });
         }
       }

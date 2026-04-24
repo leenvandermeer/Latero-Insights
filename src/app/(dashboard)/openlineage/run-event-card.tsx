@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Code, GitBranch, Search } from "lucide-react";
 import type { LineageHop } from "@/lib/adapters/types";
+import { buildOpenLineageDatasets } from "./openlineage-mapping";
+import { isContextHop, isDataFlowHop } from "@/lib/lineage-hop-kind";
 
 interface RunEvent {
   run_id: string;
@@ -34,13 +36,16 @@ export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
   const [hopSearch, setHopSearch] = useState("");
   const [showAllHops, setShowAllHops] = useState(false);
 
-  const inputDatasets = new Set(event.hops.map((h) => h.source_entity));
-  const outputDatasets = new Set(event.hops.map((h) => h.target_entity));
+  const inputDatasets = useMemo(() => buildOpenLineageDatasets(event.hops, "source"), [event.hops]);
+  const outputDatasets = useMemo(() => buildOpenLineageDatasets(event.hops, "target"), [event.hops]);
+  const dataFlowHopCount = useMemo(() => event.hops.filter(isDataFlowHop).length, [event.hops]);
+  const contextHopCount = useMemo(() => event.hops.filter(isContextHop).length, [event.hops]);
   const filteredHops = useMemo(() => {
     const q = hopSearch.trim().toLowerCase();
     if (!q) return event.hops;
     return event.hops.filter((hop) =>
       [
+        hop.hop_kind,
         hop.source_entity,
         hop.source_ref,
         hop.source_attribute,
@@ -79,7 +84,8 @@ export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
               <Badge variant="muted" title={event.run_id}>Run {event.run_id.slice(0, 8)}</Badge>
             </div>
             <div className="mt-1 text-xs text-muted-foreground">
-              {new Date(event.timestamp).toLocaleString()} · {event.hops.length} hop{event.hops.length !== 1 ? "s" : ""}
+              {new Date(event.timestamp).toLocaleString()} · {dataFlowHopCount} data flow hop{dataFlowHopCount !== 1 ? "s" : ""}
+              {contextHopCount > 0 ? ` · ${contextHopCount} context` : ""}
             </div>
           </div>
 
@@ -101,26 +107,26 @@ export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                  Input Datasets ({inputDatasets.size})
+                  Input Datasets ({inputDatasets.length})
                 </p>
                 <div className="space-y-1">
-                  {[...inputDatasets].map((ds) => (
-                    <div key={ds} className="flex items-center gap-2 text-sm">
+                  {inputDatasets.map((ds) => (
+                    <div key={ds.key} className="flex items-center gap-2 text-sm">
                       <GitBranch className="h-3 w-3 shrink-0" style={{ color: "var(--color-success)" }} />
-                      <span className="font-mono text-xs truncate">{ds}</span>
+                      <span className="font-mono text-xs truncate" title={ds.ref}>{ds.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                  Output Datasets ({outputDatasets.size})
+                  Output Datasets ({outputDatasets.length})
                 </p>
                 <div className="space-y-1">
-                  {[...outputDatasets].map((ds) => (
-                    <div key={ds} className="flex items-center gap-2 text-sm">
+                  {outputDatasets.map((ds) => (
+                    <div key={ds.key} className="flex items-center gap-2 text-sm">
                       <GitBranch className="h-3 w-3 shrink-0" style={{ color: "var(--color-primary)" }} />
-                      <span className="font-mono text-xs truncate">{ds}</span>
+                      <span className="font-mono text-xs truncate" title={ds.ref}>{ds.label}</span>
                     </div>
                   ))}
                 </div>
@@ -157,15 +163,17 @@ export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
                       <th className="text-left py-1.5 pr-3 font-medium text-muted-foreground">Source</th>
                       <th className="text-left py-1.5 pr-3 font-medium text-muted-foreground">Attribute</th>
                       <th className="text-left py-1.5 pr-3 font-medium text-muted-foreground">Target</th>
+                      <th className="text-left py-1.5 pr-3 font-medium text-muted-foreground">Kind</th>
                       <th className="text-left py-1.5 font-medium text-muted-foreground">Attribute</th>
                     </tr>
                   </thead>
                   <tbody>
                     {visibleHops.map((hop, i) => (
                       <tr key={i} className="border-b border-border last:border-0">
-                        <td className="py-1.5 pr-3 font-mono">{hop.source_entity}</td>
+                        <td className="py-1.5 pr-3 font-mono" title={hop.source_ref || hop.source_entity}>{hop.source_ref || hop.source_entity}</td>
                         <td className="py-1.5 pr-3 text-muted-foreground">{hop.source_attribute ?? "—"}</td>
-                        <td className="py-1.5 pr-3 font-mono">{hop.target_entity}</td>
+                        <td className="py-1.5 pr-3 font-mono" title={hop.target_ref || hop.target_entity}>{hop.target_ref || hop.target_entity}</td>
+                        <td className="py-1.5 pr-3 text-muted-foreground">{isDataFlowHop(hop) ? "data_flow" : (hop.hop_kind ?? "context")}</td>
                         <td className="py-1.5 text-muted-foreground">{hop.target_attribute ?? "—"}</td>
                       </tr>
                     ))}

@@ -61,6 +61,7 @@ export function SettingsDashboard() {
         databricksWarehouseId: s.databricksWarehouseId,
         databricksCatalog: s.databricksCatalog,
         databricksSchema: s.databricksSchema,
+        databricksEnvironment: s.databricksEnvironment,
         cacheTtlSeconds: s.cacheTtlSeconds,
         cacheOnly: s.cacheOnly,
       });
@@ -304,6 +305,18 @@ export function SettingsDashboard() {
                       placeholder="meta"
                     />
                   </div>
+
+                  <SettingsField
+                    label="Environment Scope"
+                    description="Only return live rows for this exact environment value"
+                    value={form.databricksEnvironment ?? ""}
+                    onChange={(v) => updateField("databricksEnvironment", v)}
+                    placeholder="dev-free"
+                  />
+
+                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    Leave blank only if your meta tables contain exactly one non-demo environment. This app will auto-detect that single value; otherwise live results stay ambiguous.
+                  </p>
                 </div>
               )}
             </CardContent>

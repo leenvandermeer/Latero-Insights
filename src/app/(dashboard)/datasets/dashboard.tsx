@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePipelines, useQuality, useLineage, useDateRange } from "@/hooks";
 import {
   PageHeader,
@@ -11,8 +11,12 @@ import {
 } from "@/components/ui";
 import { isNoDataError } from "@/lib/api";
 import { normalizeStatus } from "@/lib/chart-colors";
-import { CheckCircle, AlertTriangle, XCircle, GitBranch, Clock, Minus } from "lucide-react";
-import type { HealthStatus } from "../lineage/lineage-canvas";
+import { latestPipelineStepRuns } from "@/lib/pipeline-runs";
+import { useLineageEntities } from "@/hooks/use-lineage-entities";
+import { CheckCircle, AlertTriangle, XCircle, GitBranch, Clock, X } from "lucide-react";
+import type { HealthStatus } from "../lineage/lineage-utils";
+import type { DataQualityCheck, LineageHop, PipelineRun } from "@/lib/adapters/types";
+import { isContextHop, isDataFlowHop } from "@/lib/lineage-hop-kind";
 
 interface DatasetSummary {
   id: string;
@@ -40,21 +44,26 @@ export function DatasetsDashboard() {
   const { data: pipelineRes, isLoading: loadingP, error: errorP } = usePipelines(from, to);
   const { data: qualityRes, isLoading: loadingQ, error: errorQ } = useQuality(from, to);
   const { data: lineageRes, isLoading: loadingL, error: errorL } = useLineage(from, to);
+  const { data: lineageEntitiesRes, isLoading: loadingE, error: errorE } = useLineageEntities();
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
 
-  const isLoading = loadingP || loadingQ || loadingL;
-  const error = errorP || errorQ || errorL;
-  const source = pipelineRes?.source ?? qualityRes?.source ?? lineageRes?.source;
+  const isLoading = loadingP || loadingQ || loadingL || loadingE;
+  const error = errorP || errorQ || errorL || errorE;
+  const source = pipelineRes?.source ?? qualityRes?.source ?? lineageRes?.source ?? lineageEntitiesRes?.source;
+  const cachedAt = pipelineRes?.cachedAt ?? qualityRes?.cachedAt ?? lineageRes?.cachedAt ?? lineageEntitiesRes?.cachedAt;
 
-  const runs = pipelineRes?.data ?? [];
+  const runs = latestPipelineStepRuns(pipelineRes?.data ?? []);
   const checks = qualityRes?.data ?? [];
   const hops = lineageRes?.data ?? [];
+  const dataFlowHops = useMemo(() => hops.filter(isDataFlowHop), [hops]);
+  const lineageEntities = lineageEntitiesRes?.data ?? [];
 
   const datasets = useMemo((): DatasetSummary[] => {
-    const ids = new Set([
-      ...runs.map((r) => r.dataset_id),
-      ...checks.map((c) => c.dataset_id),
-      ...hops.map((h) => h.dataset_id),
-    ]);
+      const ids = new Set([
+        ...runs.map((r) => r.dataset_id),
+        ...checks.map((c) => c.dataset_id),
+        ...dataFlowHops.map((h) => h.dataset_id),
+      ]);
 
     return Array.from(ids).sort().map((id) => {
       // Latest run for this dataset
@@ -71,10 +80,9 @@ export function DatasetsDashboard() {
       const passRate = datasetChecks.length > 0 ? Math.round((dqPass / datasetChecks.length) * 100) : -1;
 
       // Lineage depth = unique entities connected to this dataset
-      const datasetHops = hops.filter((h) => h.dataset_id === id);
+      const datasetEntities = lineageEntities.filter((entity) => entity.dataset_id === id);
       const entities = new Set([
-        ...datasetHops.map((h) => h.source_entity),
-        ...datasetHops.map((h) => h.target_entity),
+        ...datasetEntities.map((entity) => `${entity.layer.toLowerCase()}::${entity.entity_fqn}`),
       ]);
 
       // Health
@@ -103,7 +111,7 @@ export function DatasetsDashboard() {
         lineageDepth: entities.size,
       };
     });
-  }, [runs, checks, hops]);
+  }, [runs, checks, dataFlowHops, lineageEntities]);
 
   if (error) {
     return (
@@ -128,7 +136,7 @@ export function DatasetsDashboard() {
         description="Per-dataset quality, lineage and run status"
         actions={
           <div className="flex items-center gap-3">
-            {source && <SourceIndicator source={source} />}
+            {source && <SourceIndicator source={source} cachedAt={cachedAt} />}
             <DateRangePicker from={from} to={to} onChange={setRange} />
           </div>
         }
@@ -145,24 +153,37 @@ export function DatasetsDashboard() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {datasets.map((ds) => (
-            <DatasetCard key={ds.id} dataset={ds} />
+            <DatasetCard key={ds.id} dataset={ds} onOpen={() => setSelectedDatasetId(ds.id)} />
           ))}
         </div>
+      )}
+
+      {selectedDatasetId && (
+        <DatasetEvidenceDrawer
+          datasetId={selectedDatasetId}
+          runs={runs.filter((run) => run.dataset_id === selectedDatasetId)}
+          checks={checks.filter((check) => check.dataset_id === selectedDatasetId)}
+          hops={hops.filter((hop) => hop.dataset_id === selectedDatasetId)}
+          onClose={() => setSelectedDatasetId(null)}
+        />
       )}
     </div>
   );
 }
 
-function DatasetCard({ dataset: ds }: { dataset: DatasetSummary }) {
+function DatasetCard({ dataset: ds, onOpen }: { dataset: DatasetSummary; onOpen: () => void }) {
   const h = HEALTH_STYLES[ds.health];
 
   return (
-    <div
-      className="rounded-xl p-4 space-y-4 transition-all"
+    <button
+      type="button"
+      onClick={onOpen}
+      className="rounded-xl p-4 space-y-4 text-left transition-all hover:-translate-y-0.5 focus:outline-none focus:ring-2"
       style={{
         background: "var(--color-surface)",
         border: `1.5px solid ${h.border}`,
         boxShadow: "var(--shadow-sm)",
+        color: "inherit",
       }}
     >
       {/* Title row */}
@@ -223,8 +244,110 @@ function DatasetCard({ dataset: ds }: { dataset: DatasetSummary }) {
           )}
         </div>
       )}
+    </button>
+  );
+}
+
+function DatasetEvidenceDrawer({
+  datasetId,
+  runs,
+  checks,
+  hops,
+  onClose,
+}: {
+  datasetId: string;
+  runs: PipelineRun[];
+  checks: DataQualityCheck[];
+  hops: LineageHop[];
+  onClose: () => void;
+}) {
+  const sortedRuns = [...runs].sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc)).slice(0, 8);
+  const sortedChecks = [...checks].sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc)).slice(0, 10);
+  const sortedHops = [...hops].sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc)).slice(0, 10);
+  const dataFlowCount = hops.filter(isDataFlowHop).length;
+  const contextCount = hops.filter(isContextHop).length;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-30 bg-black/20" onClick={onClose} />
+      <aside
+        className="fixed right-0 top-0 bottom-0 z-40 w-full max-w-[520px] overflow-y-auto"
+        style={{ background: "var(--color-card)", borderLeft: "1px solid var(--color-border)", boxShadow: "var(--shadow-drawer)" }}
+      >
+        <div
+          className="sticky top-0 flex items-start justify-between gap-3 px-5 py-4"
+          style={{ background: "var(--color-card)", borderBottom: "1px solid var(--color-border)" }}
+        >
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>Dataset evidence</p>
+            <h2 className="truncate text-lg font-semibold" style={{ color: "var(--color-text)" }}>{datasetId}</h2>
+          </div>
+          <button onClick={onClose} className="rounded-md p-1" aria-label="Close" style={{ color: "var(--color-text-muted)" }}>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-5 p-5">
+          <EvidenceSection title={`Recent runs (${runs.length})`}>
+            {sortedRuns.length === 0 ? (
+              <EmptyEvidence>No runs found.</EmptyEvidence>
+            ) : sortedRuns.map((run) => (
+              <EvidenceRow key={`${run.run_id}:${run.step}`} title={run.step} meta={`${run.run_status} · ${fmtTime(run.timestamp_utc)}`} detail={run.run_id} />
+            ))}
+          </EvidenceSection>
+
+          <EvidenceSection title={`Quality checks (${checks.length})`}>
+            {sortedChecks.length === 0 ? (
+              <EmptyEvidence>No checks found.</EmptyEvidence>
+            ) : sortedChecks.map((check) => (
+              <EvidenceRow
+                key={`${check.run_id}:${check.check_id}`}
+                title={check.check_id}
+                meta={`${normalizeStatus(check.check_status)} · ${check.check_category ?? "uncategorized"}`}
+                detail={check.step}
+              />
+            ))}
+          </EvidenceSection>
+
+          <EvidenceSection title={`Lineage hops (${dataFlowCount} data flow${dataFlowCount !== 1 ? "s" : ""}${contextCount > 0 ? `, ${contextCount} context` : ""})`}>
+            {sortedHops.length === 0 ? (
+              <EmptyEvidence>No lineage hops found.</EmptyEvidence>
+            ) : sortedHops.map((hop, index) => (
+              <EvidenceRow
+                key={`${hop.run_id}:${index}`}
+                title={`${hop.source_ref || hop.source_entity} -> ${hop.target_ref || hop.target_entity}`}
+                meta={`${hop.step} · ${isDataFlowHop(hop) ? "data_flow" : (hop.hop_kind ?? "context")} · ${fmtTime(hop.timestamp_utc)}`}
+                detail={`${hop.source_ref || hop.source_entity}${hop.source_attribute ? `.${hop.source_attribute}` : ""} -> ${hop.target_ref || hop.target_entity}${hop.target_attribute ? `.${hop.target_attribute}` : ""}`}
+              />
+            ))}
+          </EvidenceSection>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function EvidenceSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
+      <h3 className="px-3 py-2 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)" }}>{title}</h3>
+      <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>{children}</div>
+    </section>
+  );
+}
+
+function EvidenceRow({ title, meta, detail }: { title: string; meta: string; detail: string }) {
+  return (
+    <div className="px-3 py-2">
+      <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={title}>{title}</p>
+      <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{meta}</p>
+      <p className="truncate text-[11px] font-mono" style={{ color: "var(--color-text-muted)" }} title={detail}>{detail}</p>
     </div>
   );
+}
+
+function EmptyEvidence({ children }: { children: React.ReactNode }) {
+  return <p className="px-3 py-4 text-sm" style={{ color: "var(--color-text-muted)" }}>{children}</p>;
 }
 
 function StatCell({ label, value, sub, statusColor: sc }: { label: string; value: string; sub: string; statusColor?: string }) {
@@ -269,6 +392,14 @@ function statusColor(status: string): string {
   if (s === "WARNING") return "#F59E0B";
   if (s === "FAILED") return "#EF4444";
   return "var(--color-text)";
+}
+
+function fmtTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return iso;
+  }
 }
 
 function timeAgo(iso: string): string {

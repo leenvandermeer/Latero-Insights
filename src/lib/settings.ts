@@ -78,6 +78,7 @@ export interface AppSettings {
   databricksWarehouseId: string;
   databricksCatalog: string;
   databricksSchema: string;
+  databricksEnvironment: string;
   cacheTtlSeconds: number;
   cacheOnly: boolean;
 }
@@ -88,6 +89,7 @@ const DEFAULTS: AppSettings = {
   databricksWarehouseId: "",
   databricksCatalog: "workspace",
   databricksSchema: "meta",
+  databricksEnvironment: "",
   cacheTtlSeconds: 86400,
   cacheOnly: false,
 };
@@ -122,6 +124,7 @@ export function loadSettings(): AppSettings {
     databricksWarehouseId: saved.databricksWarehouseId ?? process.env.DATABRICKS_WAREHOUSE_ID ?? DEFAULTS.databricksWarehouseId,
     databricksCatalog: saved.databricksCatalog ?? process.env.DATABRICKS_CATALOG ?? DEFAULTS.databricksCatalog,
     databricksSchema: saved.databricksSchema ?? process.env.DATABRICKS_SCHEMA ?? DEFAULTS.databricksSchema,
+    databricksEnvironment: saved.databricksEnvironment ?? process.env.DATABRICKS_ENVIRONMENT ?? DEFAULTS.databricksEnvironment,
     cacheTtlSeconds: saved.cacheTtlSeconds ?? (process.env.INSIGHTS_CACHE_TTL ? parseInt(process.env.INSIGHTS_CACHE_TTL, 10) : DEFAULTS.cacheTtlSeconds),
     cacheOnly: saved.cacheOnly ?? (process.env.INSIGHTS_CACHE_ONLY === "true" || DEFAULTS.cacheOnly),
   };

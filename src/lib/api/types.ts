@@ -58,6 +58,7 @@ export interface SettingsResponse {
     databricksWarehouseId: string;
     databricksCatalog: string;
     databricksSchema: string;
+    databricksEnvironment: string;
     cacheTtlSeconds: number;
     cacheOnly: boolean;
     tokenSet: boolean;
@@ -71,6 +72,7 @@ export interface SettingsUpdateRequest {
   databricksWarehouseId?: string;
   databricksCatalog?: string;
   databricksSchema?: string;
+  databricksEnvironment?: string;
   cacheTtlSeconds?: number;
   cacheOnly?: boolean;
 }

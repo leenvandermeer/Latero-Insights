@@ -16,6 +16,7 @@ import { JsonDrawer } from "./json-drawer";
 import { SearchableSelect } from "@/app/(dashboard)/lineage/searchable-select";
 import { Search } from "lucide-react";
 import type { LineageHop } from "@/lib/adapters/types";
+import { isContextHop, isDataFlowHop } from "@/lib/lineage-hop-kind";
 
 interface RunEvent {
   run_id: string;
@@ -60,6 +61,8 @@ export function OpenLineageDashboard() {
   const [stepFilter, setStepFilter] = useState("all");
 
   const hops = response?.data ?? [];
+  const dataFlowHopCount = useMemo(() => hops.filter(isDataFlowHop).length, [hops]);
+  const contextHopCount = useMemo(() => hops.filter(isContextHop).length, [hops]);
 
   const runEvents = useMemo(() => {
     const byRun = new Map<string, RunEvent>();
@@ -175,7 +178,8 @@ export function OpenLineageDashboard() {
 
       <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>
         {filteredEvents.length}{filteredEvents.length !== runEvents.length ? ` of ${runEvents.length}` : ""} run event{filteredEvents.length !== 1 ? "s" : ""}
-        {" · "}{hops.length} lineage hop{hops.length !== 1 ? "s" : ""}
+        {" · "}{dataFlowHopCount} data flow hop{dataFlowHopCount !== 1 ? "s" : ""}
+        {contextHopCount > 0 ? ` · ${contextHopCount} context` : ""}
         {(datasetFilter !== "all" || stepFilter !== "all" || search) && (
           <button
             onClick={() => { setSearch(""); setDatasetFilter("all"); setStepFilter("all"); }}
