@@ -97,6 +97,19 @@ in `docs/requirements/`.
 Backlogs, brainstorming notes, and obsolete product descriptions SHOULD be
 removed or moved elsewhere.
 
+## Deferred Backlog
+
+### B-001 — Full Session Auth (Future Option B)
+
+The product MAY evolve from installation API key login to full user/session
+authentication using NextAuth.js or Clerk.
+
+If implemented, the authenticated session SHOULD carry an installation/tenant
+claim, and all read APIs MUST continue enforcing installation scoping based on
+that claim.
+
+This is explicitly deferred and not part of the current implementation scope.
+
 ## Authoritative Companion Documents
 
 - [Current Architecture](./current-architecture.md)

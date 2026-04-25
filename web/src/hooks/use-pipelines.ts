@@ -7,7 +7,8 @@ import type { PipelineRun } from "@/lib/adapters/types";
 import type { ApiResponse } from "@/lib/api";
 
 export function usePipelines(from: string, to: string) {
-  const { installationId } = useInstallation();
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   return useQuery<ApiResponse<PipelineRun[]>>({
     queryKey: ["pipelines", from, to, installationId ?? "all"],
     queryFn: () => fetchPipelineRuns({ from, to, installationId }),

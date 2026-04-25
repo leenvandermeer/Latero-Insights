@@ -7,7 +7,8 @@ import type { DataQualityCheck } from "@/lib/adapters/types";
 import type { ApiResponse } from "@/lib/api";
 
 export function useQuality(from: string, to: string) {
-  const { installationId } = useInstallation();
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   return useQuery<ApiResponse<DataQualityCheck[]>>({
     queryKey: ["quality", from, to, installationId ?? "all"],
     queryFn: () => fetchDataQualityChecks({ from, to, installationId }),

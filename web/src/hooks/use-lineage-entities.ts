@@ -6,7 +6,8 @@ import type { LineageEntity } from "@/lib/adapters/types";
 import { fetchLineageEntities, type ApiResponse } from "@/lib/api";
 
 export function useLineageEntities() {
-  const { installationId } = useInstallation();
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   return useQuery<ApiResponse<LineageEntity[]>>({
     queryKey: ["lineage", "entities", installationId ?? "all"],
     queryFn: () => fetchLineageEntities(installationId),

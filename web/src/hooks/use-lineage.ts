@@ -7,7 +7,8 @@ import type { LineageHop } from "@/lib/adapters/types";
 import type { ApiResponse } from "@/lib/api";
 
 export function useLineage(from: string, to: string) {
-  const { installationId } = useInstallation();
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   return useQuery<ApiResponse<LineageHop[]>>({
     queryKey: ["lineage", from, to, installationId ?? "all"],
     queryFn: () => fetchLineageHops({ from, to, installationId }),

@@ -6,7 +6,8 @@ import type { LineageAttribute } from "@/lib/adapters/types";
 import { fetchLineageAttributes, type ApiResponse } from "@/lib/api";
 
 export function useLineageAttributes() {
-  const { installationId } = useInstallation();
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   return useQuery<ApiResponse<LineageAttribute[]>>({
     queryKey: ["lineage", "attributes", installationId ?? "all"],
     queryFn: () => fetchLineageAttributes(installationId),
