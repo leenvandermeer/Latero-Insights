@@ -1,8 +1,10 @@
 # dependencies
 node_modules/
+web/node_modules/
 
 # next.js
 .next/
+web/.next/
 out/
 
 # production
@@ -10,6 +12,7 @@ build/
 
 # env files
 .env*.local
+web/.env*.local
 
 # debug
 npm-debug.log*
@@ -19,3 +22,4 @@ npm-debug.log*
 
 # API response cache
 .cache/
+web/.cache/

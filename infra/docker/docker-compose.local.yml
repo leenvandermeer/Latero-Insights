@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: insights-local-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: insights
+      POSTGRES_USER: insights
+      POSTGRES_PASSWORD: insights
+    ports:
+      - "5432:5432"
+    volumes:
+      - insights_postgres_data:/var/lib/postgresql/data
+      - ../sql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U insights -d insights"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: insights-local-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - insights_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.33.0
+    container_name: insights-local-azurite
+    restart: unless-stopped
+    command: >
+      azurite
+      --blobHost 0.0.0.0
+      --queueHost 0.0.0.0
+      --tableHost 0.0.0.0
+      --location /data
+      --debug /data/debug.log
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - insights_azurite_data:/data
+
+volumes:
+  insights_postgres_data:
+  insights_redis_data:
+  insights_azurite_data:

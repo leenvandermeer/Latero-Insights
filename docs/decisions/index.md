@@ -1,5 +1,11 @@
 # Latero Insights ADR Index
 
+Naming note:
+
+- newer documentation uses **Latero Insights**
+- older ADR titles may still use **Layer2 Meta Insights**
+- treat those as legacy product naming, not separate products
+
 | ID | Datum | Titel | Status |
 | --- | --- | --- | --- |
 | [LADR-003](20260417-insights-product.md) | 2026-04-17 | Layer2 Meta Insights: standalone web frontend for metadata visualization | ACCEPTED |
@@ -26,3 +32,4 @@
 | [LADR-024](20260424-widget-generator-first-architecture.md) | 2026-04-24 | Widget generator-first architectuur: geen out-of-the-box widgets, alles via shared library | ACCEPTED |
 | [LADR-025](20260424-insights-saas-ingest-backend.md) | 2026-04-24 | Insights SaaS ingest backend in Next.js with Postgres bootstrap | ACCEPTED |
 | [LADR-026](20260424-postgres-as-single-read-store.md) | 2026-04-24 | Postgres als enige read-store voor webapp API routes | ACCEPTED |
+| [LADR-027](20260425-installation-aware-ux.md) | 2026-04-25 | Installation-aware UX: multi-tenancy groundwork (stap 1 & 2) | ACCEPTED |

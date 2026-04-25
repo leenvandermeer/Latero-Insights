@@ -95,6 +95,39 @@
 
 **See:** `docs/framework/INSIGHTS_SAAS_API_CONTRACT.yml` (full OpenAPI 3.0 spec)
 
+### ✅ Phase 3: Collector Adapter Endpoints (DONE — WP-5.1 through WP-5.6)
+
+**In Latero Insights SaaS repo:**
+
+- ✅ `POST /api/v1/ingest` — unified ingest endpoint for `latero-core` adapter events
+  - Accepts JSON array of events dispatched by `event_type`
+  - Supports: `pipeline_run`, `data_quality_check`, `lineage`
+  - `evidence` MAP stored as-is in `payload`
+  - `hop_kind` stored and filtered on lineage queries
+  - Partial-success response: returns per-event `accepted`/`rejected` result
+- ✅ `POST /api/v1/license/validate` — license validation (WP-5.1)
+  - Validates `installation_id` + `api_key` against `insights_installations`
+  - Returns `subscription_tier` and `valid_until`
+  - Records `adapter_version` per call in `adapter_version_log` (LLIC-003)
+  - Response codes: 200 / 401 / 403 / 400
+- ✅ Schema version enforcement (WP-5.6)
+  - `schema_version >= 1.0, < 2.0` accepted
+  - `schema_version >= 2.0` rejected with 422
+- ✅ Lineage hop_kind filter (WP-5.3)
+  - Entity graph, upstream/downstream counts, and attribute lineage filtered on `data_flow` hops
+  - Context hops excluded from coverage and depth calculations
+- ✅ DB migration: `sql/init/002_license_and_installations.sql`
+  - `insights_installations`: `label`, `subscription_tier`, `valid_until` columns added
+  - `adapter_version_log` table added
+
+**Key management API (admin):**
+
+- ✅ `GET /api/v1/installations` — list all installations (requires `INSIGHTS_ADMIN_TOKEN`)
+- ✅ `POST /api/v1/installations` — create installation, returns one-time `api_key`
+- ✅ `PATCH /api/v1/installations/{id}` — update label / active / tier / valid_until
+- ✅ `DELETE /api/v1/installations/{id}` — revoke installation (sets `active = false`)
+- ✅ Settings UI: `InstallationsManager` component in `/settings` page
+
 ### ✅ Phase 3: Framework Notebooks Updated (DONE)
 
 **After SaaS is ready, update notebooks to use SaaS logger:**
@@ -216,6 +249,63 @@ python -m latero.insights_self_service verify \
 ---
 
 ## Event Payloads (what SaaS receives)
+
+Two formats are accepted: the **legacy per-type format** (via the individual endpoints) and
+the **collector event format** (via `POST /api/v1/ingest`). New integrations should use
+the collector format via the unified ingest endpoint.
+
+### Collector event format (POST /api/v1/ingest)
+
+Send a JSON array. All events in a batch must share the same `installation_id`.
+
+```json
+[
+  {
+    "event_type": "pipeline_run",
+    "schema_version": "1.2",
+    "run_id": "550e8400-e29b-41d4-a716-446655440000",
+    "dataset_id": "cbsenergie",
+    "step": "landing_to_raw",
+    "installation_id": "latero-prod-nl",
+    "environment": "production",
+    "status": "SUCCESS",
+    "started_at": "2026-04-25T09:00:00Z",
+    "finished_at": "2026-04-25T09:02:10Z",
+    "evidence": { "files_processed": 3, "rows_written": 4812 }
+  },
+  {
+    "event_type": "data_quality_check",
+    "schema_version": "1.2",
+    "run_id": "550e8400-e29b-41d4-a716-446655440000",
+    "dataset_id": "cbsenergie",
+    "step": "landing_to_raw",
+    "check_id": "row_count_positive",
+    "check_status": "SUCCESS",
+    "severity": "high",
+    "check_mode": "enforce",
+    "installation_id": "latero-prod-nl",
+    "environment": "production",
+    "evidence": { "row_count": 4812 }
+  },
+  {
+    "event_type": "lineage",
+    "schema_version": "1.2",
+    "run_id": "550e8400-e29b-41d4-a716-446655440000",
+    "dataset_id": "cbsenergie",
+    "step": "landing_to_raw",
+    "source_ref": "landing.cbsenergie",
+    "target_ref": "raw.cbsenergie",
+    "lineage_scope": "entity",
+    "relation_type": "derived_from",
+    "hop_kind": "data_flow",
+    "installation_id": "latero-prod-nl",
+    "environment": "production",
+    "evidence": {}
+  }
+]
+```
+
+### Legacy format (POST /api/v1/pipeline-runs etc.)
 
 ### Pipeline Run
 

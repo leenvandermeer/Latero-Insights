@@ -1368,3 +1368,45 @@ Chart color mapping:
 | Dashboard View        | `/dashboards/:id`            |
 | Dashboard Edit        | `/dashboards/:id/edit`       |
 | Settings              | `/settings`                  |
+
+---
+
+## 18. Settings IA (Connectors)
+
+The settings page should present connector behavior as one coherent control surface:
+
+1. **Current State** tiles:
+  - Databricks (connection health)
+  - API Ingest (Postgres health)
+  - Serving mode (live + fallback or snapshot only)
+  - Stored snapshot age/coverage
+
+2. **Left column**:
+  - Databricks Connection card (host, token, warehouse, catalog/schema, environment)
+  - API Ingest Connector card (v1 endpoint list, copy actions, operator guidance)
+  - Serving mode card (live+fallback / snapshot-only)
+
+3. **Right column (sticky)**:
+  - Stored Snapshot card with status rows
+  - Action group:
+    - Refresh snapshot from Databricks
+    - Sync Databricks to Postgres
+    - Clear snapshot
+
+### 18.1 Databricks Sync CTA Behavior
+
+- CTA label: **Sync Databricks to Postgres**
+- Disabled when Databricks health is unavailable.
+- Uses active date range picker values.
+- Success feedback includes synced counts:
+  - pipeline runs
+  - dq checks
+  - lineage hops
+
+### 18.2 Source-of-Truth Messaging
+
+Settings content should explicitly explain:
+
+- Push ingest (`/api/v1/*`) and pull sync (`/api/sync/databricks`) both write to Postgres.
+- Dashboards read from Postgres-backed API routes only.
+- Snapshot cache is resilience-only, not canonical storage.

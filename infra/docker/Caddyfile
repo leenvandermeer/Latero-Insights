@@ -1,0 +1,16 @@
+insights.jouwdomein.nl {
+    reverse_proxy app:3000
+
+    # Comprimeer responses
+    encode gzip
+
+    # Security headers (Next.js stuurt ze ook, Caddy mag ze dupliceren)
+    header {
+        -Server
+    }
+
+    # Logs
+    log {
+        output file /var/log/caddy/access.log
+    }
+}

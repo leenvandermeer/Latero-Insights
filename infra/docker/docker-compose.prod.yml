@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: insights-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: insights
+      POSTGRES_USER: insights
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}   # zet in .env.prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../sql/init:/docker-entrypoint-initdb.d:ro   # schema bij eerste start
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U insights -d insights"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: meta-insights:latest        # lokaal gebouwd; zie Dockerfile
+    container_name: insights-app
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      POSTGRES_URL: "postgresql://insights:${POSTGRES_PASSWORD}@postgres:5432/insights"
+    ports:
+      - "127.0.0.1:3000:3000"          # alleen intern; Caddy zit ervoor
+    volumes:
+      - insights_cache:/app/.cache     # API response cache (fallback)
+      - insights_data:/app/data        # shared-widgets.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: insights-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"      # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
+  insights_cache:
+  insights_data:
+  caddy_data:
+  caddy_config:

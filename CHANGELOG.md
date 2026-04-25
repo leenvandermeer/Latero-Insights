@@ -1,18 +1,37 @@
 # Changelog
 
-All notable changes to Layer2 Meta Insights are documented here.
+All notable changes to Latero Insights are documented here.
+
+## Naming Note
+
+This repository is currently being harmonized around the product name
+`Latero Insights`.
+
+Older entries may still refer to:
+- `Layer2 Meta Insights`
+- `Latero Meta Insights`
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+- Databricks pull-to-Postgres sync endpoint: `POST /api/sync/databricks` (optional `from`/`to`, default last 7 days).
+- Sync orchestration library (`syncFromDatabricks`) with range validation and per-domain sync counters.
+- Partial unique indexes for `databricks-sync` records in bootstrap SQL to support idempotent sync behavior.
 
 ### Fixed
 - **Grid layout overflow on MacBook Pro and other ≥1280px viewports** (LADR-014): `useContainerWidth()` from `react-grid-layout` v2 initializes at `1280px` and registers its `ResizeObserver` in `useEffect([])`. Because `DashboardCanvas` returns `null` until `mounted=true`, the container element does not yet exist when the effect runs — the observer never fires and `width` stays permanently at `1280px`. On viewports narrower than 1280px (e.g. sidebar-adjusted content area) the grid overflowed and right-side widgets (Dataset Health) were clipped. Replaced `useContainerWidth` with a custom `ResizeObserver` in `useEffect([mounted])` that starts observing only after the container is in the DOM.
 - `useBreakpoint` initial state was hardcoded `"lg"`, causing a sidebar flash on ≥1280px viewports at page load. Fixed with a lazy `useState` initializer reading `window.innerWidth` directly.
 - `transition-all` on `<main>` replaced with `transition-[padding-left]` to prevent unintended CSS transitions on sidebar toggle.
 - **Dark mode sidebar contrast** (`--color-sidebar-muted`) raised from `#7A8FA8` to `#A0B5CC` to meet WCAG AA contrast requirements on section labels and inactive nav items.
+- Databricks sync is now idempotent within range scope via `ON CONFLICT ... DO UPDATE` for sync rows.
+- Lineage entities derived from Postgres now include computed statuses (`latest_status`, `end_to_end_status`) and adjacency (`upstream_entity_fqns`, `downstream_entity_fqns`) instead of defaulting to `UNKNOWN`/empty.
+- Lineage attribute derivation now ignores empty-string attributes (`NULLIF(..., '')`) to reduce noisy mappings.
 
 ### Changed
+- Hybrid ingest model formalized: push (`/api/v1/*`) + pull sync (`/api/sync/databricks`) both write to Postgres as single read store.
+- Lineage read APIs are now consistently Postgres-backed (`/api/lineage`, `/api/lineage/entities`, `/api/lineage/attributes`).
 - LINS-011 updated (LADR-013): sidebar auto-expand threshold raised from 1024px to 1280px for better content width on common laptop resolutions (1024–1279px now collapses by default, user can expand)
 - `useBreakpoint` gains `isSmallDesktop` flag (1024–1279px)
 - Sidebar viewport-reactive collapse logic updated to match new thresholds
@@ -26,7 +45,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 - `slideUpSheet` keyframe animation added to `globals.css` for the mobile bottom sheet.
 - `latero.io` → `latero.nl` across all UI references.
 - MDCF expanded to "Meta Data Controle Framework" in the About page and OpenLineage viewer.
-- About page rewritten in English with Latero Meta Insights as the primary product card.
+- About page rewritten in English with Latero Insights as the primary product card.
 - Lineage Explorer stats bar removed (duplicate of canvas top-right panel); filter bar made collapsible with active-filter count badge.
 - Dashboard grid spacing fixed: `gap-3` between grid and widget picker, `pr-1` on grid wrapper to prevent widget picker overlap.
 
