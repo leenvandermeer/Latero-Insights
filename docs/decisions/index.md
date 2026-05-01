@@ -35,3 +35,5 @@ Naming note:
 | [LADR-027](20260425-installation-aware-ux.md) | 2026-04-25 | Installation-aware UX: multi-tenancy groundwork (stap 1 & 2) | ACCEPTED |
 | [LADR-028](20260425-admin-dashboard-architecture.md) | 2026-04-25 | Admin Dashboard: installation and multi-tenant lifecycle management | ACCEPTED |
 | [LADR-029](20260425-tenant-data-isolation-security-hardening.md) | 2026-04-25 | Tenant Data Isolation Security Hardening: LINS-016 enforcement (shared widgets, personal dashboards, API routes) | ACCEPTED |
+| [LADR-030](20260501-installation-scoped-adapter-settings.md) | 2026-05-01 | Installation-scoped DatabricksAdapter settings resolution | ACCEPTED |
+| [LADR-031](20260501-slim-page-header-pattern.md) | 2026-05-01 | Slim page header pattern voor alle dashboard-pagina's | ACCEPTED |

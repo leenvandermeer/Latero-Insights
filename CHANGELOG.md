@@ -15,6 +15,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+### Added (2026-05-01)
+
+- **Settings: "Sync now" button** — triggers `POST /api/sync/databricks` directly from the Settings page; shows record count and duration on completion; invalidates all TanStack Query caches so every page reloads with fresh data.
+- **Settings: immediate status feedback** — health query is refetched after a successful connection test so the Databricks status dot updates without waiting for the 60s poll interval.
+- **About page: dual-input-mode section** — Technical Foundation card now explains both API ingest and Databricks sync as peer modes writing to the same Postgres store, replacing the old MDCF-runtime framing.
+- LADR-030: Installation-scoped DatabricksAdapter settings resolution.
+- LADR-031: Slim page header pattern voor alle dashboard-pagina's.
+
+### Fixed (2026-05-01)
+
+- **Databricks sync failing with "Missing configuration"** (LADR-030): `DatabricksAdapter` called `loadSettings()` with no installation ID, reading root-level settings. The Settings UI writes settings scoped to the active installation (`settings.json → scoped[installationId]`). Fixed by threading `installationId` through the adapter constructor and all helper functions (`executeStatement`, `fqTable`, `resolveEnvironmentScope`, `describeColumns`). Health route, sync route and sync library updated to pass the session installation ID.
+- **Lineage empty state showing date-range copy**: "No data for this date range" was the `EmptyState` component from OpenLineage. Lineage has no date range filter; replaced with a dedicated state: "No lineage data available" with Retry and Settings buttons.
+- **Lineage graph crash when layer-header nodes present**: `filteredNodes` called `.toLowerCase()` on `data.label` for all nodes unconditionally. Layer-header nodes have no `data.label`, causing a `TypeError` that unmounted the React tree and made the sidebar disappear. Fixed with an `if (n.type === "layerHeader") return n;` guard.
+
+### Changed (2026-05-01)
+
+- **Slim page header pattern** (LADR-031): all dashboard pages now use the `<PageHeader>` slim toolbar — icon inline (no box), `text-[17px]` title, env pill (color-coded) on the right, actions in the same row. Removes gradient card with eyebrow, description and org pill. Recovers ±80–120px vertical space per page.
+- Settings page rewritten to reflect the current architecture: two-column layout, status row (Databricks dot + cache info), data-source selector (Databricks sync / API ingest), compact field grid, inline cache controls. Removed `Card`/`Badge` wrappers and all explanatory paragraph text.
+- `DashboardCanvas` header aligned with slim pattern: edit-mode accent border, env pill inline, no gradient background.
+
 ### Added
 - Databricks pull-to-Postgres sync endpoint: `POST /api/sync/databricks` (optional `from`/`to`, default last 7 days).
 - Sync orchestration library (`syncFromDatabricks`) with range validation and per-domain sync counters.

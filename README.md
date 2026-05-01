@@ -21,6 +21,22 @@ Warehouse into the Insights store. Databricks access is always server-side.
 Both modes write to the same Postgres read store. The dashboard layer is identical
 regardless of which mode is active.
 
+## First-time setup with Databricks
+
+After starting the app for the first time, the Postgres read store is empty.
+Follow these steps to populate it:
+
+1. Open **Settings** (`/settings`).
+2. Make sure **Databricks sync** is selected as the data source.
+3. Fill in Host, Warehouse ID, Token (and optionally Catalog, Schema, Environment).
+4. Click **Save**, then **Test connection** — the status dot should turn green.
+5. Click **Sync now** — Latero pulls the last 7 days from Databricks into Postgres.
+   The button shows the record count and duration when done.
+6. All pages (Pipelines, Quality, Lineage, OpenLineage) now show live data.
+
+Subsequent syncs can be triggered manually from Settings or run automatically
+via `INSIGHTS_AUTO_SYNC_ENABLED=true` (default interval: 15 minutes).
+
 ## Repository structure
 
 The repository contains two modules:
