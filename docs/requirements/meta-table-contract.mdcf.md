@@ -426,7 +426,7 @@ of `EventLogger.lineage()` MUST pass `hop_kind`. Valid values are `data_flow` an
 `hop_kind = NULL`. Consumers MUST treat `NULL` as `data_flow`. All existing medallion
 pipeline hops are real data-flow transitions; no existing `context` rows exist in the store.
 
-**Rationale:** Without this field, consumers (e.g. Latero Insights) must heuristically
+**Rationale:** Without this field, consumers (e.g. Latero Control) must heuristically
 infer whether a hop is a real data transition or a framework reference by combining
 `source_type`, `target_type`, and `relation_type`. This heuristic breaks whenever new
 step types are introduced. The producer always knows the role at write time; encoding
@@ -442,7 +442,7 @@ it once eliminates consumer-side re-derivation and prevents divergence. See LADR
 - All demo notebooks pass `hop_kind = 'data_flow'` for all medallion step hops
 - `lineage_entities_current` projector excludes `hop_kind = 'context'` rows from
   `upstream_entity_fqns` and `downstream_entity_fqns`; rows with `NULL` are included
-- Latero Insights filters `hop_kind IN ('data_flow') OR hop_kind IS NULL` for all
+- Latero Control filters `hop_kind IN ('data_flow') OR hop_kind IS NULL` for all
   source/target/input/output/depth calculations
 - No other `hop_kind` values are introduced without a new LMETA requirement
 

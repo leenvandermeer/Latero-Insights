@@ -1,12 +1,12 @@
-# AGENTS.md — Latero Insights
+# AGENTS.md — Latero Control
 
 ## Project
 
-**Latero Insights** (`@layer2/meta-insights`) is a standalone metadata operations
+**Latero Control** (`@layer2/meta-insights`) is a standalone metadata operations
 product for data teams. It provides pipeline monitoring, data quality visibility,
 lineage exploration, and operational evidence workflows.
 
-Latero Insights is a self-contained product, positioned for SaaS delivery.
+Latero Control is a self-contained product, positioned for SaaS delivery.
 It is not a demo dashboard and not coupled to any specific data platform or runtime.
 
 The product supports two integration modes:

@@ -19,6 +19,7 @@ interface Installation {
   valid_until: string | null;
   active: boolean;
   created_at: string;
+  last_token_used_at: string | null;
 }
 
 interface CreateResult {
@@ -60,6 +61,18 @@ async function revokeInstallation(adminToken: string, installationId: string): P
     headers: { Authorization: `Bearer ${adminToken}` },
   });
   if (!res.ok) throw new Error(`${res.status}`);
+}
+
+async function rotateInstallationKey(adminToken: string, installationId: string): Promise<CreateResult> {
+  const res = await fetch(`/api/v1/installations/${encodeURIComponent(installationId)}/rotate-key`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!res.ok) {
+    const err = await res.json() as { error?: string };
+    throw new Error(err.error ?? `${res.status}`);
+  }
+  return res.json() as Promise<CreateResult>;
 }
 
 function CopyButton({ value }: { value: string }) {
@@ -121,6 +134,18 @@ export function InstallationsManager({ adminToken }: { adminToken: string }) {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["v1-installations"] }),
     onError: (err) => {
       setFeedback({ type: "error", message: err instanceof Error ? err.message : "Revoke failed" });
+    },
+  });
+
+  const rotateMutation = useMutation({
+    mutationFn: (id: string) => rotateInstallationKey(adminToken, id),
+    onSuccess: (result) => {
+      setNewKey(result);
+      setFeedback({ type: "success", message: `Nieuwe key uitgegeven voor ${result.installation_id}` });
+      void queryClient.invalidateQueries({ queryKey: ["v1-installations"] });
+    },
+    onError: (err) => {
+      setFeedback({ type: "error", message: err instanceof Error ? err.message : "Rotate failed" });
     },
   });
 
@@ -279,22 +304,37 @@ export function InstallationsManager({ adminToken }: { adminToken: string }) {
                 {inst.valid_until && (
                   <span> · expires {new Date(inst.valid_until).toLocaleDateString()}</span>
                 )}
+                {inst.last_token_used_at && (
+                  <span> · key used {new Date(inst.last_token_used_at).toLocaleString()}</span>
+                )}
               </div>
             </div>
-            {inst.active && (
-              <button
-                onClick={() => {
-                  if (confirm(`Revoke installation '${inst.installation_id}'?`)) {
-                    revokeMutation.mutate(inst.installation_id);
-                  }
-                }}
-                disabled={revokeMutation.isPending}
-                className="ml-2 p-1 rounded text-[var(--color-error)] hover:bg-[var(--color-error-muted,_#fef2f2)] transition-colors disabled:opacity-50"
-                title="Revoke"
-              >
-                <Trash2 size={13} />
-              </button>
-            )}
+            <div className="ml-2 flex items-center gap-1">
+              {inst.active && (
+                <button
+                  onClick={() => rotateMutation.mutate(inst.installation_id)}
+                  disabled={rotateMutation.isPending}
+                  className="p-1 rounded text-[var(--color-warning)] hover:bg-[var(--color-warning-muted,_#fffbeb)] transition-colors disabled:opacity-50"
+                  title="Rotate key"
+                >
+                  <RefreshCw size={13} />
+                </button>
+              )}
+              {inst.active && (
+                <button
+                  onClick={() => {
+                    if (confirm(`Revoke installation '${inst.installation_id}'?`)) {
+                      revokeMutation.mutate(inst.installation_id);
+                    }
+                  }}
+                  disabled={revokeMutation.isPending}
+                  className="p-1 rounded text-[var(--color-error)] hover:bg-[var(--color-error-muted,_#fef2f2)] transition-colors disabled:opacity-50"
+                  title="Revoke"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </CardContent>

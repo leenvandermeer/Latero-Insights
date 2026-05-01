@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { syncFromDatabricks } from "@/lib/databricks-sync";
+import { requireSession } from "@/lib/session-auth";
+import { loadSettings } from "@/lib/settings";
 
 function defaultDateRange(): { from: string; to: string } {
   const to = new Date();
@@ -15,6 +17,22 @@ function isValidDate(value: unknown): value is string {
 }
 
 export async function POST(request: NextRequest) {
+  // LINS-016: Verify user session before allowing sync
+  let session;
+  try {
+    session = await requireSession(request);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const settings = loadSettings(session.active_installation_id);
+  if (settings.connectionMode !== "databricks") {
+    return NextResponse.json(
+      { error: "Databricks sync is disabled while connection mode is API ingest." },
+      { status: 409 },
+    );
+  }
+
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const { allowed, remaining } = rateLimit(`sync:databricks:${clientIp}`);
   if (!allowed) {

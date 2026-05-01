@@ -72,6 +72,8 @@ export interface SharedWidgetDef {
   defaultSize: { w: number; h: number; minW: number; minH: number };
   publishedAt: string;
   publishedBy?: string;
+  // LINS-016: Tenant scope — widget belongs to this installation
+  installation_id: string;
 }
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────

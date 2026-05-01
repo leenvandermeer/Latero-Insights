@@ -1,7 +1,7 @@
-# Latero Insights SaaS Integration Guide
+# Latero Control SaaS Integration Guide
 
 **Status:** SaaS-first architecture implemented  
-**Target:** Zero local meta-tables; all events stream to Latero Insights SaaS
+**Target:** Zero local meta-tables; all events stream to Latero Control SaaS
 
 ---
 
@@ -28,7 +28,7 @@
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Latero Insights SaaS                                        │
+│ Latero Control SaaS                                        │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  /api/v1/pipeline-runs  ──→ events.pipeline_runs           │
@@ -70,7 +70,7 @@
 
 ### ✅ Phase 2: SaaS Backend Foundation (DONE)
 
-**In Latero Insights SaaS repo:**
+**In Latero Control SaaS repo:**
 
 - ✅ Docker Postgres bootstrap with ingestion schema (`sql/init/001_insights_saas_init.sql`)
 - ✅ Core event tables initialized automatically on first `npm run infra:up`
@@ -97,7 +97,7 @@
 
 ### ✅ Phase 3: Collector Adapter Endpoints (DONE — WP-5.1 through WP-5.6)
 
-**In Latero Insights SaaS repo:**
+**In Latero Control SaaS repo:**
 
 - ✅ `POST /api/v1/ingest` — unified ingest endpoint for `latero-core` adapter events
   - Accepts JSON array of events dispatched by `event_type`
@@ -363,7 +363,7 @@ Send a JSON array. All events in a batch must share the same `installation_id`.
 
 ## Testing Against Sandbox
 
-Latero Insights SaaS should provide sandbox environment:
+Latero Control SaaS should provide sandbox environment:
 
 ```bash
 # Test token (no rate limits, separate storage)
@@ -391,7 +391,7 @@ python -m latero.insights_self_service apply \
 
 ## Next Steps
 
-1. **For Latero Insights team:**
+1. **For Latero Control team:**
    - Review `INSIGHTS_SAAS_API_CONTRACT.yml`
    - Implement API endpoints
    - Set up event storage
@@ -403,7 +403,7 @@ python -m latero.insights_self_service apply \
    - Deploy test manifest to validate integration
 
 3. **For operations:**
-   - Get API token from Latero Insights team
+   - Get API token from Latero Control team
    - Create production manifest with token
    - Deploy via `apply --executor insights-saas`
    - Monitor via dashboards in SaaS

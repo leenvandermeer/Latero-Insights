@@ -1,5 +1,5 @@
 {
-  "name": "latero-insights-repo",
+  "name": "latero-control-repo",
   "private": true,
   "workspaces": [
     "web"
@@ -17,5 +17,8 @@
     "dev:docker:up": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.dev.yml up --build",
     "dev:docker:down": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.dev.yml down",
     "dev:docker:logs": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.dev.yml logs -f app"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0"
   }
 }

@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { loadSettings } from "@/lib/settings";
+import { requireSession } from "@/lib/session-auth";
 
 // Transient states that indicate the warehouse is warming up — worth retrying
 const RETRYABLE_STATES = new Set(["PENDING", "RUNNING"]);
 
 export async function POST(request: NextRequest) {
+  let session;
+  try {
+    session = await requireSession(request);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const { allowed } = rateLimit(clientIp);
   if (!allowed) {
@@ -15,7 +23,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const settings = loadSettings();
+  const settings = loadSettings(session.active_installation_id);
+
+  if (settings.connectionMode !== "databricks") {
+    return NextResponse.json({
+      connected: false,
+      retryable: false,
+      message: "Databricks test is disabled while connection mode is API ingest.",
+    });
+  }
 
   if (!settings.databricksHost || !settings.databricksToken || !settings.databricksWarehouseId) {
     return NextResponse.json({

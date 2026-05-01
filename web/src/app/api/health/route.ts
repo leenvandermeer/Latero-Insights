@@ -3,6 +3,7 @@ import { DatabricksAdapter } from "@/lib/adapters/databricks";
 import { rateLimit } from "@/lib/rate-limit";
 import { getCacheStatus, isCacheOnly } from "@/lib/cache";
 import { loadSettings } from "@/lib/settings";
+import { getSessionFromRequest } from "@/lib/session-auth";
 
 const adapter = new DatabricksAdapter();
 
@@ -16,10 +17,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const session = await getSessionFromRequest(request);
+  const installationId = session?.active_installation_id;
+  const settings = loadSettings(installationId);
   const cacheOnly = isCacheOnly();
-  const connected = cacheOnly ? false : await adapter.testConnection();
+  const databricksEnabled = settings.connectionMode === "databricks";
+  const connected = cacheOnly || !databricksEnabled ? false : await adapter.testConnection();
   const cache = getCacheStatus();
-  const settings = loadSettings();
 
   const configured = Boolean(
     settings.databricksHost && settings.databricksToken && settings.databricksWarehouseId,
@@ -28,22 +32,24 @@ export async function GET(request: NextRequest) {
   const warehouseSuffix = settings.databricksWarehouseId
     ? settings.databricksWarehouseId.slice(-6)
     : "";
+  const status = connected || (cacheOnly && cache.entries > 0) ? "ok" : "error";
 
   const response = NextResponse.json({
-    status: connected || (cacheOnly && cache.entries > 0) ? "ok" : "error",
+    status,
     databricks: connected,
+    connectionMode: settings.connectionMode,
     sql: {
       live: connected,
-      configured,
+      configured: databricksEnabled ? configured : false,
       environment: configuredEnvironment,
-      host: settings.databricksHost || null,
-      catalog: settings.databricksCatalog || null,
-      schema: settings.databricksSchema || null,
-      warehouseLabel: warehouseSuffix ? `...${warehouseSuffix}` : null,
+      host: databricksEnabled ? (settings.databricksHost || null) : null,
+      catalog: databricksEnabled ? (settings.databricksCatalog || null) : null,
+      schema: databricksEnabled ? (settings.databricksSchema || null) : null,
+      warehouseLabel: databricksEnabled && warehouseSuffix ? `...${warehouseSuffix}` : null,
     },
     cache,
     timestamp: new Date().toISOString(),
-  }, { status: connected || (cacheOnly && cache.entries > 0) ? 200 : 503 });
+  });
   response.headers.set("X-RateLimit-Remaining", String(remaining));
   return response;
 }

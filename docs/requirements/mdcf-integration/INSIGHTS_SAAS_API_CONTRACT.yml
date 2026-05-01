@@ -1,6 +1,6 @@
-"""OpenAPI 3.0 Contract for Latero Insights SaaS Event API.
+"""OpenAPI 3.0 Contract for Latero Control SaaS Event API.
 
-This document defines the API contract that Latero Insights SaaS must implement
+This document defines the API contract that Latero Control SaaS must implement
 to receive events from Latero framework instances.
 
 All endpoints require Bearer token authentication.
@@ -8,7 +8,7 @@ All endpoints require Bearer token authentication.
 
 openapi: 3.0.0
 info:
-  title: Latero Insights Event API
+  title: Latero Control Event API
   version: 1.0.0
   description: |
     Ingest metadata events from Latero framework instances.
@@ -453,7 +453,7 @@ paths:
 info:
   x-implementation-notes: |
     
-    ## Implementation Notes for Latero Insights Team
+    ## Implementation Notes for Latero Control Team
     
     ### Rate Limiting
     - Recommended: 1000 events per minute per token

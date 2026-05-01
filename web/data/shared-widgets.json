@@ -137,5 +137,46 @@
     },
     "id": "29de2b78-84e2-4539-96ad-cbb59ed59150",
     "publishedAt": "2026-04-24T12:58:15.764Z"
+  },
+  {
+    "label": "lj",
+    "description": "jl",
+    "queryConfig": {
+      "dataSource": "data_quality_checks",
+      "measure": {
+        "type": "count"
+      },
+      "groupBy": {
+        "field": "event_date",
+        "timeGrain": "week"
+      },
+      "filters": []
+    },
+    "visualType": "counter",
+    "category": "counter",
+    "defaultSize": {
+      "w": 3,
+      "h": 2,
+      "minW": 2,
+      "minH": 2
+    },
+    "id": "b24b69c4-a356-4828-ae7c-0f9587f455a3",
+    "installation_id": "dev_cz9jjxdx8",
+    "publishedAt": "2026-04-25T19:44:40.662Z"
+  },
+  {
+    "label": "Failed Runs",
+    "description": "Count of FAILED pipeline runs in the selected period",
+    "templateType": "failed-runs",
+    "category": "counter",
+    "defaultSize": {
+      "w": 3,
+      "h": 2,
+      "minW": 2,
+      "minH": 2
+    },
+    "id": "ff52ddce-7b4f-4e3f-b246-b18523560920",
+    "installation_id": "latero2",
+    "publishedAt": "2026-04-27T17:17:23.438Z"
   }
 ]

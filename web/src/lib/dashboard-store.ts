@@ -3,6 +3,12 @@ import type { ResponsiveLayouts } from "react-grid-layout";
 
 const STORAGE_KEY = "insights-dashboard-store-v1";
 
+// LINS-016: Namespace storage key by installation to prevent cross-tenant data leakage
+export function getStorageKey(installationId?: string): string {
+  const id = installationId || "default";
+  return `insights-dashboard-store-v1:${id}`;
+}
+
 // ─── System dashboard factory definitions ───────────────────────────────────
 // System dashboards start empty; operators build and publish their own layouts
 // via the widget builder and "Publish for everyone".
@@ -72,12 +78,13 @@ function makeDefaultDashboard(): Dashboard {
 
 // ─── Storage adapter ─────────────────────────────────────────────────────────
 
-function load(): DashboardStoreData {
+function load(installationId?: string): DashboardStoreData {
   if (typeof window === "undefined") {
     return { dashboards: [makeDefaultDashboard()], customWidgets: [], activeId: "default" };
   }
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const key = getStorageKey(installationId);
+    const raw = window.localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw) as DashboardStoreData;
       if (parsed.dashboards?.length) return parsed;
@@ -90,14 +97,15 @@ function load(): DashboardStoreData {
     customWidgets: [],
     activeId: "default",
   };
-  save(initial);
+  save(initial, installationId);
   return initial;
 }
 
-function save(data: DashboardStoreData): void {
+function save(data: DashboardStoreData, installationId?: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const key = getStorageKey(installationId);
+    window.localStorage.setItem(key, JSON.stringify(data));
   } catch {
     // storage unavailable
   }
@@ -105,12 +113,12 @@ function save(data: DashboardStoreData): void {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function loadStore(): DashboardStoreData {
-  return load();
+export function loadStore(installationId?: string): DashboardStoreData {
+  return load(installationId);
 }
 
-export function saveStore(data: DashboardStoreData): void {
-  save(data);
+export function saveStore(data: DashboardStoreData, installationId?: string): void {
+  save(data, installationId);
 }
 
 export function getDashboard(data: DashboardStoreData, id: string): Dashboard | undefined {

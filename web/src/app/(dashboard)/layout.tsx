@@ -3,7 +3,6 @@ import { BottomNav } from "@/components/navigation/bottom-nav";
 import { DashboardProvider } from "@/contexts/dashboard-context";
 import { InstallationProvider } from "@/contexts/installation-context";
 import { InstallationGate } from "@/components/navigation/installation-gate";
-
 export default function DashboardLayout({
   children,
 }: {
@@ -20,7 +19,9 @@ export default function DashboardLayout({
                 className="pb-16 md:pb-0 transition-[padding-left] duration-200"
                 style={{ paddingLeft: "var(--sidebar-width, 280px)" }}
               >
-                <div className="px-4 py-4 xl:px-6 xl:py-6 w-full min-w-0">{children}</div>
+                <div className="px-4 py-4 xl:px-6 xl:py-6 w-full min-w-0">
+                  {children}
+                </div>
               </main>
               <BottomNav />
             </div>

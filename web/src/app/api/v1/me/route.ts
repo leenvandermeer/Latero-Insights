@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { getBearerToken, getPgPool } from "@/lib/insights-saas-db";
+import { noteInstallationTokenUsed } from "@/lib/session-auth";
 
 export async function GET(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     const row = result.rows[0];
+    await noteInstallationTokenUsed(String(row.installation_id));
     const response = NextResponse.json({
       installation_id: row.installation_id,
       label: row.label,

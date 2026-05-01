@@ -3,6 +3,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { writeToCache, isCacheOnly, getFromCache } from "@/lib/cache";
 import { getLineageEntitiesFromSaaS } from "@/lib/insights-saas-read";
 import type { LineageEntity } from "@/lib/adapters/types";
+import { requireSession } from "@/lib/session-auth";
 
 const CACHE_KEY = "lineage-entities";
 
@@ -16,8 +17,16 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const installationId = request.nextUrl.searchParams.get("installation_id");
-  const cacheParams = installationId ? { scope: "current", installationId } : { scope: "current" };
+  let installationId = request.nextUrl.searchParams.get("installation_id");
+  try {
+    const session = await requireSession(request);
+    installationId = session.active_installation_id;
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const cacheParams: Record<string, string> = installationId
+    ? { scope: "current", installationId }
+    : { scope: "current" };
 
   if (isCacheOnly()) {
     const cached = getFromCache<LineageEntity[]>(CACHE_KEY, cacheParams);

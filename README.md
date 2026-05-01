@@ -1,10 +1,10 @@
-# Latero Insights
+# Latero Control
 
-**Latero Insights** is a standalone metadata operations product for data teams.
+**Latero Control** is a standalone metadata operations product for data teams.
 It provides pipeline monitoring, data quality visibility, lineage exploration,
 and operational evidence workflows.
 
-Latero Insights is a self-contained product, positioned for SaaS delivery.
+Latero Control is a self-contained product, positioned for SaaS delivery.
 It connects to your data environment through one of two integration modes —
 no custom platform coupling required.
 
@@ -15,7 +15,7 @@ directly in the Insights store. Choose this when you run Latero in your own
 pipelines.
 
 **Databricks mode** — Operators trigger a pull sync via `POST /api/sync/databricks`.
-Latero Insights pulls pipeline, quality and lineage data from a Databricks SQL
+Latero Control pulls pipeline, quality and lineage data from a Databricks SQL
 Warehouse into the Insights store. Databricks access is always server-side.
 
 Both modes write to the same Postgres read store. The dashboard layer is identical

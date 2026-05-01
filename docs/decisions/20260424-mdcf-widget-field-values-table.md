@@ -8,7 +8,7 @@
 
 ## Context
 
-De widget builder in Latero Insights laat gebruikers custom widgets configureren via een UX wizard. Stap 1 (Measure) en de filterstap (Step 0) vragen om veldwaarden die de gebruiker handmatig moet intypen — bijvoorbeeld `SUCCESS`, `FAILED`, of `WARNING` voor het veld `run_status`. Zonder hints leidt dit tot typefouten en inconsistente configuraties.
+De widget builder in Latero Control laat gebruikers custom widgets configureren via een UX wizard. Stap 1 (Measure) en de filterstap (Step 0) vragen om veldwaarden die de gebruiker handmatig moet intypen — bijvoorbeeld `SUCCESS`, `FAILED`, of `WARNING` voor het veld `run_status`. Zonder hints leidt dit tot typefouten en inconsistente configuraties.
 
 De applicatie heeft een `useFieldValues()` hook en een `/api/field-values` API-route nodig die bekende veldwaarden aanbiedt. Deze waarden kennen twee bronnen:
 

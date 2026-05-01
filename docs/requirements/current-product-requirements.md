@@ -1,4 +1,4 @@
-# Latero Insights — Current Product Requirements
+# Latero Control — Current Product Requirements
 
 Status: CURRENT  
 Owner: Latero product
@@ -7,7 +7,7 @@ Key words such as MUST, SHOULD, and MAY are used normatively.
 
 ## Scope
 
-Latero Insights is a standalone metadata operations product for data teams.
+Latero Control is a standalone metadata operations product for data teams.
 It provides:
 
 - pipeline monitoring
@@ -15,7 +15,7 @@ It provides:
 - lineage exploration
 - operational evidence workflows
 
-Latero Insights is a self-contained product positioned for SaaS delivery.
+Latero Control is a self-contained product positioned for SaaS delivery.
 It is not a demo dashboard and not a browser-side data platform viewer.
 
 The product supports two integration modes:
@@ -95,7 +95,7 @@ These experiences SHOULD read from the same operational model where possible.
 
 ### LINS-008 — Product Naming Consistency
 
-The active product name MUST be `Latero Insights`.
+The active product name MUST be `Latero Control`.
 
 Legacy names MAY remain in historical records, but new documentation SHOULD use
 the current product name consistently.

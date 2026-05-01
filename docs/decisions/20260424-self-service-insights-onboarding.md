@@ -1,4 +1,4 @@
-# LADR-008 — Self-service onboarding boundary for Latero Insights integration
+# LADR-008 — Self-service onboarding boundary for Latero Control integration
 
 Date: 2026-04-24
 Status: Proposed
@@ -9,7 +9,7 @@ Owner: Latero product
 ## Context
 
 Latero currently exposes a strong metadata contract for lineage and DQ, but onboarding a new
-installation to Latero Insights still depends on developer-operated activities:
+installation to Latero Control still depends on developer-operated activities:
 
 - Manual bootstrap and migration execution
 - Manual Databricks job wiring for projector/sync notebooks
@@ -47,7 +47,7 @@ input; implementation-specific runtime details remain adapter-owned.
 
 ### 3. Contract-tested consumer read model
 
-Latero Insights integration must target the product read model (`meta.lineage_entities_current`,
+Latero Control integration must target the product read model (`meta.lineage_entities_current`,
 `meta.lineage_attributes_current`) through versioned consumer contracts. Changes that can affect
 Insights queries require contract tests and explicit versioning/deprecation notes.
 
@@ -97,4 +97,4 @@ Execution planning is documented in:
 - LADR-003 — End-to-end lineage state (`20260420-end-to-end-lineage-state.md`)
 - LADR-005 — Lineage current-state projection (`20260421-lineage-current-state-projection.md`)
 - LADR-007 — Explicit `hop_kind` field (`20260424-hop-kind-field.md`)
-- Latero Insights lineage integration guide (`../latero-insights-lineage-integration.md`)
+- Latero Control lineage integration guide (`../latero-insights-lineage-integration.md`)

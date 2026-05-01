@@ -116,6 +116,9 @@ export function getFromCache<T>(endpoint: string, params: Record<string, string>
 
     // Prefer entries with the most overlap (latest storedTo first)
     const candidates: Array<{ file: string; storedTo: string }> = [];
+    const requestedScope = Object.fromEntries(
+      Object.entries(params).filter(([key]) => key !== "from" && key !== "to"),
+    );
     for (const file of files) {
       const fp = join(CACHE_DIR, file);
       try {
@@ -124,6 +127,12 @@ export function getFromCache<T>(endpoint: string, params: Record<string, string>
         const entry: CacheEntry<T> = JSON.parse(readFileSync(fp, "utf-8"));
         const storedFrom = entry.params?.from;
         const storedTo = entry.params?.to;
+        const storedScope = Object.fromEntries(
+          Object.entries(entry.params ?? {}).filter(([key]) => key !== "from" && key !== "to"),
+        );
+        if (JSON.stringify(storedScope) !== JSON.stringify(requestedScope)) {
+          continue;
+        }
         // Any overlap: stored range ends on or after requestedFrom AND starts on or before requestedTo
         if (storedFrom && storedTo && storedFrom <= requestedTo && storedTo >= requestedFrom) {
           candidates.push({ file, storedTo });

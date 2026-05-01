@@ -1,17 +1,17 @@
-# Latero Insights — Current Architecture
+# Latero Control — Current Architecture
 
 Status: CURRENT  
 Owner: Latero product
 
 ## Purpose
 
-This document defines the current architecture of Latero Insights at a product
+This document defines the current architecture of Latero Control at a product
 level. It replaces older descriptions that framed the product as only a direct
 Databricks visualization layer.
 
 ## System Model
 
-Latero Insights consists of two primary modules inside one repository:
+Latero Control consists of two primary modules inside one repository:
 
 1. **Web module**
    - Next.js application

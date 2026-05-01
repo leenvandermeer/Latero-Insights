@@ -1,6 +1,6 @@
-# Latero Insights SQL Schema Reference
+# Latero Control SQL Schema Reference
 
-This document describes the bootstrap SQL schema used by Latero Insights in
+This document describes the bootstrap SQL schema used by Latero Control in
 local and development environments.
 
 Authoritative SQL source:

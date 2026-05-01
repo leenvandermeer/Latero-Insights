@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import type { Dashboard, DashboardStoreData, CustomWidget, WidgetSlot, QueryConfig, VisualType, SharedWidgetDef } from "@/types/dashboard";
 import type { ResponsiveLayouts } from "react-grid-layout";
+import { useInstallation } from "@/contexts/installation-context";
 import {
   loadStore,
   saveStore,
@@ -57,6 +58,7 @@ interface DashboardContextValue {
 const DashboardContext = createContext<DashboardContextValue | null>(null);
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
+  const { installation } = useInstallation();
   const [store, setStore] = useState<DashboardStoreData>(() => ({
     dashboards: [],
     customWidgets: [],
@@ -65,15 +67,17 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const [systemOverrides, setSystemOverrides] = useState<Record<string, SystemOverride>>({});
 
+  // LINS-016: Load store scoped to current installation; reload on installation switch
   useEffect(() => {
-    setStore(loadStore());
+    const installationId = installation?.installation_id;
+    setStore(loadStore(installationId));
     setMounted(true);
     // Load server-side system dashboard overrides
     fetch("/api/dashboards/system")
       .then((r) => r.json())
       .then((data) => setSystemOverrides(data as Record<string, SystemOverride>))
       .catch(() => {});
-  }, []);
+  }, [installation?.installation_id]);
 
   const getDashboardById = useCallback(
     (id: string) => getDashboard(store, id),
@@ -156,10 +160,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setStore((prev) => {
       if (prev.activeId === id) return prev; // bail out — no state update, no re-render
       const next = { ...prev, activeId: id };
-      saveStore(next);
+      saveStore(next, installation?.installation_id);
       return next;
     });
-  }, []);
+  }, [installation?.installation_id]);
 
   const publishSystemDashboard = useCallback(async (id: string, widgets: WidgetSlot[], layout: ResponsiveLayouts) => {
     const res = await fetch("/api/dashboards/system", {

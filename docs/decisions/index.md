@@ -1,8 +1,8 @@
-# Latero Insights ADR Index
+# Latero Control ADR Index
 
 Naming note:
 
-- newer documentation uses **Latero Insights**
+- newer documentation uses **Latero Control**
 - older ADR titles may still use **Layer2 Meta Insights**
 - treat those as legacy product naming, not separate products
 
@@ -33,3 +33,5 @@ Naming note:
 | [LADR-025](20260424-insights-saas-ingest-backend.md) | 2026-04-24 | Insights SaaS ingest backend in Next.js with Postgres bootstrap | ACCEPTED |
 | [LADR-026](20260424-postgres-as-single-read-store.md) | 2026-04-24 | Postgres als enige read-store voor webapp API routes | ACCEPTED |
 | [LADR-027](20260425-installation-aware-ux.md) | 2026-04-25 | Installation-aware UX: multi-tenancy groundwork (stap 1 & 2) | ACCEPTED |
+| [LADR-028](20260425-admin-dashboard-architecture.md) | 2026-04-25 | Admin Dashboard: installation and multi-tenant lifecycle management | ACCEPTED |
+| [LADR-029](20260425-tenant-data-isolation-security-hardening.md) | 2026-04-25 | Tenant Data Isolation Security Hardening: LINS-016 enforcement (shared widgets, personal dashboards, API routes) | ACCEPTED |

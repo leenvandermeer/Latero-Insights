@@ -73,6 +73,7 @@ function decryptToken(stored: string): string {
 }
 
 export interface AppSettings {
+  connectionMode: "databricks" | "api";
   databricksHost: string;
   databricksToken: string;
   databricksWarehouseId: string;
@@ -83,7 +84,18 @@ export interface AppSettings {
   cacheOnly: boolean;
 }
 
+type StoredSettings = Partial<AppSettings & { databricksToken: string }>;
+
+export function isConnectionMode(value: unknown): value is AppSettings["connectionMode"] {
+  return value === "databricks" || value === "api";
+}
+
+interface SettingsFileShape extends StoredSettings {
+  scoped?: Record<string, StoredSettings>;
+}
+
 const DEFAULTS: AppSettings = {
+  connectionMode: "databricks",
   databricksHost: "",
   databricksToken: "",
   databricksWarehouseId: "",
@@ -100,46 +112,84 @@ function ensureDir(): void {
   }
 }
 
+function readSettingsFile(): SettingsFileShape {
+  ensureDir();
+
+  if (!existsSync(SETTINGS_FILE)) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(readFileSync(SETTINGS_FILE, "utf-8")) as SettingsFileShape;
+  } catch {
+    return {};
+  }
+}
+
+function writeSettingsFile(data: SettingsFileShape): void {
+  ensureDir();
+  writeFileSync(SETTINGS_FILE, JSON.stringify(data, null, 2), "utf-8");
+}
+
 /**
  * Load settings. Priority: settings.json > env vars > defaults.
  * Token is decrypted automatically if an encryption key is configured.
  */
-export function loadSettings(): AppSettings {
-  ensureDir();
+export function loadSettings(installationId?: string): AppSettings {
+  const saved = readSettingsFile();
+  const scoped = installationId ? saved.scoped?.[installationId] ?? {} : {};
 
-  let saved: Partial<AppSettings & { databricksToken: string }> = {};
-  if (existsSync(SETTINGS_FILE)) {
-    try {
-      saved = JSON.parse(readFileSync(SETTINGS_FILE, "utf-8"));
-    } catch {
-      // corrupt file — use defaults
-    }
-  }
-
-  const storedToken = saved.databricksToken ?? process.env.DATABRICKS_TOKEN ?? DEFAULTS.databricksToken;
+  const storedToken = scoped.databricksToken
+    ?? saved.databricksToken
+    ?? process.env.DATABRICKS_TOKEN
+    ?? DEFAULTS.databricksToken;
 
   return {
-    databricksHost: saved.databricksHost ?? process.env.DATABRICKS_HOST ?? DEFAULTS.databricksHost,
+    connectionMode: isConnectionMode(scoped.connectionMode)
+      ? scoped.connectionMode
+      : isConnectionMode(saved.connectionMode)
+        ? saved.connectionMode
+        : isConnectionMode(process.env.INSIGHTS_CONNECTION_MODE)
+          ? process.env.INSIGHTS_CONNECTION_MODE
+          : DEFAULTS.connectionMode,
+    databricksHost: scoped.databricksHost ?? saved.databricksHost ?? process.env.DATABRICKS_HOST ?? DEFAULTS.databricksHost,
     databricksToken: decryptToken(storedToken),
-    databricksWarehouseId: saved.databricksWarehouseId ?? process.env.DATABRICKS_WAREHOUSE_ID ?? DEFAULTS.databricksWarehouseId,
-    databricksCatalog: saved.databricksCatalog ?? process.env.DATABRICKS_CATALOG ?? DEFAULTS.databricksCatalog,
-    databricksSchema: saved.databricksSchema ?? process.env.DATABRICKS_SCHEMA ?? DEFAULTS.databricksSchema,
-    databricksEnvironment: saved.databricksEnvironment ?? process.env.DATABRICKS_ENVIRONMENT ?? DEFAULTS.databricksEnvironment,
-    cacheTtlSeconds: saved.cacheTtlSeconds ?? (process.env.INSIGHTS_CACHE_TTL ? parseInt(process.env.INSIGHTS_CACHE_TTL, 10) : DEFAULTS.cacheTtlSeconds),
-    cacheOnly: saved.cacheOnly ?? (process.env.INSIGHTS_CACHE_ONLY === "true" || DEFAULTS.cacheOnly),
+    databricksWarehouseId: scoped.databricksWarehouseId ?? saved.databricksWarehouseId ?? process.env.DATABRICKS_WAREHOUSE_ID ?? DEFAULTS.databricksWarehouseId,
+    databricksCatalog: scoped.databricksCatalog ?? saved.databricksCatalog ?? process.env.DATABRICKS_CATALOG ?? DEFAULTS.databricksCatalog,
+    databricksSchema: scoped.databricksSchema ?? saved.databricksSchema ?? process.env.DATABRICKS_SCHEMA ?? DEFAULTS.databricksSchema,
+    databricksEnvironment: scoped.databricksEnvironment ?? saved.databricksEnvironment ?? process.env.DATABRICKS_ENVIRONMENT ?? DEFAULTS.databricksEnvironment,
+    cacheTtlSeconds: scoped.cacheTtlSeconds ?? saved.cacheTtlSeconds ?? (process.env.INSIGHTS_CACHE_TTL ? parseInt(process.env.INSIGHTS_CACHE_TTL, 10) : DEFAULTS.cacheTtlSeconds),
+    cacheOnly: scoped.cacheOnly ?? saved.cacheOnly ?? (process.env.INSIGHTS_CACHE_ONLY === "true" || DEFAULTS.cacheOnly),
   };
 }
 
 /**
  * Save settings to disk. Token is encrypted before writing if an encryption key is configured.
  */
-export function saveSettings(settings: AppSettings): void {
-  ensureDir();
-  const toWrite: AppSettings = {
+export function saveSettings(settings: AppSettings, installationId?: string): void {
+  const current = readSettingsFile();
+  const encoded: StoredSettings = {
     ...settings,
     databricksToken: encryptToken(settings.databricksToken),
   };
-  writeFileSync(SETTINGS_FILE, JSON.stringify(toWrite, null, 2), "utf-8");
+
+  if (installationId) {
+    const scoped = {
+      ...(current.scoped ?? {}),
+      [installationId]: encoded,
+    };
+
+    writeSettingsFile({
+      ...current,
+      scoped,
+    });
+    return;
+  }
+
+  writeSettingsFile({
+    ...current,
+    ...encoded,
+  });
 }
 
 /**

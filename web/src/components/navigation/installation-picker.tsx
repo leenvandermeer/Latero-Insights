@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut, Building2 } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Building2, Mail } from "lucide-react";
 import { useInstallation } from "@/contexts/installation-context";
 import { cn } from "@/lib/utils";
 
@@ -9,12 +10,11 @@ interface Props {
 }
 
 export function InstallationPicker({ collapsed }: Props) {
-  const { installation, logout } = useInstallation();
+  const { installation, logout, user } = useInstallation();
 
   if (!installation) return null;
 
   const label = installation.label ?? installation.installation_id;
-  const env = installation.environment;
 
   if (collapsed) {
     return (
@@ -54,7 +54,7 @@ export function InstallationPicker({ collapsed }: Props) {
                 {label}
               </p>
               <p className="text-[10px] mt-0.5 truncate leading-none" style={{ color: "var(--color-sidebar-muted)" }}>
-                {env}
+                {installation.installation_id}
               </p>
             </div>
           </div>
@@ -69,6 +69,12 @@ export function InstallationPicker({ collapsed }: Props) {
             <LogOut className="h-3.5 w-3.5" />
           </button>
         </div>
+
+        {user?.email && (
+          <p className="mt-2 text-[10px] truncate flex items-center gap-1" style={{ color: "var(--color-sidebar-muted)" }} title={user.email}>
+            <Mail className="h-3 w-3" /> {user.email}
+          </p>
+        )}
       </div>
     </div>
   );

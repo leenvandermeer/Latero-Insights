@@ -1,4 +1,4 @@
-# Latero Insights Requirements Index
+# Latero Control Requirements Index
 
 This folder has been cleaned up to keep only the requirement and architecture
 documents that still match the current product.
@@ -11,6 +11,13 @@ documents that still match the current product.
 - [Current Product Requirements](./current-product-requirements.md)
 - [Current API Reference](./current-api-reference.md)
 - [SQL Schema Reference](./sql-schema-reference.md)
+- [Admin/App Separation Work Packages](./admin-app-separation-workpackages.md)
+- [Admin Dashboard Feature Summary](./admin-dashboard-feature.md)
+- [Admin Developer Quick Start](./admin-developer-quick-start.md)
+- [Admin Implementation Checklist](./admin-implementation-checklist.md)
+- [Admin Execution Checklist](./ADMIN_EXECUTION_CHECKLIST.md)
+- [Security Guidelines](./security-guidelines.md)
+- [Go-Live Checklist](./go-live-checklist.md)
 
 ### Data Contract
 
@@ -29,7 +36,7 @@ requirements set:
 - outdated standalone Databricks-reader product requirements
 - duplicated meta-table contract drafts
 - backlog and workflow notes that were not normative requirements
-- MDCF product-positioning notes that do not define Latero Insights behavior
+- MDCF product-positioning notes that do not define Latero Control behavior
 - strategic brainstorming documents mixed into the requirements folder
 
 If a removed document contained still-relevant intent, that intent should be

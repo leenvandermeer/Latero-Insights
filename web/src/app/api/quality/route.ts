@@ -3,6 +3,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { writeToCache, isCacheOnly, getFromCache } from "@/lib/cache";
 import { getDataQualityChecksFromSaaS } from "@/lib/insights-saas-read";
 import { triggerAutoSyncIfDue } from "@/lib/databricks-auto-sync";
+import { requireSession } from "@/lib/session-auth";
 
 export async function GET(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -17,13 +18,24 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const from = params.get("from");
   const to = params.get("to");
-  const installationId = params.get("installation_id");
+  let installationId = params.get("installation_id");
+
+  try {
+    const session = await requireSession(request);
+    installationId = session.active_installation_id;
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
     return NextResponse.json({ error: "Missing or invalid 'from' and 'to' date parameters (YYYY-MM-DD)" }, { status: 400 });
   }
 
-  const cacheParams = { from, to };
+  const cacheParams = {
+    from,
+    to,
+    installation_id: installationId ?? "unknown",
+  };
   triggerAutoSyncIfDue("/api/quality");
 
   if (isCacheOnly()) {

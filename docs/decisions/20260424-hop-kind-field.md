@@ -13,7 +13,7 @@ represent a real dataset transition. Some rows record framework-internal referen
 example, a hop from the Latero runtime context to a landing entity used as evidence — that
 are not part of the actual data flow from source to gold.
 
-Consumers (specifically Latero Insights) must currently infer whether a hop is a "real"
+Consumers (specifically Latero Control) must currently infer whether a hop is a "real"
 data-flow transition or a context reference by combining heuristics on `source_type`,
 `target_type`, and `relation_type`. This leads to:
 
@@ -78,7 +78,7 @@ All notebooks calling `logger.lineage()` must pass `hop_kind = 'data_flow'` for 
 medallion step hops. All non-data-transition calls (framework context, evidence references)
 must pass `hop_kind = 'context'`.
 
-### For Latero Insights
+### For Latero Control
 
 The lineage page must filter on `hop_kind IN ('data_flow') OR hop_kind IS NULL` when
 computing:
@@ -127,4 +127,4 @@ ALTER TABLE LATERO.META.DATA_LINEAGE
 - LMETA-017 in `docs/framework/requirements/meta-table-contract.md`
 - LADR-005 — Lineage current-state projection tables (`20260421-lineage-current-state-projection.md`)
 - LADR-006 — Deterministic layer columns (`20260422-meta-lineage-layer-columns.md`)
-- Latero Insights lineage integration guide (`docs/framework/latero-insights-lineage-integration.md`)
+- Latero Control lineage integration guide (`docs/framework/latero-insights-lineage-integration.md`)

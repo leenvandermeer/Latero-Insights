@@ -1,18 +1,18 @@
-# CLAUDE.md — Latero Insights
+# CLAUDE.md — Latero Control
 
 ## Product
 
-**Latero Insights** (`@layer2/meta-insights`) is a standalone metadata operations
+**Latero Control** (`@layer2/meta-insights`) is a standalone metadata operations
 product. It provides pipeline monitoring, data quality visibility, lineage exploration,
 and operational evidence workflows for data teams.
 
-Latero Insights is a self-contained product and is positioned for SaaS delivery.
+Latero Control is a self-contained product and is positioned for SaaS delivery.
 It is not a demo dashboard, not a Databricks viewer, and not coupled to any specific
 runtime framework.
 
 ## Data Connectivity
 
-Latero Insights supports two integration modes:
+Latero Control supports two integration modes:
 
 1. **API mode** — Latero runtimes push events via `/api/v1/*` ingest endpoints.
    The canonical store is Postgres. Dashboards read from the Insights store.

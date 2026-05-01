@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import type { WidgetSlot } from "@/types/dashboard";
 import type { ResponsiveLayouts } from "react-grid-layout";
+import { requireSession } from "@/lib/session-auth";
 
 export interface SystemOverride {
   id: string;
@@ -29,12 +30,24 @@ function write(data: Record<string, SystemOverride>) {
 }
 
 // GET /api/dashboards/system — return all overrides
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // LINS-016: Verify user session before exposing system dashboard overrides
+  try {
+    await requireSession(request);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   return NextResponse.json(read());
 }
 
 // PUT /api/dashboards/system — upsert one override
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
+  // LINS-016: Verify user session before allowing system dashboard modifications
+  try {
+    await requireSession(request);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const body = await request.json() as Partial<SystemOverride>;
   if (!body.id || !body.widgets || !body.layout) {
     return NextResponse.json({ error: "id, widgets and layout are required" }, { status: 400 });
@@ -51,7 +64,13 @@ export async function PUT(request: Request) {
 }
 
 // DELETE /api/dashboards/system?id=system:pipelines — reset one override
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
+  // LINS-016: Verify user session before allowing system dashboard deletion
+  try {
+    await requireSession(request);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });

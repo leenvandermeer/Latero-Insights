@@ -5,7 +5,7 @@ Status: ACCEPTED
 
 ## Context
 
-Latero Insights ondersteunt meerdere Latero runtime-installaties via de
+Latero Control ondersteunt meerdere Latero runtime-installaties via de
 `insights_installations` tabel en per-installation bearer-token auth op de
 `/api/v1/*` ingest routes (LADR-025). De onderliggende Postgres-tabellen
 (`pipeline_runs`, `data_quality_checks`, `data_lineage`) hebben een
@@ -108,6 +108,48 @@ read-functie (WHERE installation_id = $1)
 | Stap 4 | Row-level security in Postgres per `installation_id` |
 | Stap 5 | Tenant-admin UI — installatiebeheer, token-rotatie |
 | Stap 6 | Multi-org met billing-isolatie |
+
+## Update — Stap 3, 4 en 5 geactiveerd (2026-04-25)
+
+De oorspronkelijke roadmap-items voor sessie-auth, tenant-isolatie in reads en
+token lifecycle zijn nu in een eerste versie gerealiseerd.
+
+### Nieuwe UX-flow (multi-org, volgens productrichtlijnen)
+
+- Inlogscherm gebruikt e-mailadres + wachtwoord (geen API key invoer meer).
+- Na inloggen wordt een server-side sessiecookie gebruikt (`HttpOnly`).
+- In de sidebar wordt de actieve organisatie zichtbaar getoond.
+- Gebruikers met meerdere organisaties krijgen een compacte switcher in de
+  sidebar om realtime van context te wisselen.
+- 2FA is "ready": de flow exposeert expliciet `two_factor_*` statusvelden,
+  zodat een volgende stap zonder UX-breuk kan worden toegevoegd.
+
+### Backend-auth model
+
+- Nieuwe auth endpoints:
+  - `POST /api/auth/login`
+  - `GET /api/auth/session`
+  - `POST /api/auth/switch-installation`
+  - `POST /api/auth/logout`
+- Nieuwe tabellen:
+  - `insights_users`
+  - `insights_user_installations`
+  - `insights_sessions`
+- Dashboard read APIs forceren `installation_id` op basis van de sessie.
+  Query-params kunnen de sessie-tenant niet overrulen.
+
+### Key lifecycle (tenant admin)
+
+- Installations manager ondersteunt nu:
+  - key rotatie (nieuwe sleutel, eenmalig getoond)
+  - revoke
+  - weergave van `last_token_used_at`
+
+### Veiligheidsimpact
+
+- Tenant context is niet langer browser-lokaal via `localStorage`.
+- Sleutels blijven buiten JS-toegankelijke storage; sessie draait op cookie.
+- Multi-org wisselen blijft expliciet zichtbaar in de navigatie.
 
 ## Alternatieven overwogen
 

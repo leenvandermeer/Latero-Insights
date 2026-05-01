@@ -5,10 +5,11 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { ResponsiveGridLayout, verticalCompactor, type LayoutItem, type ResponsiveLayouts } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
-import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2, Check, MoreHorizontal, Sparkles, ChevronDown, Plus, Globe } from "lucide-react";
+import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2, Check, MoreHorizontal, Sparkles, Plus, Globe } from "lucide-react";
 import { useDateRange } from "@/hooks/use-date-range";
 import { DateRangePicker, Button } from "@/components/ui";
 import { useDashboards } from "@/contexts/dashboard-context";
+import { useInstallation } from "@/contexts/installation-context";
 import { useSharedWidgets, useUpdateSharedWidget } from "@/hooks/use-shared-widgets";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
 import { DashboardSettingsDialog } from "@/components/dashboard/dashboard-settings-dialog";
@@ -47,8 +48,6 @@ export function DashboardCanvas({ dashboardId }: Props) {
     deleteDash,
     resetDash,
     duplicateDash,
-    systemDashboards,
-    userDashboards,
     publishSystemDashboard,
     resetSystemOverride,
     systemOverrides,
@@ -57,6 +56,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
     updateCustomWidget,
   } = useDashboards();
   const { data: sharedWidgets = [] } = useSharedWidgets();
+  const { installation, installations, switchInstallation, validating } = useInstallation();
   const { mutateAsync: updateSharedWidget } = useUpdateSharedWidget();
   const { from, to, setRange } = useDateRange();
   const [editMode, setEditMode] = useState(false);
@@ -68,7 +68,6 @@ export function DashboardCanvas({ dashboardId }: Props) {
   const [nameInput, setNameInput] = useState("");
   const [descInput, setDescInput] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [dashPickerOpen, setDashPickerOpen] = useState(false);
   const [newDashOpen, setNewDashOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -115,7 +114,6 @@ export function DashboardCanvas({ dashboardId }: Props) {
     setPendingRemove(null);
     setConfigTarget(null);
     setMenuOpen(false);
-    setDashPickerOpen(false);
     setEditingName(false);
   }, [dashboardId]);
 
@@ -260,22 +258,22 @@ export function DashboardCanvas({ dashboardId }: Props) {
         <div className="flex-1 min-w-0 space-y-4 p-0 overflow-hidden pr-1">
         {/* Dashboard header */}
         <div
-          className="relative rounded-2xl mb-2 px-8 py-6"
+          className="relative rounded-2xl mb-2 px-5 py-4"
           style={{
             background: "linear-gradient(135deg, var(--color-surface) 60%, var(--color-brand-subtle) 100%)",
             border: editMode ? "1px solid var(--color-accent)" : "1px solid var(--color-border)",
             transition: "border-color 0.2s",
           }}
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             {/* Left: eyebrow + title with dashboard switcher */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "var(--color-accent)", letterSpacing: "0.13em" }}>
-                <span aria-hidden="true" style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--color-accent)", marginRight: 8, verticalAlign: "middle", marginBottom: 2 }} />
+              <p className="text-[11px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "var(--color-accent)", letterSpacing: "0.11em" }}>
+                <span aria-hidden="true" style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: "var(--color-accent)", marginRight: 7, verticalAlign: "middle", marginBottom: 2 }} />
                 {isSystem ? "System Dashboard" : "Dashboard"}
               </p>
 
-              {/* Title — inline name editor OR dashboard switcher */}
+              {/* Title — inline name editor OR static title */}
               {editingName ? (
                 <div className="flex items-center gap-2">
                   <input
@@ -290,25 +288,15 @@ export function DashboardCanvas({ dashboardId }: Props) {
                 </div>
               ) : (
                 <div className="relative group/title">
-                  <button
-                    onClick={() => setDashPickerOpen((v) => !v)}
-                    className="group flex items-center gap-1.5 text-left"
-                    title="Switch dashboard"
+                  <h1
+                    className="font-display font-light italic leading-tight"
+                    style={{ fontSize: "clamp(1.35rem, 2.2vw, 1.9rem)", color: "var(--color-text)", letterSpacing: "-0.02em" }}
                   >
-                    <h1
-                      className="font-display font-light italic leading-tight"
-                      style={{ fontSize: "clamp(1.5rem, 3vw, 2.25rem)", color: "var(--color-text)", letterSpacing: "-0.02em" }}
-                    >
-                      {dashboard.name}
-                    </h1>
-                    <ChevronDown
-                      className="h-5 w-5 shrink-0 transition-transform"
-                      style={{ color: "var(--color-text-muted)", transform: dashPickerOpen ? "rotate(180deg)" : "rotate(0deg)", marginTop: 4 }}
-                    />
-                  </button>
+                    {dashboard.name}
+                  </h1>
                   {!isSystem && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); setDashPickerOpen(false); setEditingName(true); setNameInput(dashboard.name); }}
+                      onClick={(e) => { e.stopPropagation(); setEditingName(true); setNameInput(dashboard.name); }}
                       className="absolute -right-7 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover/title:opacity-100 transition-opacity"
                       style={{ color: "var(--color-text-subtle)" }}
                       title="Edit name"
@@ -316,61 +304,11 @@ export function DashboardCanvas({ dashboardId }: Props) {
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                   )}
-
-                  {dashPickerOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setDashPickerOpen(false)} />
-                      <div
-                        className="absolute left-0 top-full mt-2 w-72 rounded-xl py-2 z-20 overflow-auto"
-                        style={{ maxHeight: 320, background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown, 0 8px 24px rgba(27,59,107,0.12))" }}
-                      >
-                        <p className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>System</p>
-                        {systemDashboards.map((d) => {
-                          const route = d.id === "system:pipelines" ? "/pipelines" : d.id === "system:quality" ? "/quality" : `/dashboard/${d.id}`;
-                          const active = d.id === dashboardId;
-                          return (
-                            <button key={d.id} onClick={() => { router.push(route); setDashPickerOpen(false); }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--color-sidebar-hover)]"
-                              style={{ color: active ? "var(--color-accent)" : "var(--color-text)" }}>
-                              <span className="w-3.5 shrink-0">{active && <Check className="h-3.5 w-3.5" />}</span>
-                              <span className="truncate">{d.name}</span>
-                            </button>
-                          );
-                        })}
-
-                        {userDashboards.length > 0 && (
-                          <>
-                            <div className="my-1 mx-3" style={{ borderTop: "1px solid var(--color-border)" }} />
-                            <p className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>My Dashboards</p>
-                            {userDashboards.map((d) => {
-                              const active = d.id === dashboardId;
-                              return (
-                                <button key={d.id} onClick={() => { router.push(`/dashboard/${d.id}`); setDashPickerOpen(false); }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--color-sidebar-hover)]"
-                                  style={{ color: active ? "var(--color-accent)" : "var(--color-text)" }}>
-                                  <span className="w-3.5 shrink-0">{active && <Check className="h-3.5 w-3.5" />}</span>
-                                  <span className="truncate">{d.name}</span>
-                                </button>
-                              );
-                            })}
-                          </>
-                        )}
-
-                        <div className="my-1 mx-3" style={{ borderTop: "1px solid var(--color-border)" }} />
-                        <button onClick={() => { setNewDashOpen(true); setSettingsOpen(false); setDashPickerOpen(false); }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--color-sidebar-hover)]"
-                          style={{ color: "var(--color-accent)" }}>
-                          <Plus className="h-3.5 w-3.5 shrink-0" />
-                          New Dashboard
-                        </button>
-                      </div>
-                    </>
-                  )}
                 </div>
               )}
 
               {dashboard.description && !editMode && (
-                <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>{dashboard.description}</p>
+                <p className="mt-0.5 text-xs" style={{ color: "var(--color-text-muted)" }}>{dashboard.description}</p>
               )}
               {editMode && !isSystem && (
                 <input
@@ -386,10 +324,9 @@ export function DashboardCanvas({ dashboardId }: Props) {
               )}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <div className="flex shrink-0 items-center gap-2 flex-wrap justify-end">
               <DateRangePicker from={from} to={to} onChange={setRange} />
 
-              {/* Publish success badge */}
               {publishDone && (
                 <span
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium"
@@ -400,16 +337,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                 </span>
               )}
 
-              {/* Edit button — available for all dashboards */}
-              {!editMode && (
-                <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} style={{ padding: "0.5rem 0.75rem" }}>
-                  <Pencil className="h-4 w-4" />
-                  <span className="hidden sm:inline">Edit</span>
-                </Button>
-              )}
-
-              {/* Done / Publish button in edit mode */}
-              {editMode && (
+              {editMode ? (
                 isSystem ? (
                   <Button
                     variant="primary"
@@ -425,9 +353,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
                     Done
                   </Button>
                 )
-              )}
-
-              {!editMode && (
+              ) : (
                 <div className="relative">
                   <Button variant="ghost" size="sm" onClick={() => setMenuOpen((v) => !v)} style={{ padding: "0.5rem" }}>
                     <MoreHorizontal className="h-4 w-4" />
@@ -436,29 +362,51 @@ export function DashboardCanvas({ dashboardId }: Props) {
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                       <div
-                        className="absolute right-0 top-full mt-1 w-52 rounded-xl py-1 z-20"
+                        className="absolute right-0 top-full mt-1 w-64 rounded-xl py-1 z-20"
                         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown, 0 8px 24px rgba(27,59,107,0.12))" }}
                       >
+                        {installation && installations.length > 1 && (
+                          <>
+                            <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+                              Switch organization
+                            </p>
+                            {installations.map((org) => {
+                              const active = org.installation_id === installation.installation_id;
+                              return (
+                                <button
+                                  key={org.installation_id}
+                                  onClick={() => {
+                                    void switchInstallation(org.installation_id);
+                                    setMenuOpen(false);
+                                  }}
+                                  disabled={validating}
+                                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)] disabled:opacity-60"
+                                  style={{ color: "var(--color-text)" }}
+                                >
+                                  <span className="truncate">{org.label ?? org.installation_id}</span>
+                                  {active ? <Check className="h-4 w-4" style={{ color: "var(--color-accent)" }} /> : null}
+                                </button>
+                              );
+                            })}
+                            <div className="my-1 border-t" style={{ borderColor: "var(--color-border)" }} />
+                          </>
+                        )}
+
+                        <button onClick={() => { setEditMode(true); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
+                          <Pencil className="h-4 w-4" /> Edit
+                        </button>
                         <button onClick={() => { duplicateDash(dashboardId); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
                           <Copy className="h-4 w-4" /> Duplicate
                         </button>
-                        {isSystem && hasOverride && (
-                          <button onClick={handleResetOverride} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-error, #dc2626)" }}>
-                            <RotateCcw className="h-4 w-4" /> Reset to default
-                          </button>
-                        )}
-                        {!isSystem && (
-                          <button onClick={() => { setSettingsOpen(true); setNewDashOpen(false); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
-                            <Settings2 className="h-4 w-4" /> Settings
-                          </button>
-                        )}
-                        {!isSystem && (
-                          <button
-                            onClick={() => { if (confirm(`Delete dashboard "${dashboard.name}"?`)) { deleteDash(dashboardId); router.push("/pipelines"); } setMenuOpen(false); }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]"
-                            style={{ color: "var(--color-error, #dc2626)" }}
-                          >
-                            <Trash2 className="h-4 w-4" /> Delete
+                        {isSystem ? (
+                          hasOverride ? (
+                            <button onClick={handleResetOverride} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-error, #dc2626)" }}>
+                              <RotateCcw className="h-4 w-4" /> Reset to default
+                            </button>
+                          ) : null
+                        ) : (
+                          <button onClick={() => { resetDash(dashboardId); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-error, #dc2626)" }}>
+                            <RotateCcw className="h-4 w-4" /> Reset layout
                           </button>
                         )}
                       </div>

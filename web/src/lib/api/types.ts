@@ -18,6 +18,7 @@ export interface ApiError {
 export interface ApiHealthResponse {
   status: "ok" | "error";
   databricks: boolean;
+  connectionMode: "databricks" | "api";
   sql: {
     live: boolean;
     configured: boolean;
@@ -72,6 +73,7 @@ export interface CacheClearResponse {
 
 export interface SettingsResponse {
   settings: {
+    connectionMode: "databricks" | "api";
     databricksHost: string;
     databricksToken: string;
     databricksWarehouseId: string;
@@ -86,6 +88,7 @@ export interface SettingsResponse {
 }
 
 export interface SettingsUpdateRequest {
+  connectionMode?: "databricks" | "api";
   databricksHost?: string;
   databricksToken?: string;
   databricksWarehouseId?: string;

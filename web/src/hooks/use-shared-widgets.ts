@@ -18,7 +18,7 @@ export function useSharedWidgets() {
 export function usePublishWidget() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (widget: Omit<SharedWidgetDef, "id" | "publishedAt">) => {
+    mutationFn: async (widget: Omit<SharedWidgetDef, "id" | "publishedAt" | "installation_id">) => {
       const res = await fetch("/api/widgets/shared", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -37,7 +37,7 @@ export function usePublishWidget() {
 export function useUpdateSharedWidget() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<SharedWidgetDef, "id" | "publishedAt">> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<SharedWidgetDef, "id" | "publishedAt" | "installation_id">> }) => {
       const res = await fetch(`/api/widgets/shared/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

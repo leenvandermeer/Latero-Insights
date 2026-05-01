@@ -8,6 +8,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Session-based UI auth endpoints handle credentials/cookies themselves.
+  if (path.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
+
   // Skip auth for health, settings, and test-connection endpoints
   if (path === "/api/health" || path === "/api/settings" || path === "/api/test-connection" || path === "/api/cache/seed") {
     return NextResponse.next();
@@ -18,17 +23,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const apiKey = process.env.INSIGHTS_API_KEY;
-  if (!apiKey) {
-    // No API key configured — reject all API requests
-    return NextResponse.json(
-      { error: "Server misconfiguration: INSIGHTS_API_KEY not set" },
-      { status: 500 }
-    );
+  const sessionCookie = request.cookies.get("insights_session")?.value;
+  if (sessionCookie) {
+    // Session validity is resolved in route handlers.
+    return NextResponse.next();
   }
 
+  const apiKey = process.env.INSIGHTS_API_KEY;
   const providedKey = request.headers.get("x-api-key") ?? request.nextUrl.searchParams.get("api_key");
-  if (!providedKey || providedKey !== apiKey) {
+  if (!apiKey || !providedKey || providedKey !== apiKey) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

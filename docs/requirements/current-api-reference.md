@@ -1,6 +1,6 @@
-# Latero Insights API Reference
+# Latero Control API Reference
 
-This document is the compact API reference for the current Latero Insights
+This document is the compact API reference for the current Latero Control
 repository.
 
 For the full external ingest contract, also see:
@@ -10,7 +10,7 @@ For the full external ingest contract, also see:
 
 ## API Groups
 
-Latero Insights currently exposes two API groups:
+Latero Control currently exposes two API groups:
 
 1. **Web read and admin APIs**
    - used by the Next.js web application
@@ -76,7 +76,7 @@ Source:
 ### `POST /api/sync/databricks`
 
 Purpose:
-- pull metadata from Databricks into the Latero Insights read store
+- pull metadata from Databricks into the Latero Control read store
 
 Request body:
 - optional JSON
@@ -328,7 +328,7 @@ Source:
 ## Current Storage Model
 
 Read side:
-- web APIs read from the Latero Insights store
+- web APIs read from the Latero Control store
 - the current local/dev bootstrap schema is defined in:
   - [infra/sql/init/001_insights_saas_init.sql](/Users/leenvandermeer/Git/Latero%20Insights/infra/sql/init/001_insights_saas_init.sql)
 

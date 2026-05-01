@@ -38,11 +38,14 @@
   --color-sidebar-hover:        #F5EFE4;
 
   --color-success:              #10B981;
-  --color-success-light:        #D1FAE5;
+  --color-success-bg:           #E8F8F3;
+  --color-success-text:         #065F46;
   --color-warning:              #F59E0B;
-  --color-warning-light:        #FEF3C7;
+  --color-warning-bg:           #FFFBEB;
+  --color-warning-text:         #78350F;
   --color-error:                #EF4444;
-  --color-error-light:          #FEE2E2;
+  --color-error-bg:             #FEF2F2;
+  --color-error-text:           #7F1D1D;
 
   --radius-sm:   0.5rem;
   --radius-md:   0.75rem;
@@ -82,11 +85,14 @@
   --color-sidebar-hover:        #142038;
 
   --color-success:              #34D399;
-  --color-success-light:        #064E3B;
+  --color-success-bg:           #064E3B;
+  --color-success-text:         #86EFAC;
   --color-warning:              #FBBF24;
-  --color-warning-light:        #78350F;
+  --color-warning-bg:           #78350F;
+  --color-warning-text:         #FCD34D;
   --color-error:                #F87171;
-  --color-error-light:          #7F1D1D;
+  --color-error-bg:             #7F1D1D;
+  --color-error-text:           #FECACA;
 }
 
 /* ── Base ─────────────────────────────────────────────── */
@@ -222,4 +228,68 @@ h1, h2, .font-display {
 @keyframes slideUpSheet {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
+}
+
+/* ── Admin theme bridge: map legacy slate utilities to design tokens ─────── */
+.admin-theme {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.admin-theme .bg-slate-50,
+.admin-theme .dark\:bg-slate-950,
+.admin-theme .dark\:bg-slate-900,
+.admin-theme .dark\:bg-slate-800,
+.admin-theme .bg-white,
+.admin-theme .bg-slate-100 {
+  background-color: var(--color-surface) !important;
+}
+
+.admin-theme .hover\:bg-slate-50:hover,
+.admin-theme .hover\:bg-slate-100:hover,
+.admin-theme .dark\:hover\:bg-slate-800:hover,
+.admin-theme .dark\:hover\:bg-slate-900\/20:hover,
+.admin-theme .dark\:hover\:bg-slate-800\/50:hover {
+  background-color: var(--color-surface-alt) !important;
+}
+
+.admin-theme .text-slate-900,
+.admin-theme .dark\:text-white,
+.admin-theme .dark\:text-slate-200,
+.admin-theme .dark\:text-slate-100 {
+  color: var(--color-text) !important;
+}
+
+.admin-theme .text-slate-700,
+.admin-theme .text-slate-600,
+.admin-theme .text-slate-500,
+.admin-theme .dark\:text-slate-400,
+.admin-theme .dark\:text-slate-300 {
+  color: var(--color-text-muted) !important;
+}
+
+.admin-theme .text-slate-400,
+.admin-theme .dark\:text-slate-500,
+.admin-theme .dark\:text-slate-600 {
+  color: var(--color-text-subtle) !important;
+}
+
+.admin-theme .border-slate-100,
+.admin-theme .border-slate-200,
+.admin-theme .border-slate-300,
+.admin-theme .dark\:border-slate-800,
+.admin-theme .dark\:border-slate-700,
+.admin-theme .dark\:border-slate-600 {
+  border-color: var(--color-border) !important;
+}
+
+.admin-theme .bg-slate-900,
+.admin-theme .text-white {
+  background-color: var(--color-brand) !important;
+  color: var(--color-text-on-dark) !important;
+}
+
+.admin-theme .hover\:bg-slate-800:hover,
+.admin-theme .dark\:hover\:bg-slate-100:hover {
+  background-color: var(--color-brand-hover) !important;
 }

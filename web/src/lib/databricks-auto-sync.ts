@@ -48,6 +48,7 @@ function canAttemptSync(): boolean {
   if (!process.env.POSTGRES_URL) return false;
 
   const settings = loadSettings();
+  if (settings.connectionMode !== "databricks") return false;
   if (settings.cacheOnly) return false;
 
   return Boolean(
