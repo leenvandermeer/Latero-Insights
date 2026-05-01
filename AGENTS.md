@@ -2,19 +2,24 @@
 
 ## Project
 
-**Latero Insights** (`@layer2/meta-insights`) is a standalone responsive
-Next.js application for metadata operations, dashboarding, lineage exploration,
-and operational evidence workflows on top of the Latero MDCF model.
+**Latero Insights** (`@layer2/meta-insights`) is a standalone metadata operations
+product for data teams. It provides pipeline monitoring, data quality visibility,
+lineage exploration, and operational evidence workflows.
 
-The current product architecture is no longer just a direct Databricks-reader.
-It now consists of:
+Latero Insights is a self-contained product, positioned for SaaS delivery.
+It is not a demo dashboard and not coupled to any specific data platform or runtime.
 
-- a **web module** in `src/`
-- an **infra module** for local/dev runtime support (`docker-compose*.yml`, `sql/init/`)
+The product supports two integration modes:
 
-Canonical operational data is persisted in Postgres. The product still supports
-Databricks connectivity for pull-sync and integration scenarios, but dashboard
-read APIs are backed by the Insights read store.
+1. **API mode** — Latero runtimes push events to `/api/v1/*`. Canonical data is
+   stored in Postgres. Dashboards read from the Insights store.
+2. **Databricks mode** — Operators pull data via `POST /api/sync/databricks` into
+   the same Insights store.
+
+The repository is split into two explicit modules:
+
+- a **web module** under `web/`
+- an **infra module** for local/dev runtime support under `infra/`
 
 ## Tech Stack
 
@@ -29,28 +34,27 @@ read APIs are backed by the Insights read store.
 ## Repository Structure
 
 ```text
-data/                   Local writable app data (shared widgets, overrides)
-docs/                   ADRs, requirements, and product assets
-  decisions/            Architecture Decision Records (LADR-xxx)
-  product/              Product assets and collateral
-  requirements/         Normative product and integration requirements
-public/                 Static assets, PWA manifest
-scripts/                Local scripts and utilities
-sql/
-  init/                 Postgres bootstrap SQL for local/dev infra
-src/
-  app/                  Next.js App Router pages and API routes
-    (dashboard)/        Dashboard layout group (DashboardProvider scope)
-    api/                Server-side API routes
-  components/           Shared UI components
-  contexts/             React context (DashboardContext)
-  hooks/                TanStack Query hooks per domain entity
-  lib/                  Core logic: settings, cache, sync, read APIs, adapters
-  styles/               tokens.css (design tokens), responsive.css
-  types/                TypeScript types (dashboard.ts)
+web/
+  data/                 Local writable app data (shared widgets, overrides)
+  public/               Static assets, PWA manifest
+  scripts/              App-local scripts
+  src/
+    app/                Next.js App Router pages and API routes
+      (dashboard)/      Dashboard layout group (DashboardProvider scope)
+      api/              Server-side API routes
+    components/         Shared UI components
+    contexts/           React context (DashboardContext)
+    hooks/              TanStack Query hooks per domain entity
+    lib/                Core logic: settings, cache, sync, read APIs
+    styles/             tokens.css (design tokens), responsive.css
+    types/              TypeScript types (dashboard.ts)
 infra/
   docker/               Compose files, Dockerfiles, Caddy config
   sql/                  Postgres bootstrap SQL for local/dev infra
+docs/
+  decisions/            Architecture Decision Records (LADR-xxx)
+  requirements/         Normative product requirements (LINS-xxx)
+  product/              Product assets and collateral
 ```
 
 ## Key Architecture Rules
@@ -61,15 +65,14 @@ infra/
 - **Three widget tiers:** `system` (registry.ts, built-in), `shared`
   (`/api/widgets/shared`, JSON-persisted in `data/shared-widgets.json`),
   `personal` (localStorage, per-browser).
-- **Read APIs are store-backed.** The primary dashboard APIs read from the
-  Insights read store, not directly from Databricks.
-- **Databricks access stays server-side.** Pull sync and integration logic must
-  stay in server-side code; no credentials are exposed to the browser.
+- **Read APIs are store-backed.** All dashboard data reads from the Insights
+  Postgres store. No browser-side reads from Databricks or any other data platform.
+- **All external connectivity is server-side.** No credentials or direct data
+  platform connections are exposed to the browser.
 - **Infra and web are one system.** Treat Docker/SQL/bootstrap assets as a
   first-class repo module, not as incidental leftovers.
 - **Dashboard store v1 uses localStorage** (`insights-dashboard-store-v1`).
-  Shared widget definitions and some overrides also persist to local JSON files
-  under `data/`.
+  Shared widget definitions persist in `data/shared-widgets.json`.
 - **Runtime settings** are stored in `.cache/settings.json` and take priority
   over environment variables. Token values are stored in plaintext — operators
   must secure filesystem access.
@@ -84,13 +87,13 @@ infra/
 | Route | Purpose |
 |-------|---------|
 | `GET/PUT /api/settings` | Runtime configuration |
-| `POST /api/test-connection` | Databricks connectivity check |
+| `POST /api/test-connection` | Databricks connectivity check (Databricks mode) |
 | `GET /api/health` | Health check |
-| `POST /api/sync/databricks` | Pull sync from Databricks into Insights store |
+| `POST /api/sync/databricks` | Pull sync from Databricks into the Insights store |
+| `POST /api/v1/*` | Push ingest endpoints for Latero runtimes |
 | `GET /api/pipelines` | Pipeline runs |
 | `GET /api/quality` | DQ check results |
 | `GET /api/lineage` | Lineage data |
-| `POST /api/v1/*` | Push ingest endpoints for Latero runtimes |
 | `GET/POST/DELETE /api/widgets/shared` | Shared widget library |
 
 ## Engineering Guardrails
@@ -98,12 +101,10 @@ infra/
 - Do not put Databricks credentials or API tokens in any component or page.
 - Do not add direct `fetch()` calls to API routes from client components — use
   the typed API client in `src/lib/api/` and the query hooks in `src/hooks/`.
-- Do not write SQL in components.
+- Do not write SQL in components or pages.
 - Do not store widget definitions as system widgets without a registry entry.
 - Do not persist shared widgets to localStorage — shared widgets use the
   server-side JSON store.
-- Do not bypass the read-store model by reintroducing direct browser-side
-  reads from Databricks or Postgres.
 - Never place `@theme` blocks inside `@media` queries — this breaks the
   `data-theme` override mechanism (see LADR-006).
 
@@ -119,8 +120,10 @@ infra/
 
 ## What Not To Do
 
-- Do not couple this repository to the Latero MDCF Python package or demo
-  config files.
-- Do not write directly back into customer-managed Databricks meta tables.
+- Do not couple this repository to the Latero Metadata Control Framework Python
+  package or any demo configuration.
+- Do not add a writable connection to Databricks meta tables.
+- Do not introduce a separate database — the JSON file store is intentional
+  for single-tenant deployments.
 - Do not create new top-level directories without an ADR.
 - Do not move system widget logic into shared or personal tiers.

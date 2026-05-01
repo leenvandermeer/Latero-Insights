@@ -1,20 +1,26 @@
-# CLAUDE.md — Layer2 Meta Insights
+# CLAUDE.md — Latero Insights
 
-## Project
+## Product
 
-**Layer2 Meta Insights** (`@layer2/meta-insights`) is a standalone responsive
-Next.js web application that visualizes pipeline metadata, data quality, and
-data lineage stored in the Latero MDCF meta tables. It is a Latero product, not
-a demo artifact.
+**Latero Insights** (`@layer2/meta-insights`) is a standalone metadata operations
+product. It provides pipeline monitoring, data quality visibility, lineage exploration,
+and operational evidence workflows for data teams.
 
-It reads from three standard meta tables written by the Latero runtime:
+Latero Insights is a self-contained product and is positioned for SaaS delivery.
+It is not a demo dashboard, not a Databricks viewer, and not coupled to any specific
+runtime framework.
 
-- `pipeline_runs`
-- `data_quality_checks`
-- `data_lineage`
+## Data Connectivity
 
-These tables live in Databricks Unity Catalog (Delta). Snowflake support is
-deferred to a future release.
+Latero Insights supports two integration modes:
+
+1. **API mode** — Latero runtimes push events via `/api/v1/*` ingest endpoints.
+   The canonical store is Postgres. Dashboards read from the Insights store.
+2. **Databricks mode** — Operators trigger a pull sync via `POST /api/sync/databricks`.
+   Data is pulled from a Databricks SQL Warehouse and written to the Insights store.
+
+Both modes write to the same Postgres read store. The dashboard layer is identical
+regardless of which mode is active. Databricks access is always server-side.
 
 ## Tech Stack
 
@@ -34,17 +40,20 @@ docs/                   ADRs and product requirements
   decisions/            Architecture Decision Records (LADR-xxx)
   requirements/         Normative product requirements (LINS-xxx)
 public/                 Static assets, PWA manifest
-scripts/                Seed cache CLI (seed-cache.ts)
+scripts/                Local scripts and utilities
 src/
   app/                  Next.js App Router pages and API routes
     (dashboard)/        Dashboard layout group (DashboardProvider scope)
-    api/                Server-side API routes (proxied to Databricks)
+    api/                Server-side API routes
   components/           Shared UI components
   contexts/             React context (DashboardContext)
   hooks/                TanStack Query hooks per domain entity
-  lib/                  Core logic: cache, settings, adapters, API client
+  lib/                  Core logic: settings, cache, sync, read APIs
   styles/               tokens.css (design tokens), responsive.css
   types/                TypeScript types (dashboard.ts)
+infra/
+  docker/               Compose files, Dockerfiles, Caddy config
+  sql/                  Postgres bootstrap SQL
 ```
 
 ## Key Architecture Rules
@@ -55,13 +64,12 @@ src/
 - **Three widget tiers:** `system` (registry.ts, built-in), `shared`
   (`/api/widgets/shared`, JSON-persisted in `data/shared-widgets.json`),
   `personal` (localStorage, per-browser).
-- **Data adapter interface.** All Databricks SQL calls go through the typed
-  adapter in `src/lib/adapters/`. No raw SQL in components or pages.
-- **API proxy only.** All data platform calls are server-side API routes.
-  No credentials are exposed to the browser.
-- **Read-only.** No DML against any data platform table.
+- **Read APIs are store-backed.** All dashboard data reads from the Insights
+  Postgres store. No browser-side reads from Databricks or any other data platform.
+- **All external connectivity is server-side.** No credentials or direct data
+  platform connections are exposed to the browser.
 - **Dashboard store v1 uses localStorage** (`insights-dashboard-store-v1`).
-  Server persistence (`/api/dashboards`) is deferred (P4).
+  Shared widget definitions persist in `data/shared-widgets.json`.
 - **Runtime settings** are stored in `.cache/settings.json` and take priority
   over environment variables. Token values are stored in plaintext — operators
   must secure filesystem access.
@@ -76,12 +84,13 @@ src/
 | Route | Purpose |
 |-------|---------|
 | `GET/PUT /api/settings` | Runtime configuration |
-| `POST /api/test-connection` | Databricks connectivity check |
+| `POST /api/test-connection` | Databricks connectivity check (Databricks mode) |
 | `GET /api/health` | Health check |
+| `POST /api/sync/databricks` | Pull sync from Databricks into the Insights store |
+| `POST /api/v1/*` | Push ingest endpoints for Latero runtimes |
 | `GET /api/pipelines` | Pipeline runs |
 | `GET /api/quality` | DQ check results |
 | `GET /api/lineage` | Lineage data |
-| `POST /api/cache/seed` | Generate synthetic demo data |
 | `GET/POST/DELETE /api/widgets/shared` | Shared widget library |
 
 ## Engineering Guardrails
@@ -89,12 +98,10 @@ src/
 - Do not put Databricks credentials or API tokens in any component or page.
 - Do not add direct `fetch()` calls to API routes from client components — use
   the typed API client in `src/lib/api/` and the query hooks in `src/hooks/`.
-- Do not write SQL in components. All queries go through the adapter interface.
+- Do not write SQL in components or pages.
 - Do not store widget definitions as system widgets without a registry entry.
 - Do not persist shared widgets to localStorage — shared widgets use the
   server-side JSON store.
-- Do not add writable database tables. The application is read-only toward
-  the Latero meta tables; `data/shared-widgets.json` is the only writable store.
 - Never place `@theme` blocks inside `@media` queries — this breaks the
   `data-theme` override mechanism (see LADR-006).
 

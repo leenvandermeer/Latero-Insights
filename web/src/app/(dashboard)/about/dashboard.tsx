@@ -16,6 +16,10 @@ import {
   ShieldCheck,
   Sparkles,
   Workflow,
+  Building2,
+  Users,
+  KeyRound,
+  ShieldAlert,
 } from "lucide-react";
 
 const VALUE_PILLARS = [
@@ -111,12 +115,35 @@ const OPERATING_MODEL = [
   },
 ];
 
+const MULTI_TENANT_UX_PRINCIPLES = [
+  {
+    icon: Building2,
+    title: "Tenant context first",
+    text: "Every operational view should make the active installation explicit, so users always know which tenant context they are working in.",
+  },
+  {
+    icon: Users,
+    title: "Role-segregated controls",
+    text: "Tenant users focus on monitoring and analysis, while platform admins own tenant lifecycle, access and key management in Admin Center.",
+  },
+  {
+    icon: KeyRound,
+    title: "Governance in one place",
+    text: "Password resets, user rights, installation provisioning and API key lifecycle are grouped in admin flows to avoid fragmented security operations.",
+  },
+  {
+    icon: ShieldAlert,
+    title: "Auditability by design",
+    text: "Critical actions should be traceable from one admin timeline so teams can explain who changed what and when across tenants.",
+  },
+];
+
 export function AboutDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Product"
-        title="Latero Meta Insights"
+        title="Latero Control"
         description="A Databricks-first workspace for monitoring runs, investigating data quality, understanding lineage and tracing operational evidence back to source metadata."
       />
 
@@ -130,7 +157,7 @@ export function AboutDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm leading-relaxed" style={{ color: "var(--color-text)" }}>
-              Latero Meta Insights helps teams answer four operational questions quickly: what happened, what changed, what is impacted, and what evidence supports that answer.
+              Latero Control helps teams answer four operational questions quickly: what happened, what changed, what is impacted, and what evidence supports that answer.
             </p>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -254,6 +281,36 @@ export function AboutDashboard() {
         ))}
       </div>
 
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2">
+            <Layers3 className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+            Multi-tenant UX principles
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+            In a multi-tenant operating model, product clarity comes from strict separation between tenant-scoped work and cross-tenant governance.
+            Settings and dashboards stay tenant-focused, while Admin Center handles installation, access and security operations.
+          </p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {MULTI_TENANT_UX_PRINCIPLES.map(({ icon: Icon, title, text }) => (
+              <div
+                key={title}
+                className="rounded-xl p-4 space-y-2"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>{title}</p>
+                </div>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>{text}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <div
         className="flex flex-col gap-3 rounded-xl px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
@@ -261,7 +318,7 @@ export function AboutDashboard() {
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>Platform context</p>
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-            Latero Meta Insights is part of the Latero Meta Data Control Framework platform.
+            Latero Control is part of the Latero Meta Data Control Framework platform.
           </p>
         </div>
         <a

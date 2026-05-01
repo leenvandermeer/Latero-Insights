@@ -1,104 +1,67 @@
 # Latero Insights
 
-Metadata operations workspace for the Latero Meta Data Control Framework.
+**Latero Insights** is a standalone metadata operations product for data teams.
+It provides pipeline monitoring, data quality visibility, lineage exploration,
+and operational evidence workflows.
 
-This repository now contains one product split into two explicit modules:
+Latero Insights is a self-contained product, positioned for SaaS delivery.
+It connects to your data environment through one of two integration modes —
+no custom platform coupling required.
 
-1. **Web module** — the Next.js application in `web/`
-2. **Infra module** — Docker/runtime/bootstrap assets in `infra/`
+## Integration modes
 
-There is also a supporting documentation and product-assets area under `docs/`.
+**API mode** — Latero runtimes push pipeline events to `/api/v1/*`. Data lands
+directly in the Insights store. Choose this when you run Latero in your own
+pipelines.
 
-## Current Architecture
+**Databricks mode** — Operators trigger a pull sync via `POST /api/sync/databricks`.
+Latero Insights pulls pipeline, quality and lineage data from a Databricks SQL
+Warehouse into the Insights store. Databricks access is always server-side.
 
-Latero Insights now runs on a hybrid ingest architecture with a single read store:
+Both modes write to the same Postgres read store. The dashboard layer is identical
+regardless of which mode is active.
 
-1. Push ingest: runtimes can publish events to `/api/v1/*`
-2. Pull ingest: operators can run `POST /api/sync/databricks`
-3. Canonical persistence: Insights stores metadata in Postgres
-4. Read APIs: dashboards read from the Insights store
-5. Snapshot fallback: `.cache` remains available for fallback and local resilience
+## Repository structure
 
-In practice, that means the web module is no longer just a Databricks visualizer. It is an application layer on top of an Insights read store, while the infra module provides the local services and bootstrap SQL needed to run that architecture.
-
-## Module Map
-
-### 1. Web Module
-
-Purpose:
-- product UI
-- API routes
-- dashboarding
-- lineage exploration
-- settings and operational workflows
-
-Main locations:
-- `web/src/app`
-- `web/src/components`
-- `web/src/contexts`
-- `web/src/hooks`
-- `web/src/lib`
-- `web/src/styles`
-- `web/src/types`
-- `web/public`
-- `web/data`
-- `web/scripts`
-
-### 2. Infra Module
-
-Purpose:
-- local development infrastructure
-- database bootstrap
-- Docker-based parity with later deployment environments
-
-Main locations:
-- `infra/docker/docker-compose.local.yml`
-- `infra/docker/docker-compose.dev.yml`
-- `infra/docker/docker-compose.prod.yml`
-- `infra/docker/Dockerfile`
-- `infra/docker/Dockerfile.dev`
-- `infra/docker/Caddyfile`
-- `infra/sql/init`
-
-Services in local infra:
-- Postgres
-- Redis
-- Azurite
-
-### 3. Docs and Product Assets
-
-Purpose:
-- ADRs and requirements
-- integration contracts
-- product collateral and reference assets
-
-Main locations:
-- `docs/decisions`
-- `docs/requirements`
-- `docs/product`
-- `CHANGELOG.md`
-
-## Repository Layout
+The repository contains two modules:
 
 ```text
-web/
-  data/                 Local writable app data (shared widgets, overrides)
-  public/               Static assets
-  scripts/              App-local scripts
-  src/                  Latero Insights web module
-infra/
-  docker/               Compose files, Dockerfiles, Caddy config
-  sql/
-    init/               Postgres bootstrap SQL for local/dev infra
-docs/
-  decisions/            Architecture Decision Records
-  product/              Product collateral and assets
-  requirements/         Normative requirements and integration guides
+web/                    Next.js application (product UI, API routes, dashboards)
+infra/                  Local development infrastructure (Docker, Postgres bootstrap)
+docs/                   ADRs and product requirements
 ```
+
+### Web module
+
+```text
+web/src/
+  app/                  Next.js App Router pages and API routes
+    (dashboard)/        Dashboard layout group
+    api/                Server-side API routes
+  components/           Shared UI components
+  hooks/                TanStack Query hooks per domain entity
+  lib/                  Core logic: settings, sync, read APIs
+  styles/               Design tokens and responsive styles
+  types/                TypeScript types
+web/data/               Shared widget library (shared-widgets.json)
+web/public/             Static assets, PWA manifest
+```
+
+### Infra module
+
+```text
+infra/docker/           Compose files, Dockerfiles, Caddy config
+infra/sql/              Postgres bootstrap SQL
+```
+
+Services in local infra:
+- Postgres on `localhost:5432`
+- Redis on `localhost:6379`
+- Azurite on `localhost:10000-10002`
 
 ## Quick Start
 
-### Option A — Web Local, Infra in Docker
+### Option A — Web local, infra in Docker
 
 Recommended for everyday development.
 
@@ -109,16 +72,11 @@ npm run infra:up
 npm run dev
 ```
 
-Open:
-- `http://localhost:3000`
+Open: `http://localhost:3000`
 
-This mode means:
-- infra module runs in Docker
-- web module runs locally with hot reload
+### Option B — Web + infra in Docker
 
-### Option B — Web + Infra in Docker
-
-Useful when you want dev environment parity inside containers.
+Useful for development environment parity inside containers.
 
 ```bash
 npm install
@@ -126,15 +84,9 @@ cp web/.env.example web/.env.local
 npm run dev:docker:up
 ```
 
-Open:
-- `http://localhost:3010`
+Open: `http://localhost:3010`
 
-This mode means:
-- infra module runs in Docker
-- web module also runs in Docker as a dev server
-- source code still lives on the host via bind mount
-
-## Local Infra Setup
+## Local infra
 
 ### Install Docker Desktop
 
@@ -156,11 +108,6 @@ docker compose version
 npm run infra:up
 ```
 
-This starts:
-- Postgres on `localhost:5432`
-- Redis on `localhost:6379`
-- Azurite on `localhost:10000-10002`
-
 ### Reset local database
 
 ```bash
@@ -174,17 +121,57 @@ npm run infra:logs
 npm run infra:down
 ```
 
-## Dev Container Notes
+## Daily workflow
 
-`infra/docker/docker-compose.dev.yml` is intentionally a dev-only overlay for the web module.
+```bash
+# 1. Start Postgres (and Redis / Azurite)
+docker compose -f infra/docker/docker-compose.local.yml up -d
 
-Behavior:
-- the repository is bind-mounted into the container
-- source code stays on the host
+# 2. Start the web dev server
+npm --workspace web run dev
+```
+
+App runs at **http://localhost:3000**.
+
+### Restart dev server (without losing data)
+
+```bash
+pkill -f "next dev" || true
+npm --workspace web run dev
+```
+
+### Restart Postgres
+
+```bash
+docker compose -f infra/docker/docker-compose.local.yml restart postgres
+```
+
+### Status check
+
+```bash
+curl -s http://localhost:3000/api/health
+docker exec insights-local-postgres pg_isready -U insights -d insights
+```
+
+### Full reset (deletes all data)
+
+```bash
+pkill -f "next dev" || true
+docker compose -f infra/docker/docker-compose.local.yml down -v
+docker compose -f infra/docker/docker-compose.local.yml up -d
+npm --workspace web run dev
+```
+
+> **Note:** `-v` removes the Postgres volume including all stored data.
+
+## Dev container
+
+`infra/docker/docker-compose.dev.yml` is a dev-only overlay for the web module.
+
+- The repository is bind-mounted into the container
+- Source code stays on the host
 - `web/.cache`, `web/data`, and `web/.next` stay on the host
-- only `node_modules` lives in a Docker volume
-
-Commands:
+- Only `node_modules` lives in a Docker volume
 
 ```bash
 npm run dev:docker:up
@@ -192,9 +179,7 @@ npm run dev:docker:logs
 npm run dev:docker:down
 ```
 
-## Environment Setup
-
-Copy:
+## Environment setup
 
 ```bash
 cp web/.env.example web/.env.local
@@ -209,19 +194,7 @@ AZURE_STORAGE_BLOB_ENDPOINT=http://127.0.0.1:10000/devstoreaccount1
 AZURE_STORAGE_QUEUE_ENDPOINT=http://127.0.0.1:10001/devstoreaccount1
 ```
 
-Depending on your ingest mode, also configure Databricks credentials in `web/.env.local`.
-
-## Operational Model
-
-Latero Insights is best understood as:
-
-- **Web module**: user experience and operational workflows
-- **Infra module**: local runtime services and bootstrap assets
-
-That split is logical, but the two modules are still intentionally kept in one repository because:
-- they evolve together
-- local setup depends on both
-- the product is still deployed and developed as one system
+For Databricks mode, also configure Databricks credentials in `web/.env.local`.
 
 ## Scripts
 
@@ -230,7 +203,6 @@ npm run dev              # Web module locally
 npm run build
 npm run start
 npm run lint
-npm run seed
 
 npm run infra:up         # Infra module in Docker
 npm run infra:logs
@@ -242,12 +214,3 @@ npm run dev:docker:logs
 npm run dev:docker:down
 ```
 
-## Naming
-
-The product name is **Latero Insights**.
-
-Older documents may still reference:
-- `Layer2 Meta Insights`
-- `Latero Meta Insights`
-
-Those should be treated as legacy names while the documentation is being harmonized.

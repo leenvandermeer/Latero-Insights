@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
 
 export const metadata: Metadata = {
-  title: "Latero Meta Insights",
-  description: "Latero Meta Insights — Metadata observability for data pipelines",
+  title: "Latero Control",
+  description: "Latero Control — Metadata observability for data pipelines",
   manifest: "/manifest.webmanifest",
 };
 

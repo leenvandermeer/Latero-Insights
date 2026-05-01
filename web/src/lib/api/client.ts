@@ -11,7 +11,7 @@ import type {
 } from "./types";
 
 /**
- * Typed API client for Latero Meta Insights.
+ * Typed API client for Latero Control.
  *
  * Pattern: Repository/Gateway pattern — encapsulates all HTTP communication
  * with the BFF (Backend-for-Frontend) API routes.

@@ -23,7 +23,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useDashboards } from "@/contexts/dashboard-context";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
-import { InstallationPicker } from "@/components/navigation/installation-picker";
 import { useBreakpoint } from "@/hooks";
 
 const SYSTEM_NAV = [
@@ -45,6 +44,7 @@ export function Sidebar() {
   const [userDashOpen, setUserDashOpen] = useState(true);
   const [lineageOpen, setLineageOpen] = useState(true);
   const [newDashOpen, setNewDashOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const { userDashboards, deleteDash } = useDashboards();
   const { isTablet, isSmallDesktop } = useBreakpoint();
   // isTablet      = 768–1023px: always collapsed, no expand button
@@ -100,7 +100,12 @@ export function Sidebar() {
   const handleDeleteDash = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = (id: string) => {
     deleteDash(id);
+    setDeleteConfirm(null);
     if (pathname === `/dashboard/${id}`) {
       router.push("/pipelines");
     }
@@ -123,12 +128,12 @@ export function Sidebar() {
         <div className="flex items-center h-14 px-3 shrink-0" style={{ borderBottom: "1px solid var(--color-sidebar-border)" }}>
           {!collapsed ? (
             <div className="flex items-center justify-between w-full">
-              <Link href="/" className="flex items-center gap-2.5 min-w-0 flex-1 h-14 hover:opacity-80 transition-opacity" aria-label="Latero Meta Insights">
+              <Link href="/" className="flex items-center gap-2.5 min-w-0 flex-1 h-14 hover:opacity-80 transition-opacity" aria-label="Latero Control">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/logo/latero-mark-light.svg" alt="Latero" width={28} height={28} className="shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold leading-none tracking-tight truncate" style={{ color: "var(--color-brand, #1B3B6B)" }}>Latero</p>
-                  <p className="text-xs leading-none mt-0.5 truncate" style={{ color: "var(--color-text-subtle)" }}>Meta Insights</p>
+                  <p className="text-xs leading-none mt-0.5 truncate" style={{ color: "var(--color-text-subtle)" }}>Control</p>
                 </div>
               </Link>
               {/* Hide collapse button at md (768–1023px): sidebar is always collapsed there */}
@@ -238,15 +243,21 @@ export function Sidebar() {
           {/* My Dashboards */}
           {!collapsed && (
             <div className="pt-3">
-              <button
-                onClick={() => setUserDashOpen((v) => !v)}
-                className="w-full flex items-center justify-between px-3 pb-1 pt-1"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-sidebar-muted)" }}>
+              <div className="flex items-center justify-between px-3 pb-1 pt-1">
+                <Link
+                  href="/dashboard"
+                  className="text-[10px] font-bold uppercase tracking-widest hover:opacity-70 transition-opacity"
+                  style={{ color: pathname === "/dashboard" ? "var(--color-sidebar-active-text)" : "var(--color-sidebar-muted)" }}
+                >
                   My Dashboards
-                </p>
-                <ChevronDown className={cn("h-3 w-3 transition-transform", !userDashOpen && "-rotate-90")} style={{ color: "var(--color-sidebar-muted)" }} />
-              </button>
+                </Link>
+                <button
+                  onClick={() => setUserDashOpen((v) => !v)}
+                  className="p-0.5 rounded hover:opacity-70 transition-opacity"
+                >
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", !userDashOpen && "-rotate-90")} style={{ color: "var(--color-sidebar-muted)" }} />
+                </button>
+              </div>
 
               {userDashOpen && (
                 <div className="space-y-0.5">
@@ -292,20 +303,33 @@ export function Sidebar() {
           )}
 
           {collapsed && (
-            <button
-              onClick={() => { setCollapsed(false); setNewDashOpen(true); }}
-              className="w-full flex justify-center px-2 py-2.5 rounded-lg"
-              style={{ color: "var(--color-sidebar-muted)" }}
-              title="New Dashboard"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
+            <>
+              <Link
+                href="/dashboard"
+                className="w-full flex justify-center px-2 py-2.5 rounded-lg"
+                style={pathname === "/dashboard" ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
+                onMouseEnter={(e) => { if (pathname !== "/dashboard") { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
+                onMouseLeave={(e) => { if (pathname !== "/dashboard") { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
+                title="My Dashboards"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+              </Link>
+              <button
+                onClick={() => { setCollapsed(false); setNewDashOpen(true); }}
+                className="w-full flex justify-center px-2 py-2.5 rounded-lg"
+                style={{ color: "var(--color-sidebar-muted)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-sidebar-foreground)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-sidebar-muted)"; }}
+                title="New Dashboard"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </>
           )}
         </nav>
 
         {/* Bottom */}
         <div className="px-2 pb-3 space-y-0.5" style={{ borderTop: "1px solid var(--color-sidebar-border)", paddingTop: 12 }}>
-          <InstallationPicker collapsed={collapsed} />
           <Link
             href="/about"
             className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
@@ -321,6 +345,8 @@ export function Sidebar() {
             href="/settings"
             className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
             style={pathname === "/settings" ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
+            onMouseEnter={(e) => { if (pathname !== "/settings") { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
+            onMouseLeave={(e) => { if (pathname !== "/settings") { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
             title={collapsed ? "Settings" : undefined}
           >
             <Settings className="h-4 w-4 shrink-0" />
@@ -339,6 +365,33 @@ export function Sidebar() {
           </button>
         </div>
       </aside>
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl p-6 shadow-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+            <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>Delete dashboard?</h3>
+            <p className="text-xs mb-5" style={{ color: "var(--color-text-muted)" }}>
+              {userDashboards.find((d) => d.id === deleteConfirm)?.name ?? "This dashboard"} will be permanently removed.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium"
+                style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmDelete(deleteConfirm)}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium text-white"
+                style={{ background: "var(--color-error, #dc2626)" }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <NewDashboardModal open={newDashOpen} onClose={() => setNewDashOpen(false)} />
     </>

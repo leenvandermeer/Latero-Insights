@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Latero Meta Insights",
-    short_name: "L2 Insights",
-    description: "Latero Meta Insights — Metadata observability for data pipelines",
+    name: "Latero Control",
+    short_name: "Latero Control",
+    description: "Latero Control — Metadata observability for data pipelines",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

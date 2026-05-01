@@ -9,34 +9,38 @@ export interface Installation {
   active: boolean;
 }
 
+interface SessionUser {
+  email: string;
+  two_factor_enabled: boolean;
+  two_factor_required: boolean;
+  is_admin?: boolean;
+}
+
+interface SessionResponse {
+  authenticated: boolean;
+  user?: SessionUser;
+  active_installation?: Installation | null;
+  installations?: Installation[];
+}
+
 interface InstallationContextValue {
   installation: Installation | null;
-  apiKey: string | null;
+  installations: Installation[];
+  user: SessionUser | null;
   validating: boolean;
   authError: string | null;
-  authenticate: (key: string) => Promise<boolean>;
+  authenticate: (email: string, password: string) => Promise<boolean>;
+  switchInstallation: (installationId: string) => Promise<boolean>;
   logout: () => void;
 }
 
-const STORAGE_KEY = "insights-installation-v1";
-const API_KEY_STORAGE = "insights-api-key-v1";
-
 const InstallationContext = createContext<InstallationContextValue | null>(null);
 
-async function validateKey(key: string): Promise<Installation | null> {
+async function fetchSession(): Promise<SessionResponse | null> {
   try {
-    const res = await fetch("/api/v1/me", {
-      headers: { Authorization: `Bearer ${key}` },
-    });
+    const res = await fetch("/api/auth/session", { credentials: "include" });
     if (!res.ok) return null;
-    const data = await res.json();
-    if (!data.installation_id) return null;
-    return {
-      installation_id: data.installation_id,
-      label: data.label ?? data.installation_id,
-      environment: data.environment ?? "production",
-      active: true,
-    };
+    return (await res.json()) as SessionResponse;
   } catch {
     return null;
   }
@@ -44,58 +48,105 @@ async function validateKey(key: string): Promise<Installation | null> {
 
 export function InstallationProvider({ children }: { children: ReactNode }) {
   const [installation, setInstallation] = useState<Installation | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [installations, setInstallations] = useState<Installation[]>([]);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [validating, setValidating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const storedKey = localStorage.getItem(API_KEY_STORAGE);
-    if (storedKey) {
-      setApiKey(storedKey);
-      validateKey(storedKey).then((inst) => {
-        if (inst) {
-          setInstallation(inst);
-        } else {
-          localStorage.removeItem(API_KEY_STORAGE);
-          localStorage.removeItem(STORAGE_KEY);
-          setApiKey(null);
-        }
-        setHydrated(true);
-      });
-    } else {
+    fetchSession().then((session) => {
+      if (session?.authenticated) {
+        setInstallation(session.active_installation ?? null);
+        setInstallations(session.installations ?? []);
+        setUser(session.user ?? null);
+      }
       setHydrated(true);
+    });
+  }, []);
+
+  const authenticate = useCallback(async (email: string, password: string): Promise<boolean> => {
+    setValidating(true);
+    setAuthError(null);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = (await res.json()) as SessionResponse & { error?: string };
+      if (!res.ok || !data.authenticated) {
+        setAuthError(data.error ?? "Sign-in failed. Please check your credentials.");
+        setValidating(false);
+        return false;
+      }
+      setUser(data.user ?? null);
+      setInstallation(data.active_installation ?? null);
+      setInstallations(data.installations ?? []);
+      setValidating(false);
+      return true;
+    } catch {
+      setAuthError("Sign-in failed due to a network error.");
+      setValidating(false);
+      return false;
     }
   }, []);
 
-  const authenticate = useCallback(async (key: string): Promise<boolean> => {
+  const switchInstallation = useCallback(async (installationId: string): Promise<boolean> => {
     setValidating(true);
     setAuthError(null);
-    const inst = await validateKey(key);
-    setValidating(false);
-    if (!inst) {
-      setAuthError("Ongeldige API key. Controleer de key en probeer opnieuw.");
+    try {
+      const res = await fetch("/api/auth/switch-installation", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ installation_id: installationId }),
+      });
+      const data = (await res.json()) as SessionResponse & { error?: string };
+      if (!res.ok || !data.authenticated) {
+        setAuthError(data.error ?? "Failed to switch organisation.");
+        setValidating(false);
+        return false;
+      }
+      setUser(data.user ?? null);
+      setInstallation(data.active_installation ?? null);
+      setInstallations(data.installations ?? []);
+      setValidating(false);
+      return true;
+    } catch {
+      setAuthError("Failed to switch organisation due to a network error.");
+      setValidating(false);
       return false;
     }
-    setApiKey(key);
-    setInstallation(inst);
-    localStorage.setItem(API_KEY_STORAGE, key);
-    localStorage.setItem(STORAGE_KEY, inst.installation_id);
-    return true;
   }, []);
 
   const logout = useCallback(() => {
-    setApiKey(null);
+    void fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
     setInstallation(null);
+    setInstallations([]);
+    setUser(null);
     setAuthError(null);
-    localStorage.removeItem(API_KEY_STORAGE);
-    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   if (!hydrated) return null;
 
   return (
-    <InstallationContext.Provider value={{ installation, apiKey, validating, authError, authenticate, logout }}>
+    <InstallationContext.Provider
+      value={{
+        installation,
+        installations,
+        user,
+        validating,
+        authError,
+        authenticate,
+        switchInstallation,
+        logout,
+      }}
+    >
       {children}
     </InstallationContext.Provider>
   );

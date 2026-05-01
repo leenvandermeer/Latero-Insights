@@ -98,6 +98,14 @@ export async function verifyInstallationToken(
     `,
     [installationId, token],
   );
+  if (result.rowCount === 1) {
+    await pool.query(
+      `UPDATE insights_installations
+       SET last_token_used_at = NOW(), updated_at = NOW()
+       WHERE installation_id = $1`,
+      [installationId],
+    );
+  }
   return result.rowCount === 1;
 }
 
@@ -208,12 +216,14 @@ export interface InstallationRow {
   valid_until: string | null;
   active: boolean;
   created_at: string;
+  last_token_used_at: string | null;
 }
 
 export async function listInstallations(): Promise<InstallationRow[]> {
   const pool = getPgPool();
+  await pool.query("ALTER TABLE insights_installations ADD COLUMN IF NOT EXISTS last_token_used_at TIMESTAMPTZ");
   const result = await pool.query(
-    `SELECT installation_id, label, environment, subscription_tier, valid_until, active, created_at
+    `SELECT installation_id, label, environment, subscription_tier, valid_until, active, created_at, last_token_used_at
      FROM insights_installations
      ORDER BY created_at DESC`,
   );
@@ -263,4 +273,20 @@ export async function updateInstallation(
 
 export async function revokeInstallation(installationId: string): Promise<boolean> {
   return updateInstallation(installationId, { active: false });
+}
+
+export async function rotateInstallationKey(
+  installationId: string,
+  rawToken: string,
+): Promise<boolean> {
+  const pool = getPgPool();
+  const result = await pool.query(
+    `UPDATE insights_installations
+     SET token_hash = crypt($2, gen_salt('bf')),
+         active = TRUE,
+         updated_at = NOW()
+     WHERE installation_id = $1`,
+    [installationId, rawToken],
+  );
+  return (result.rowCount ?? 0) > 0;
 }
