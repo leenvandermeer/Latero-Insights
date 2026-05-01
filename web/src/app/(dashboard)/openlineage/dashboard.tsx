@@ -14,7 +14,7 @@ import { TableSkeleton } from "@/components/ui/loading-skeleton";
 import { RunEventCard } from "./run-event-card";
 import { JsonDrawer } from "./json-drawer";
 import { SearchableSelect } from "@/app/(dashboard)/lineage/searchable-select";
-import { Search } from "lucide-react";
+import { Network, Search } from "lucide-react";
 import type { LineageHop } from "@/lib/adapters/types";
 import { isContextHop, isDataFlowHop } from "@/lib/lineage-hop-kind";
 
@@ -115,11 +115,7 @@ export function OpenLineageDashboard() {
   if (error) {
     return (
       <div className="space-y-4">
-        <PageHeader
-          eyebrow="Run Evidence" title="OpenLineage Viewer"
-          description="Inspect run events, flow hops and technical lineage evidence in OpenLineage format."
-          actions={<DateRangePicker from={from} to={to} onChange={setRange} />}
-        />
+        <PageHeader title="OpenLineage" icon={Network} actions={<DateRangePicker from={from} to={to} onChange={setRange} />} />
         {isNoDataError(error)
           ? <EmptyState from={from} to={to} onRetry={() => refetch()} />
           : <ErrorMessage message={error.message} onRetry={() => refetch()} />
@@ -131,10 +127,10 @@ export function OpenLineageDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Run Evidence" title="OpenLineage Viewer"
-        description="Inspect run events, flow hops and technical lineage evidence in OpenLineage format."
+        title="OpenLineage"
+        icon={Network}
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
             {response && <SourceIndicator source={response.source} cachedAt={response.cachedAt} />}
             <DateRangePicker from={from} to={to} onChange={setRange} />
           </div>

@@ -13,7 +13,7 @@ import { isNoDataError } from "@/lib/api";
 import { normalizeStatus } from "@/lib/chart-colors";
 import { latestPipelineStepRuns } from "@/lib/pipeline-runs";
 import { useLineageEntities } from "@/hooks/use-lineage-entities";
-import { CheckCircle, AlertTriangle, XCircle, GitBranch, Clock, X } from "lucide-react";
+import { CheckCircle, AlertTriangle, XCircle, GitBranch, Clock, X, Database } from "lucide-react";
 import type { HealthStatus } from "../lineage/lineage-utils";
 import type { DataQualityCheck, LineageHop, PipelineRun } from "@/lib/adapters/types";
 import { isContextHop, isDataFlowHop } from "@/lib/lineage-hop-kind";
@@ -116,11 +116,7 @@ export function DatasetsDashboard() {
   if (error) {
     return (
       <div className="space-y-4">
-        <PageHeader
-          eyebrow="Datasets" title="Dataset Health"
-          description="Operational health, quality signals and lineage context for each dataset."
-          actions={<DateRangePicker from={from} to={to} onChange={setRange} />}
-        />
+        <PageHeader title="Datasets" icon={Database} actions={<DateRangePicker from={from} to={to} onChange={setRange} />} />
         {isNoDataError(error)
           ? <EmptyState from={from} to={to} />
           : <ErrorMessage message={error.message} />
@@ -132,10 +128,10 @@ export function DatasetsDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Datasets" title="Dataset Health"
-        description="Operational health, quality signals and lineage context for each dataset."
+        title="Datasets"
+        icon={Database}
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
             {source && <SourceIndicator source={source} cachedAt={cachedAt} />}
             <DateRangePicker from={from} to={to} onChange={setRange} />
           </div>

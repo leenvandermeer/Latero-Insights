@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useLineageEntities, useLineageAttributes } from "@/hooks";
-import { SourceIndicator, ErrorMessage, EmptyState } from "@/components/ui";
+import { SourceIndicator, ErrorMessage, PageHeader } from "@/components/ui";
 import { Skeleton } from "@/components/ui/loading-skeleton";
 import { isNoDataError } from "@/lib/api";
 import { GraphView } from "./graph-view";
 import { ChainsView } from "./chains-view";
 import { ColumnsView } from "./columns-view";
 import { LineageOverview } from "./overview-view";
-import { GitFork, Link2, Columns3, LayoutDashboard, RefreshCw, Loader2 } from "lucide-react";
+import { GitFork, Link2, Columns3, LayoutDashboard, RefreshCw, Loader2, GitBranch, Settings } from "lucide-react";
 
 type Tab = "overview" | "graph" | "chains" | "columns";
 
@@ -66,17 +66,48 @@ export function LineageDashboard() {
         className="flex flex-col -mx-6 -mt-6"
         style={{ height: "100dvh", paddingTop: "24px" }}
       >
-        <div
-          className="flex items-center justify-between px-6 py-3 shrink-0"
-          style={{ borderBottom: "1px solid var(--color-border)" }}
-        >
-          <span className="font-display font-light italic text-xl" style={{ color: "var(--color-text)" }}>
-            Lineage Explorer
-          </span>
+        <div className="px-6 pt-4 shrink-0">
+          <PageHeader title="Lineage" icon={GitBranch} />
         </div>
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-6 flex items-center justify-center">
           {isNoDataError(entitiesError)
-            ? <EmptyState from="" to="" onRetry={() => refetchEntities()} />
+            ? (
+              <div
+                className="flex flex-col items-center gap-4 rounded-xl border p-10 text-center max-w-md"
+                style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+              >
+                <div
+                  className="flex items-center justify-center w-12 h-12 rounded-xl"
+                  style={{ background: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)" }}
+                >
+                  <GitBranch className="h-6 w-6" />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-base" style={{ color: "var(--color-text)" }}>No lineage data available</p>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                    No lineage data was found for this installation. Make sure your Databricks connection is configured and a sync has been run.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => refetchEntities()}
+                    className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all hover:-translate-y-px"
+                    style={{ background: "var(--color-brand, #1B3B6B)", color: "#fff" }}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Retry
+                  </button>
+                  <a
+                    href="/settings"
+                    className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all hover:-translate-y-px"
+                    style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                    Settings
+                  </a>
+                </div>
+              </div>
+            )
             : <ErrorMessage message={(entitiesError as Error).message} onRetry={() => refetchEntities()} />
           }
         </div>
@@ -90,55 +121,25 @@ export function LineageDashboard() {
       style={{ height: "100dvh", paddingTop: "24px" }}
     >
       {/* Header */}
-      <div
-        className="flex items-center justify-between px-6 py-3 shrink-0"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="min-w-0">
-            <span
-              className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest shrink-0"
-              style={{ color: "var(--color-accent)", letterSpacing: "0.13em" }}
-            >
-              <span
-                aria-hidden="true"
-                style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--color-accent)", flexShrink: 0 }}
-              />
-              Data Lineage
-            </span>
-            <div className="space-y-1">
-              <span
-                className="block font-display font-light italic text-xl leading-none"
-                style={{ color: "var(--color-text)" }}
+      <div className="px-6 pt-4 shrink-0">
+        <PageHeader
+          title="Lineage"
+          icon={GitBranch}
+          actions={
+            <div className="flex items-center gap-1.5">
+              {entitiesRes && <SourceIndicator source={entitiesRes.source} cachedAt={entitiesRes.cachedAt} />}
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing || entitiesLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 disabled:opacity-40"
+                style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "var(--color-surface)" }}
               >
-                Lineage Explorer
-              </span>
-              <p
-                className="text-sm leading-relaxed"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                Explore entity flow, impact paths and column mappings from one shared lineage model.
-              </p>
+                {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                {refreshing ? "Refreshing…" : "Refresh"}
+              </button>
             </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          {entitiesRes && (
-            <SourceIndicator source={entitiesRes.source} cachedAt={entitiesRes.cachedAt} />
-          )}
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing || entitiesLoading}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 disabled:opacity-40"
-            style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "var(--color-surface)" }}
-            title="Refresh lineage data"
-          >
-            {refreshing
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              : <RefreshCw className="h-3.5 w-3.5" />}
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </button>
-        </div>
+          }
+        />
       </div>
 
       {/* Tab bar */}

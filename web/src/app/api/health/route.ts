@@ -5,8 +5,6 @@ import { getCacheStatus, isCacheOnly } from "@/lib/cache";
 import { loadSettings } from "@/lib/settings";
 import { getSessionFromRequest } from "@/lib/session-auth";
 
-const adapter = new DatabricksAdapter();
-
 export async function GET(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const { allowed, remaining } = rateLimit(clientIp);
@@ -22,6 +20,7 @@ export async function GET(request: NextRequest) {
   const settings = loadSettings(installationId);
   const cacheOnly = isCacheOnly();
   const databricksEnabled = settings.connectionMode === "databricks";
+  const adapter = new DatabricksAdapter(installationId ?? undefined);
   const connected = cacheOnly || !databricksEnabled ? false : await adapter.testConnection();
   const cache = getCacheStatus();
 

@@ -46,11 +46,11 @@ async function ensureSyncIndexes(): Promise<void> {
   ]);
 }
 
-export async function syncFromDatabricks(range: { from: string; to: string }): Promise<SyncResult> {
+export async function syncFromDatabricks(range: { from: string; to: string }, installationId?: string): Promise<SyncResult> {
   const from = assertDate(range.from);
   const to = assertDate(range.to);
 
-  const adapter = new DatabricksAdapter();
+  const adapter = new DatabricksAdapter(installationId);
   const pool = getPgPool();
 
   await ensureSyncIndexes();

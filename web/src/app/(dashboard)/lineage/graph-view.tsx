@@ -16,7 +16,7 @@ import {
   Panel,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { RotateCcw, Search, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
+import { RotateCcw, Search } from "lucide-react";
 import type { LineageEntity, LineageAttribute } from "@/lib/adapters/types";
 import { EntityNode } from "./entity-node";
 import { EntityDetailPanel } from "./entity-detail-panel";
@@ -79,9 +79,40 @@ const STATUS_EDGE_COLOR: Record<string, string> = {
   UNKNOWN: "var(--color-border)",
 };
 
+const LAYER_ACCENT: Record<string, string> = {
+  landing: "#6B7280",
+  raw:     "#6B7280",
+  bronze:  "#B45309",
+  silver:  "#0891B2",
+  gold:    "#D97706",
+  file:    "#6B7280",
+};
+
 const FILE_REF_PATTERN = /\.(csv|json|jsonl|parquet|avro|xlsx?)($|[?#])/i;
 
-const nodeTypes: NodeTypes = { entity: EntityNode };
+function LayerHeaderNode({ data }: { data: { label: string; accent: string } }) {
+  return (
+    <div
+      className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest pointer-events-none select-none"
+      style={{
+        borderLeft: `3px solid ${data.accent}`,
+        color: data.accent,
+        background: "var(--color-surface)",
+        border: `1px solid var(--color-border)`,
+        borderLeftColor: data.accent,
+        minWidth: 120,
+        opacity: 0.85,
+      }}
+    >
+      {data.label}
+    </div>
+  );
+}
+
+const nodeTypes: NodeTypes = {
+  entity: EntityNode,
+  layerHeader: LayerHeaderNode as unknown as NodeTypes["layerHeader"],
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -343,6 +374,22 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
   // Build nodes
   const nodes: Node[] = [];
   const virtualFiles: VirtualFileRef[] = [];
+
+  // Add layer header nodes (rendered above the graph, follow zoom/pan)
+  for (const col of cols) {
+    const x = cols.indexOf(col) * X_SPACING;
+    const accent = LAYER_ACCENT[col] ?? "var(--color-border)";
+    nodes.push({
+      id: `__layer_header__${col}`,
+      type: "layerHeader",
+      position: { x: x - 16, y: -52 },
+      data: { label: col.charAt(0).toUpperCase() + col.slice(1), accent },
+      selectable: false,
+      draggable: false,
+      connectable: false,
+    });
+  }
+
   for (const col of cols) {
     const layerEntities = [...(byLayer.get(col) ?? [])].sort((a, b) => chainSortKey(a).localeCompare(chainSortKey(b)));
     const x = cols.indexOf(col) * X_SPACING;
@@ -557,7 +604,6 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
   const [search, setSearch] = useState("");
   const [layerFilter, setLayerFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [datasetFocus, setDatasetFocus] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [flow, setFlow] = useState<ReactFlowInstance | null>(null);
@@ -632,10 +678,11 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
     return ["all", ...LAYER_ORDER.filter((l) => present.has(l)), ...[...present].filter((l) => !LAYER_ORDER.includes(l))];
   }, [focusedEntities]);
 
-  // Apply filters as opacity on nodes
+  // Apply filters as opacity on nodes (skip layer header nodes — they have no GraphNodeData)
   const filteredNodes = useMemo(() => {
     const q = search.toLowerCase().trim();
     return nodes.map((n) => {
+      if (n.type === "layerHeader") return n;
       const d = n.data as unknown as GraphNodeData;
       const matchSearch = !q || d.label.toLowerCase().includes(q) || d.fullFqn.toLowerCase().includes(q);
       const matchLayer = layerFilter === "all" || d.layer.toLowerCase() === layerFilter;
@@ -650,7 +697,7 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
       const matchedEntity = focusedEntities.find((e) => lineageEntityKey(e) === selectedNodeId);
       if (matchedEntity) return matchedEntity;
 
-      const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+      const selectedNode = nodes.find((node) => node.id === selectedNodeId && node.type !== "layerHeader");
       if (!selectedNode) return null;
 
       const data = selectedNode.data as unknown as GraphNodeData;
@@ -683,18 +730,26 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
       {/* Toolbar */}
       <div
         className="flex items-center gap-2 px-4 py-2 shrink-0 flex-wrap"
-        style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}
+        style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-card)" }}
       >
         {/* Dataset focus */}
         <select
           value={datasetFocus ?? ""}
           onChange={(e) => { setDatasetFocus(e.target.value || null); setSelectedNodeId(null); }}
-          className="text-xs rounded-lg px-2.5 py-1.5 outline-none max-w-[160px]"
-          style={{ background: "var(--color-card)", border: `1px solid ${datasetFocus ? "var(--color-brand)" : "var(--color-border)"}`, color: "var(--color-text)", fontWeight: datasetFocus ? 600 : undefined }}
+          className="text-xs rounded-lg px-2.5 py-1.5 outline-none max-w-[160px] cursor-pointer"
+          style={{
+            background: "var(--color-surface)",
+            border: `1.5px solid ${datasetFocus ? "var(--color-primary)" : "var(--color-border)"}`,
+            color: datasetFocus ? "var(--color-primary)" : "var(--color-text)",
+            fontWeight: datasetFocus ? 600 : undefined,
+          }}
         >
           <option value="">All datasets</option>
           {datasetOptions.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
+
+        {/* Divider */}
+        <span style={{ width: 1, height: 20, background: "var(--color-border)", flexShrink: 0 }} />
 
         {/* Search */}
         <div className="relative">
@@ -703,59 +758,54 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search entities…"
-            className="text-xs rounded-lg pl-7 pr-3 py-1.5 w-44 outline-none"
-            style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+            placeholder="Search…"
+            className="text-xs rounded-lg pl-7 pr-3 py-1.5 w-36 outline-none"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
           />
         </div>
 
-        {/* Filter toggle */}
-        <button
-          onClick={() => setFiltersOpen((p) => !p)}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
-          style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: filtersOpen ? "var(--color-surface)" : "transparent" }}
+        {/* Layer filter pills */}
+        <div className="flex items-center gap-1">
+          {layerOptions.map((l) => {
+            const accent = LAYER_ACCENT[l] ?? "var(--color-text-muted)";
+            const active = layerFilter === l;
+            return (
+              <button
+                key={l}
+                onClick={() => setLayerFilter(l)}
+                className="text-[10px] font-bold uppercase tracking-wide rounded px-2 py-1 transition-colors"
+                style={{
+                  background: active ? accent : "transparent",
+                  color: active ? "#fff" : "var(--color-text-muted)",
+                  border: `1px solid ${active ? accent : "var(--color-border)"}`,
+                }}
+              >
+                {l === "all" ? "All" : l}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Status filter */}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="text-xs rounded-lg px-2.5 py-1.5 outline-none cursor-pointer"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
         >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Filters
-          {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-        </button>
-
-        {filtersOpen && (
-          <>
-            {/* Layer filter */}
-            <select
-              value={layerFilter}
-              onChange={(e) => setLayerFilter(e.target.value)}
-              className="text-xs rounded-lg px-2.5 py-1.5 outline-none"
-              style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
-            >
-              {layerOptions.map((l) => (
-                <option key={l} value={l}>{l === "all" ? "All layers" : l.charAt(0).toUpperCase() + l.slice(1)}</option>
-              ))}
-            </select>
-
-            {/* Status filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs rounded-lg px-2.5 py-1.5 outline-none"
-              style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
-            >
-              <option value="all">All statuses</option>
-              <option value="success">Success</option>
-              <option value="warning">Warning</option>
-              <option value="partial">Partial</option>
-              <option value="in_progress">In progress</option>
-              <option value="failed">Failed</option>
-              <option value="unknown">Unknown</option>
-            </select>
-          </>
-        )}
+          <option value="all">All statuses</option>
+          <option value="success">Success</option>
+          <option value="warning">Warning</option>
+          <option value="partial">Partial</option>
+          <option value="in_progress">In progress</option>
+          <option value="failed">Failed</option>
+          <option value="unknown">Unknown</option>
+        </select>
 
         {/* Reset layout */}
         <button
           onClick={handleResetLayout}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
           style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
           title="Reset node positions"
         >
@@ -766,7 +816,7 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
         <span className="ml-auto text-xs" style={{ color: "var(--color-text-muted)" }}>
           {focusedEntities.length}{datasetFocus ? ` of ${normalizedEntities.length}` : ""} entit{focusedEntities.length === 1 ? "y" : "ies"}
           {refreshedAt && (
-            <span> · updated {(() => { try { return new Date(refreshedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); } catch { return refreshedAt; } })()}</span>
+            <span> · {(() => { try { return new Date(refreshedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); } catch { return refreshedAt; } })()}</span>
           )}
         </span>
       </div>

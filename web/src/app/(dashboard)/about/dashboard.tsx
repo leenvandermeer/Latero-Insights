@@ -10,6 +10,7 @@ import {
   Database,
   ExternalLink,
   GitBranch,
+  Info,
   Layers3,
   Radar,
   Search,
@@ -141,11 +142,7 @@ const MULTI_TENANT_UX_PRINCIPLES = [
 export function AboutDashboard() {
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Product"
-        title="Latero Control"
-        description="A Databricks-first workspace for monitoring runs, investigating data quality, understanding lineage and tracing operational evidence back to source metadata."
-      />
+      <PageHeader title="About" icon={Info} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
@@ -238,8 +235,35 @@ export function AboutDashboard() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-            The product reads directly from the Latero Meta Data Control Framework runtime. That shared model keeps operational dashboards, dataset views, lineage and OpenLineage aligned.
+            All data lands in a single Postgres read store, regardless of how it arrived. Runtimes can push events via the API ingest endpoints, or operators can trigger a pull sync from Databricks. Either way, the dashboard layer reads from the same canonical store — keeping operational views, lineage and quality aligned.
           </p>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div
+              className="rounded-xl p-4 space-y-1.5"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+            >
+              <div className="flex items-center gap-2">
+                <Workflow className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+                <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>API ingest</span>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                Push pipeline runs, quality checks and lineage events via <code className="font-mono">/api/v1/*</code> endpoints from any runtime.
+              </p>
+            </div>
+            <div
+              className="rounded-xl p-4 space-y-1.5"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+            >
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+                <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Databricks sync</span>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                Pull from a Databricks SQL Warehouse via a scheduled or manual sync. Data is written to the same Postgres store on arrival.
+              </p>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {META_TABLES.map(({ icon: Icon, name, desc }) => (

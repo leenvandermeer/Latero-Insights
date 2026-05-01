@@ -1,72 +1,66 @@
-import { cn } from "@/lib/utils";
+"use client";
+
+import type { LucideIcon } from "lucide-react";
+import { useInstallation } from "@/contexts/installation-context";
 
 interface PageHeaderProps {
   title: string;
+  icon?: LucideIcon;
+  actions?: React.ReactNode;
+  // Legacy props — accepted but no longer rendered
   eyebrow?: string;
   description?: string;
-  actions?: React.ReactNode;
   className?: string;
 }
 
-export function PageHeader({ title, eyebrow, description, actions, className }: PageHeaderProps) {
+const ENV_STYLE: Record<string, { bg: string; color: string; dot: string }> = {
+  prod:       { bg: "rgba(239,68,68,0.10)",   color: "#dc2626", dot: "#ef4444" },
+  production: { bg: "rgba(239,68,68,0.10)",   color: "#dc2626", dot: "#ef4444" },
+  staging:    { bg: "rgba(245,158,11,0.11)",  color: "#b45309", dot: "#f59e0b" },
+  acc:        { bg: "rgba(245,158,11,0.11)",  color: "#b45309", dot: "#f59e0b" },
+  dev:        { bg: "rgba(8,145,178,0.10)",   color: "#0e7490", dot: "#06b6d4" },
+  develop:    { bg: "rgba(8,145,178,0.10)",   color: "#0e7490", dot: "#06b6d4" },
+  test:       { bg: "rgba(139,92,246,0.10)",  color: "#7c3aed", dot: "#8b5cf6" },
+};
+
+function envStyle(env: string) {
+  return ENV_STYLE[env?.toLowerCase()] ?? { bg: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)", dot: "var(--color-text-muted)" };
+}
+
+export function PageHeader({ title, icon: Icon, actions }: PageHeaderProps) {
+  const { installation } = useInstallation();
+  const env = installation?.environment;
+  const label = installation?.label ?? installation?.installation_id;
+  const style = env ? envStyle(env) : null;
+
   return (
     <div
-      className={cn("relative overflow-hidden rounded-2xl mb-6 px-8 py-8", className)}
-      style={{
-        background: "linear-gradient(135deg, var(--color-surface) 60%, var(--color-brand-subtle) 100%)",
-        border: "1px solid var(--color-border)",
-      }}
+      className="flex items-center gap-3 mb-5 min-h-[44px]"
+      style={{ borderBottom: "1px solid var(--color-border)", paddingBottom: "12px" }}
     >
-      {/* Dot-grid texture — top right */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          inset: 0,
-          backgroundImage: "radial-gradient(circle, rgba(75,123,181,0.13) 1.5px, transparent 1.5px)",
-          backgroundSize: "24px 24px",
-          maskImage: "radial-gradient(ellipse 60% 90% at 95% 10%, black 0%, transparent 100%)",
-          WebkitMaskImage: "radial-gradient(ellipse 60% 90% at 95% 10%, black 0%, transparent 100%)",
-          pointerEvents: "none",
-        }}
-      />
+      {/* Left: icon + title */}
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        {Icon && <Icon className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />}
+        <h1
+          className="text-[17px] font-semibold leading-none truncate"
+          style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}
+        >
+          {title}
+        </h1>
+      </div>
 
-      <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          {eyebrow && (
-            <p
-              className="text-xs font-bold uppercase tracking-widest mb-2"
-              style={{ color: "var(--color-accent)", letterSpacing: "0.13em" }}
-            >
-              <span
-                aria-hidden="true"
-                style={{
-                  display: "inline-block",
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: "var(--color-accent)",
-                  marginRight: 8,
-                  verticalAlign: "middle",
-                  marginBottom: 2,
-                }}
-              />
-              {eyebrow}
-            </p>
-          )}
-          <h1
-            className="font-display font-light italic leading-tight"
-            style={{ fontSize: "clamp(1.5rem, 3vw, 2.25rem)", color: "var(--color-text)", letterSpacing: "-0.02em" }}
+      {/* Right: env pill + actions */}
+      <div className="flex items-center gap-2 shrink-0">
+        {env && style && (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"
+            style={{ background: style.bg, color: style.color }}
           >
-            {title}
-          </h1>
-          {description && (
-            <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--color-text-muted)", maxWidth: 560 }}>
-              {description}
-            </p>
-          )}
-        </div>
-        {actions && <div className="shrink-0">{actions}</div>}
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: style.dot }} />
+            {env}
+          </span>
+        )}
+        {actions && <div className="flex items-center gap-1.5">{actions}</div>}
       </div>
     </div>
   );

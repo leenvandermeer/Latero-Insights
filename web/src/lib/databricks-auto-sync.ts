@@ -63,7 +63,7 @@ async function runSync(reason: string): Promise<void> {
 
   try {
     const range = defaultRange(getSyncWindowDays());
-    await syncFromDatabricks(range);
+    await syncFromDatabricks(range, undefined);
   } catch (err) {
     state.lastError = err instanceof Error ? err.message : "Auto-sync failed";
     console.warn(`[auto-sync] ${reason}: ${state.lastError}`);

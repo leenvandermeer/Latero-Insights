@@ -127,14 +127,11 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
         {/* Chain */}
         {entity.lineage_group_id && (
           <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)" }}>Dataset chain</dt>
+            <dt className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)" }}>Chain</dt>
             <dd className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>{datasetLabel}</dd>
-            <p className="text-[10px] font-mono break-all mt-1" style={{ color: "var(--color-text-muted)" }} title={entity.lineage_group_id}>
-              Technical chain id: {entity.lineage_group_id}
-            </p>
             {entity.last_completed_layer && (
               <p className="text-[10px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-                Last completed: <strong style={{ color: "var(--color-text)" }}>{entity.last_completed_layer}</strong>
+                Last completed layer: <strong style={{ color: "var(--color-text)" }}>{entity.last_completed_layer}</strong>
               </p>
             )}
           </div>
@@ -191,7 +188,7 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
               Column Lineage
             </dt>
             <p className="mb-2 text-[10px]" style={{ color: "var(--color-text-muted)" }}>
-              {outgoing.length + incoming.length} current mappings from `lineage_attributes_current`.
+              {outgoing.length + incoming.length} current column mappings
             </p>
             {outgoing.length > 0 && (
               <div className="space-y-1 mb-2">

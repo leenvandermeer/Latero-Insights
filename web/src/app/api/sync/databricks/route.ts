@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
   const started = Date.now();
 
   try {
-    const synced = await syncFromDatabricks({ from, to });
+    const synced = await syncFromDatabricks({ from, to }, session.active_installation_id ?? undefined);
     const duration_ms = Date.now() - started;
 
     const response = NextResponse.json({ synced, duration_ms, range: { from, to } });

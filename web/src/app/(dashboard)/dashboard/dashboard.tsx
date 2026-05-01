@@ -258,163 +258,154 @@ export function DashboardCanvas({ dashboardId }: Props) {
         <div className="flex-1 min-w-0 space-y-4 p-0 overflow-hidden pr-1">
         {/* Dashboard header */}
         <div
-          className="relative rounded-2xl mb-2 px-5 py-4"
-          style={{
-            background: "linear-gradient(135deg, var(--color-surface) 60%, var(--color-brand-subtle) 100%)",
-            border: editMode ? "1px solid var(--color-accent)" : "1px solid var(--color-border)",
-            transition: "border-color 0.2s",
-          }}
+          className="flex items-center gap-3 mb-5 min-h-[44px]"
+          style={{ borderBottom: `1px solid ${editMode ? "var(--color-accent)" : "var(--color-border)"}`, paddingBottom: "12px", transition: "border-color 0.2s" }}
         >
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            {/* Left: eyebrow + title with dashboard switcher */}
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "var(--color-accent)", letterSpacing: "0.11em" }}>
-                <span aria-hidden="true" style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: "var(--color-accent)", marginRight: 7, verticalAlign: "middle", marginBottom: 2 }} />
-                {isSystem ? "System Dashboard" : "Dashboard"}
-              </p>
+          {/* Left: icon + title */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <LayoutGrid className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
 
-              {/* Title — inline name editor OR static title */}
-              {editingName ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    autoFocus
-                    value={nameInput}
-                    onChange={(e) => setNameInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
-                    className="text-2xl font-display font-light italic rounded px-1 focus:outline-none focus:ring-2"
-                    style={{ color: "var(--color-text)", background: "transparent", borderBottom: "2px solid var(--color-accent)", minWidth: 0 }}
-                  />
-                  <button onClick={saveName} className="p-1 rounded" style={{ color: "var(--color-accent)" }}><Check className="h-4 w-4" /></button>
-                </div>
-              ) : (
-                <div className="relative group/title">
-                  <h1
-                    className="font-display font-light italic leading-tight"
-                    style={{ fontSize: "clamp(1.35rem, 2.2vw, 1.9rem)", color: "var(--color-text)", letterSpacing: "-0.02em" }}
-                  >
-                    {dashboard.name}
-                  </h1>
-                  {!isSystem && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setEditingName(true); setNameInput(dashboard.name); }}
-                      className="absolute -right-7 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover/title:opacity-100 transition-opacity"
-                      style={{ color: "var(--color-text-subtle)" }}
-                      title="Edit name"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {dashboard.description && !editMode && (
-                <p className="mt-0.5 text-xs" style={{ color: "var(--color-text-muted)" }}>{dashboard.description}</p>
-              )}
-              {editMode && !isSystem && (
+            {editingName ? (
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <input
-                  type="text"
-                  value={descInput}
-                  onChange={(e) => setDescInput(e.target.value)}
-                  onBlur={() => { if (nameInput.trim()) renameDash(dashboardId, nameInput.trim(), descInput.trim() || undefined); }}
-                  onDoubleClick={() => setEditingName(true)}
-                  placeholder="Add a subtitle…"
-                  className="mt-1 w-full text-sm rounded px-1 focus:outline-none focus:ring-1"
-                  style={{ color: "var(--color-text-muted)", background: "transparent", borderBottom: "1px dashed var(--color-border)" }}
+                  autoFocus
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
+                  className="text-[17px] font-semibold rounded px-1 focus:outline-none min-w-0 flex-1"
+                  style={{ color: "var(--color-text)", background: "transparent", borderBottom: "2px solid var(--color-accent)", letterSpacing: "-0.02em" }}
                 />
-              )}
-            </div>
-
-            <div className="flex shrink-0 items-center gap-2 flex-wrap justify-end">
-              <DateRangePicker from={from} to={to} onChange={setRange} />
-
-              {publishDone && (
-                <span
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium"
-                  style={{ background: "rgba(34,197,94,0.12)", color: "#16a34a" }}
-                >
+                <button onClick={saveName} className="p-1 rounded shrink-0" style={{ color: "var(--color-accent)" }}>
                   <Check className="h-3.5 w-3.5" />
-                  Published
-                </span>
-              )}
-
-              {editMode ? (
-                isSystem ? (
-                  <Button
-                    variant="primary"
-                    onClick={handlePublish}
-                    disabled={publishing}
+                </button>
+              </div>
+            ) : (
+              <div className="relative group/title min-w-0 flex-1 flex items-center gap-1.5">
+                <h1
+                  className="text-[17px] font-semibold leading-none truncate"
+                  style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}
+                >
+                  {dashboard.name}
+                </h1>
+                {!isSystem && editMode && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingName(true); setNameInput(dashboard.name); }}
+                    className="p-1 rounded opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0"
+                    style={{ color: "var(--color-text-muted)" }}
+                    title="Edit name"
                   >
-                    <Globe className="h-4 w-4" />
-                    {publishing ? "Publishing…" : "Publish for everyone"}
-                  </Button>
-                ) : (
-                  <Button variant="secondary" onClick={() => { setEditMode(false); setPendingRemove(null); setConfigTarget(null); }}>
-                    <Check className="h-4 w-4" />
-                    Done
-                  </Button>
-                )
-              ) : (
-                <div className="relative">
-                  <Button variant="ghost" size="sm" onClick={() => setMenuOpen((v) => !v)} style={{ padding: "0.5rem" }}>
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                  {menuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                      <div
-                        className="absolute right-0 top-full mt-1 w-64 rounded-xl py-1 z-20"
-                        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown, 0 8px 24px rgba(27,59,107,0.12))" }}
-                      >
-                        {installation && installations.length > 1 && (
-                          <>
-                            <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
-                              Switch organization
-                            </p>
-                            {installations.map((org) => {
-                              const active = org.installation_id === installation.installation_id;
-                              return (
-                                <button
-                                  key={org.installation_id}
-                                  onClick={() => {
-                                    void switchInstallation(org.installation_id);
-                                    setMenuOpen(false);
-                                  }}
-                                  disabled={validating}
-                                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)] disabled:opacity-60"
-                                  style={{ color: "var(--color-text)" }}
-                                >
-                                  <span className="truncate">{org.label ?? org.installation_id}</span>
-                                  {active ? <Check className="h-4 w-4" style={{ color: "var(--color-accent)" }} /> : null}
-                                </button>
-                              );
-                            })}
-                            <div className="my-1 border-t" style={{ borderColor: "var(--color-border)" }} />
-                          </>
-                        )}
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
-                        <button onClick={() => { setEditMode(true); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
-                          <Pencil className="h-4 w-4" /> Edit
-                        </button>
-                        <button onClick={() => { duplicateDash(dashboardId); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
-                          <Copy className="h-4 w-4" /> Duplicate
-                        </button>
-                        {isSystem ? (
-                          hasOverride ? (
-                            <button onClick={handleResetOverride} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-error, #dc2626)" }}>
-                              <RotateCcw className="h-4 w-4" /> Reset to default
-                            </button>
-                          ) : null
-                        ) : (
-                          <button onClick={() => { resetDash(dashboardId); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-error, #dc2626)" }}>
-                            <RotateCcw className="h-4 w-4" /> Reset layout
+          {/* Right: env pill + date + controls */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {(() => {
+              const env = installation?.environment;
+              if (!env) return null;
+              const styles: Record<string, { bg: string; color: string; dot: string }> = {
+                prod:       { bg: "rgba(239,68,68,0.10)",  color: "#dc2626", dot: "#ef4444" },
+                production: { bg: "rgba(239,68,68,0.10)",  color: "#dc2626", dot: "#ef4444" },
+                staging:    { bg: "rgba(245,158,11,0.11)", color: "#b45309", dot: "#f59e0b" },
+                acc:        { bg: "rgba(245,158,11,0.11)", color: "#b45309", dot: "#f59e0b" },
+                dev:        { bg: "rgba(8,145,178,0.10)",  color: "#0e7490", dot: "#06b6d4" },
+              };
+              const s = styles[env.toLowerCase()] ?? { bg: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)", dot: "var(--color-text-muted)" };
+              return (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"
+                  style={{ background: s.bg, color: s.color }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.dot }} />
+                  {env}
+                </span>
+              );
+            })()}
+
+            <DateRangePicker from={from} to={to} onChange={setRange} />
+
+            {publishDone && (
+              <span
+                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium"
+                style={{ background: "rgba(34,197,94,0.12)", color: "#16a34a" }}
+              >
+                <Check className="h-3 w-3" />
+                Published
+              </span>
+            )}
+
+            {editMode ? (
+              isSystem ? (
+                <Button variant="primary" onClick={handlePublish} disabled={publishing}>
+                  <Globe className="h-3.5 w-3.5" />
+                  {publishing ? "Publishing…" : "Publish"}
+                </Button>
+              ) : (
+                <Button variant="secondary" onClick={() => { setEditMode(false); setPendingRemove(null); setConfigTarget(null); }}>
+                  <Check className="h-3.5 w-3.5" />
+                  Done
+                </Button>
+              )
+            ) : (
+              <div className="relative">
+                <Button variant="ghost" size="sm" onClick={() => setMenuOpen((v) => !v)} style={{ padding: "0.375rem" }}>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                    <div
+                      className="absolute right-0 top-full mt-1 w-56 rounded-xl py-1 z-20"
+                      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-dropdown, 0 8px 24px rgba(27,59,107,0.12))" }}
+                    >
+                      {installation && installations.length > 1 && (
+                        <>
+                          <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+                            Switch organization
+                          </p>
+                          {installations.map((org) => {
+                            const active = org.installation_id === installation.installation_id;
+                            return (
+                              <button
+                                key={org.installation_id}
+                                onClick={() => { void switchInstallation(org.installation_id); setMenuOpen(false); }}
+                                disabled={validating}
+                                className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)] disabled:opacity-60"
+                                style={{ color: "var(--color-text)" }}
+                              >
+                                <span className="truncate">{org.label ?? org.installation_id}</span>
+                                {active ? <Check className="h-4 w-4" style={{ color: "var(--color-accent)" }} /> : null}
+                              </button>
+                            );
+                          })}
+                          <div className="my-1 border-t" style={{ borderColor: "var(--color-border)" }} />
+                        </>
+                      )}
+                      <button onClick={() => { setEditMode(true); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
+                        <Pencil className="h-4 w-4" /> Edit
+                      </button>
+                      <button onClick={() => { duplicateDash(dashboardId); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
+                        <Copy className="h-4 w-4" /> Duplicate
+                      </button>
+                      {isSystem ? (
+                        hasOverride ? (
+                          <button onClick={handleResetOverride} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-error, #dc2626)" }}>
+                            <RotateCcw className="h-4 w-4" /> Reset to default
                           </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
+                        ) : null
+                      ) : (
+                        <button onClick={() => { resetDash(dashboardId); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-error, #dc2626)" }}>
+                          <RotateCcw className="h-4 w-4" /> Reset layout
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
