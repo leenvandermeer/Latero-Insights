@@ -84,24 +84,23 @@ export function AdminLoginForm() {
   }
 
   const fieldStyle = (focused: boolean): React.CSSProperties => ({
-    background: "#ffffff",
-    border: `1px solid ${focused ? "#1e293b" : "#e2e8f0"}`,
-    color: "#0f172a",
+    background: "var(--color-bg)",
+    border: `1px solid ${focused ? "var(--color-border-focus)" : "var(--color-border)"}`,
+    color: "var(--color-text)",
     outline: "none",
-    colorScheme: "light",
   });
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm" style={{ colorScheme: "light" }}>
+    <div className="w-full max-w-sm rounded-2xl p-8 shadow-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
       {/* Header */}
       <div className="mb-8 flex flex-col items-center gap-2">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-900">
-          <ShieldAlert className="h-5 w-5 text-white" />
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: "var(--color-brand)" }}>
+          <ShieldAlert className="h-5 w-5" style={{ color: "var(--color-text-on-dark)" }} />
         </div>
-        <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+        <h1 className="text-lg font-bold tracking-tight" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
           Latero Control
         </h1>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
           {step === "totp"
             ? "Enter the 6-digit code from your authenticator app."
             : "Platform operator access. Authorised personnel only."}
@@ -109,7 +108,7 @@ export function AdminLoginForm() {
       </div>
 
       {error && (
-        <div className="mb-4 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-xs text-red-700 border border-red-200">
+        <div className="mb-4 flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs" style={{ background: "var(--color-error-subtle)", color: "var(--color-error)", border: "1px solid var(--color-error)" }}>
           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>
@@ -118,9 +117,9 @@ export function AdminLoginForm() {
       {step === "credentials" ? (
         <form onSubmit={(e) => void handleCredentials(e)} className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Email</label>
+            <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Email</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "var(--color-text-subtle)" }} />
               <input
                 type="email"
                 autoComplete="username"
@@ -137,9 +136,9 @@ export function AdminLoginForm() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Password</label>
+            <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "var(--color-text-subtle)" }} />
               <input
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
@@ -155,7 +154,8 @@ export function AdminLoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ color: "var(--color-text-subtle)" }}
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -166,7 +166,8 @@ export function AdminLoginForm() {
           <button
             type="submit"
             disabled={loading || !email.trim() || !password.trim()}
-            className="mt-2 w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50 bg-slate-900 hover:bg-slate-800"
+            className="mt-2 w-full rounded-full py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+            style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
@@ -174,11 +175,11 @@ export function AdminLoginForm() {
       ) : (
         <form onSubmit={(e) => void handleTotp(e)} className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">
+            <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
               Authenticator code
             </label>
             <div className="relative">
-              <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "var(--color-text-subtle)" }} />
               <input
                 type="text"
                 inputMode="numeric"
@@ -200,7 +201,8 @@ export function AdminLoginForm() {
           <button
             type="submit"
             disabled={loading || totpCode.length < 6}
-            className="mt-2 w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+            className="mt-2 w-full rounded-full py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+            style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
           >
             {loading ? "Verifying…" : "Verify"}
           </button>
@@ -208,7 +210,8 @@ export function AdminLoginForm() {
           <button
             type="button"
             onClick={() => { setStep("credentials"); setError(null); setTotpCode(""); }}
-            className="w-full text-xs text-slate-500 hover:text-slate-700 py-1"
+            className="w-full text-xs py-1"
+            style={{ color: "var(--color-text-subtle)" }}
           >
             ← Back to sign in
           </button>

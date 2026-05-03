@@ -170,7 +170,7 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
     >
       <div
         className="w-full max-w-md rounded-2xl p-8 shadow-lg"
-        style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
         {/* Header */}
         <div className="flex flex-col items-center mb-8">

@@ -109,11 +109,18 @@ export async function ensureAuthSchema(): Promise<void> {
        DROP CONSTRAINT IF EXISTS insights_sessions_active_installation_id_fkey`,
   );
   await pool.query(
-    `ALTER TABLE insights_sessions
-       ADD CONSTRAINT IF NOT EXISTS insights_sessions_active_installation_id_fkey
-         FOREIGN KEY (active_installation_id)
-         REFERENCES insights_installations(installation_id)
-         ON DELETE SET NULL`,
+    `DO $$
+     BEGIN
+       IF NOT EXISTS (
+         SELECT 1 FROM pg_constraint WHERE conname = 'insights_sessions_active_installation_id_fkey'
+       ) THEN
+         ALTER TABLE insights_sessions
+           ADD CONSTRAINT insights_sessions_active_installation_id_fkey
+             FOREIGN KEY (active_installation_id)
+             REFERENCES insights_installations(installation_id)
+             ON DELETE SET NULL;
+       END IF;
+     END $$`,
   );
 }
 
