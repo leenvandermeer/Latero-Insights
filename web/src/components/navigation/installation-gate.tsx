@@ -309,58 +309,6 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
               </form>
             )}
 
-            {/* Lokaal formulier zonder SSO (local_only) */}
-            {!isSsoAvailable && (
-              <form onSubmit={handleLocalSubmit} className="space-y-4">
-                <div className="relative">
-                  <Lock
-                    className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
-                    style={{ color: "var(--color-text-muted)" }}
-                  />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Your password"
-                    autoComplete="current-password"
-                    className="w-full pl-9 pr-10 py-2.5 text-sm outline-none transition-colors"
-                    style={{ ...inputStyle(passwordFocused), borderRadius: 12 }}
-                    onFocus={() => setPasswordFocused(true)}
-                    onBlur={() => setPasswordFocused(false)}
-                    disabled={validating}
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5"
-                    style={{ color: "var(--color-text-muted)" }}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-
-                {authError && (
-                  <p className="text-sm" style={{ color: "var(--color-error, #dc2626)" }}>
-                    {AUTH_API_ERRORS[authError] ?? authError}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={validating || !password.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-                  style={{ background: "var(--color-brand, #1B3B6B)", color: "#fff", borderRadius: 100 }}
-                >
-                  {validating ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Signing in…</>
-                  ) : (
-                    <><Building2 className="h-4 w-4" /> Sign in</>
-                  )}
-                </button>
-              </form>
-            )}
           </div>
         )}
       </div>
