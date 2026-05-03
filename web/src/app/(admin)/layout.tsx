@@ -22,8 +22,15 @@ export default function AdminRootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} bg-slate-50 text-slate-900`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('theme');if(!t){t='light';localStorage.setItem('theme',t);}document.documentElement.setAttribute('data-theme',t);})();`,
+          }}
+        />
+      </head>
+      <body className={`${inter.variable}`}>
         <QueryProvider>
           {children}
         </QueryProvider>
