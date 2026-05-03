@@ -275,6 +275,8 @@ Indicatie:
 
 ## Werkpakket 10 — UX discovery, flows en auth-interactieontwerp
 
+**Status: COMPLETED — 2026-05-03. Zie `ux/sso-auth-ux.md`.**
+
 Doel:
 - De hybride auth-aanpak begrijpelijk en veilig bruikbaar maken voor tenant
   users en operators.
