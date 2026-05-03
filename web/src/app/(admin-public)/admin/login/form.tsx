@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { AlertTriangle, Eye, EyeOff, KeyRound, Lock, Mail, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, KeyRound, Lock, Mail } from "lucide-react";
 
 export function AdminLoginForm() {
   const [email, setEmail] = useState("");
@@ -14,6 +14,10 @@ export function AdminLoginForm() {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [totpFocused, setTotpFocused] = useState(false);
+  const [theme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "light";
+    return (localStorage.getItem("theme") as "light" | "dark") ?? "light";
+  });
 
   async function handleCredentials(e: FormEvent) {
     e.preventDefault();
@@ -94,13 +98,18 @@ export function AdminLoginForm() {
     <div className="w-full max-w-sm rounded-2xl p-8 shadow-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
       {/* Header */}
       <div className="mb-8 flex flex-col items-center gap-2">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: "var(--color-brand)" }}>
-          <ShieldAlert className="h-5 w-5" style={{ color: "var(--color-text-on-dark)" }} />
-        </div>
-        <h1 className="text-lg font-bold tracking-tight" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={theme === "dark" ? "/logo/latero-mark-dark.svg" : "/logo/latero-mark-light.svg"}
+          alt="Latero"
+          width={40}
+          height={40}
+          className="mb-1"
+        />
+        <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
           Latero Control
         </h1>
-        <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+        <p className="text-sm text-center" style={{ color: "var(--color-text-muted)" }}>
           {step === "totp"
             ? "Enter the 6-digit code from your authenticator app."
             : "Platform operator access. Authorised personnel only."}
