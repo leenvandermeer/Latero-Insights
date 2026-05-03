@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, Copy, Save } from "lucide-react";
+import { ArrowLeft, Building2, Copy, Save, ShieldCheck } from "lucide-react";
 import { useAdminInstallation, useUpdateInstallation } from "@/hooks/use-admin";
 
 export default function AdminInstallationDetailPage() {
@@ -98,13 +98,18 @@ export default function AdminInstallationDetailPage() {
             {installation.installation_id}
           </p>
         </div>
+        <Link
+          href={`/admin/installations/${installation.installation_id}/auth`}
+          className="inline-flex items-center gap-2 rounded border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          <ShieldCheck className="h-4 w-4" />
+          Auth configuration
+        </Link>
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-6">
           <button
-            type="button"
-            onClick={() => setShowRotateConfirm(true)}
             disabled={rotating}
             className="rounded bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
           >

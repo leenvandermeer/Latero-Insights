@@ -12,6 +12,8 @@ import {
   AdminUserUpdateResult,
   AdminPasswordResetResult,
   AdminUserDeactivationResult,
+  AdminAuthConfig,
+  AdminSsoTestResult,
 } from "@/types/admin";
 
 async function adminRequest(path: string, init?: RequestInit): Promise<Response> {
@@ -205,6 +207,56 @@ export function useDeactivateAdminUser() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "installations"] });
+    },
+  });
+}
+
+// Auth config
+export function useAdminAuthConfig(installationId: string) {
+  return useQuery({
+    queryKey: ["admin", "auth-config", installationId],
+    queryFn: async () => {
+      const res = await adminRequest(
+        `/api/v1/admin/installations/${encodeURIComponent(installationId)}/auth-config`,
+      );
+      return res.json() as Promise<AdminAuthConfig>;
+    },
+    enabled: !!installationId,
+  });
+}
+
+export function useUpdateAdminAuthConfig(installationId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      data: Partial<Pick<AdminAuthConfig, "auth_policy" | "sso_config">>,
+    ) => {
+      const res = await adminRequest(
+        `/api/v1/admin/installations/${encodeURIComponent(installationId)}/auth-config`,
+        { method: "PUT", body: JSON.stringify(data) },
+      );
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "auth-config", installationId] });
+    },
+  });
+}
+
+export function useTestSsoConnection(installationId: string) {
+  return useMutation({
+    mutationFn: async (issuer: string) => {
+      const res = await fetch(
+        `/api/v1/admin/installations/${encodeURIComponent(installationId)}/auth-config/test`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ issuer }),
+        },
+      );
+      return res.json() as Promise<AdminSsoTestResult>;
     },
   });
 }

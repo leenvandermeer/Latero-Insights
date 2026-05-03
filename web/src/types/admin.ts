@@ -80,3 +80,44 @@ export interface AdminUserDeactivationResult {
   email: string;
   active: boolean;
 }
+
+export type AdminAuthMode =
+  | "sso_only"
+  | "sso_with_break_glass"
+  | "sso_with_local_fallback"
+  | "local_only";
+
+export interface AdminAuthPolicy {
+  auth_mode: AdminAuthMode;
+  jit_provisioning: boolean;
+  jit_default_role: string;
+  allowed_domains: string[] | null;
+  break_glass_enabled: boolean;
+}
+
+export interface AdminSsoConfig {
+  issuer: string;
+  client_id: string;
+  /** Name of the environment variable holding the client secret. Never the secret itself. */
+  client_secret_ref: string | null;
+  redirect_uri: string;
+  scopes: string[];
+  allowed_groups: string[] | null;
+  pkce_required: boolean;
+  enabled: boolean;
+  role_mapping: Record<string, string>;
+}
+
+export interface AdminAuthConfig {
+  auth_policy: AdminAuthPolicy | null;
+  sso_config: AdminSsoConfig | null;
+}
+
+export interface AdminSsoTestResult {
+  ok: boolean;
+  error?: string;
+  issuer?: string;
+  authorization_endpoint?: string;
+  token_endpoint?: string;
+  jwks_uri?: string;
+}
