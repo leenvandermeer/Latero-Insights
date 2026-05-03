@@ -140,7 +140,7 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
             height={40}
             className="mb-3"
           />
-          <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--color-text)" }}>
+          <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
             Latero Control
           </h1>
           <p className="text-sm mt-1 text-center" style={{ color: "var(--color-text-muted)" }}>
@@ -173,8 +173,8 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@organisation.com"
                 autoComplete="email"
-                className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm outline-none transition-colors"
-                style={inputStyle(emailFocused)}
+                className="w-full pl-9 pr-4 py-2.5 text-sm outline-none transition-colors"
+                style={{ ...inputStyle(emailFocused), borderRadius: 12 }}
                 onFocus={() => setEmailFocused(true)}
                 onBlur={() => setEmailFocused(false)}
                 disabled={policyLoading}
@@ -184,8 +184,8 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
             <button
               type="submit"
               disabled={policyLoading || !email.trim()}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-50"
-              style={{ background: "var(--color-brand, #1B3B6B)", color: "#fff" }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+              style={{ background: "var(--color-brand, #1B3B6B)", color: "#fff", borderRadius: 100 }}
             >
               {policyLoading ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Checking…</>
@@ -217,8 +217,8 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={handleSsoClick}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold"
-                style={{ background: "var(--color-brand, #1B3B6B)", color: "#fff" }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold"
+                style={{ background: "var(--color-brand, #1B3B6B)", color: "#fff", borderRadius: 100 }}
               >
                 Continue with SSO
                 <ArrowRight className="h-4 w-4" />
@@ -239,11 +239,12 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setShowLocalForm(true)}
-                className="w-full py-2.5 rounded-lg text-sm transition-opacity"
+                className="w-full py-2.5 text-sm transition-opacity"
                 style={{
                   border: "1px solid var(--color-border)",
                   color: "var(--color-text-muted)",
                   background: "transparent",
+                  borderRadius: 100,
                 }}
               >
                 Sign in with password
@@ -264,8 +265,8 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Your password"
                     autoComplete="current-password"
-                    className="w-full pl-9 pr-10 py-2.5 rounded-lg text-sm outline-none transition-colors"
-                    style={inputStyle(passwordFocused)}
+                    className="w-full pl-9 pr-10 py-2.5 text-sm outline-none transition-colors"
+                    style={{ ...inputStyle(passwordFocused), borderRadius: 12 }}
                     onFocus={() => setPasswordFocused(true)}
                     onBlur={() => setPasswordFocused(false)}
                     disabled={validating}
@@ -291,11 +292,12 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
                 <button
                   type="submit"
                   disabled={validating || !password.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
                   style={{
                     background: isSsoAvailable ? "transparent" : "var(--color-brand, #1B3B6B)",
                     color: isSsoAvailable ? "var(--color-text)" : "#fff",
                     border: isSsoAvailable ? "1px solid var(--color-border)" : "none",
+                    borderRadius: 100,
                   }}
                 >
                   {validating ? (
@@ -321,8 +323,8 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Your password"
                     autoComplete="current-password"
-                    className="w-full pl-9 pr-10 py-2.5 rounded-lg text-sm outline-none transition-colors"
-                    style={inputStyle(passwordFocused)}
+                    className="w-full pl-9 pr-10 py-2.5 text-sm outline-none transition-colors"
+                    style={{ ...inputStyle(passwordFocused), borderRadius: 12 }}
                     onFocus={() => setPasswordFocused(true)}
                     onBlur={() => setPasswordFocused(false)}
                     disabled={validating}
@@ -348,8 +350,8 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
                 <button
                   type="submit"
                   disabled={validating || !password.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-50"
-                  style={{ background: "var(--color-brand, #1B3B6B)", color: "#fff" }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+                  style={{ background: "var(--color-brand, #1B3B6B)", color: "#fff", borderRadius: 100 }}
                 >
                   {validating ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Signing in…</>
