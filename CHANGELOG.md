@@ -15,6 +15,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+### Added (2026-05-03)
+
+- **Uitlogknop in tenant sidebar** — "Log out" knop (rood, met `LogOut`-icoon) toegevoegd onderaan de sidebar, na de theme-toggle. Werkt in zowel collapsed (icoon + tooltip) als expanded state. Roept `POST /api/auth/logout` aan en redirect naar `/`.
+
+### Fixed (2026-05-03)
+
+- **SSO policy niet gevonden voor `acme.test`-domein**: `getAuthPolicyByDomain` queried `s.allowed_domains` (kolom van `installation_sso_config`), maar die kolom bestaat niet in die tabel — `allowed_domains` staat in `installation_auth_policy` (`p`). Query gecorrigeerd naar `p.allowed_domains`. Gevolg was dat `bob@acme.test` altijd `local_only` terugkreeg en nooit een SSO-knop zag.
+- **"Sign-in failed due to a network error" bij lokale login**: de login route gooit bij onverwachte DB-fouten een HTML 500-pagina; de client kan dat niet als JSON parsen en toont "network error". De `handleLogin`-logica is nu gewikkeld in een try-catch die altijd een JSON-response retourneert.
+- **`is_break_glass` kolom ontbrak in runtime-schema**: de kolom staat alleen in de `007_sso_auth.sql` infra-migratie, niet in `ensureAuthSchema()`. Op verse omgevingen die `ensureAuthSchema` oproepen vóór de migratie is gedraaid faalde de `isBreakGlassUser`-query met een column-not-found error. Kolom nu ook toegevoegd via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` in `ensureAuthSchema`.
+- **Dubbel loginformulier bij `local_only` policy**: voor `local_only` was `showLocalForm === true` én `!isSsoAvailable === true` tegelijk, waardoor zowel het SSO-fallback-form als het aparte local_only-form tegelijk renderden. Het redundante `{!isSsoAvailable && <form>}` blok is verwijderd (52 regels).
+- **Icoon overlapt invoertekst in login-inputs**: Tailwind `pl-9` en de `style`-prop werkten naast elkaar; de klasse won niet consistent. Padding nu via `paddingLeft: "2.5rem"` direct in de `style`-prop gezet.
+- **Login-scherm UX afwijkend van design system**: titel gebruikte Inter i.p.v. Fraunces (`--font-display`), buttons hadden `rounded-lg` i.p.v. pill-shape (`borderRadius: 100`), inputs hadden `8px` i.p.v. `12px` radius (`--radius-input`). Alle drie hersteld conform `wireframes.md` en `sso-auth-ux.md`.
+
 ### Added (2026-05-01)
 
 - **Settings: "Sync now" button** — triggers `POST /api/sync/databricks` directly from the Settings page; shows record count and duration on completion; invalidates all TanStack Query caches so every page reloads with fresh data.
