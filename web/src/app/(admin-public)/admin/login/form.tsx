@@ -87,11 +87,14 @@ export function AdminLoginForm() {
     }
   }
 
-  const fieldStyle = (focused: boolean): React.CSSProperties => ({
+  const fieldStyle = (focused: boolean, extraPadding?: React.CSSProperties): React.CSSProperties => ({
     background: "var(--color-bg)",
     border: `1px solid ${focused ? "var(--color-border-focus)" : "var(--color-border)"}`,
     color: "var(--color-text)",
     outline: "none",
+    borderRadius: 12,
+    padding: "0.625rem 0.75rem",
+    ...extraPadding,
   });
 
   return (
@@ -136,8 +139,8 @@ export function AdminLoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 onFocus={() => setEmailFocused(true)}
                 onBlur={() => setEmailFocused(false)}
-                className="w-full rounded-lg pl-11 pr-3 py-2.5 text-sm"
-                style={fieldStyle(emailFocused)}
+                className="w-full text-sm"
+                style={fieldStyle(emailFocused, { paddingLeft: "2.75rem", paddingRight: "0.75rem" })}
                 placeholder="operator@latero.local"
                 required
               />
@@ -155,8 +158,8 @@ export function AdminLoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setPasswordFocused(true)}
                 onBlur={() => setPasswordFocused(false)}
-                className="w-full rounded-lg pl-11 pr-10 py-2.5 text-sm"
-                style={fieldStyle(passwordFocused)}
+                className="w-full text-sm"
+                style={fieldStyle(passwordFocused, { paddingLeft: "2.75rem", paddingRight: "2.5rem" })}
                 placeholder="••••••••"
                 required
               />
@@ -199,8 +202,8 @@ export function AdminLoginForm() {
                 onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
                 onFocus={() => setTotpFocused(true)}
                 onBlur={() => setTotpFocused(false)}
-                className="w-full rounded-lg pl-11 pr-3 py-2.5 text-sm font-mono tracking-widest text-center"
-                style={fieldStyle(totpFocused)}
+                className="w-full text-sm font-mono tracking-widest text-center"
+                style={fieldStyle(totpFocused, { paddingLeft: "2.75rem", paddingRight: "0.75rem" })}
                 placeholder="000000"
                 required
               />
