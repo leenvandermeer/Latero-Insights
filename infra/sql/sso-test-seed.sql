@@ -99,18 +99,20 @@ ON CONFLICT (installation_id) DO UPDATE SET
 --    Dit account werkt altijd via lokale login, ook als SSO is ingeschakeld.
 --    Vervang het wachtwoord zo snel mogelijk via de admin UI.
 -- ============================================================
-INSERT INTO insights_users (user_id, email, password_hash, active, is_admin)
+INSERT INTO insights_users (user_id, email, password_hash, active, is_admin, is_break_glass)
 VALUES (
   '00000000-0000-0000-0000-000000000001',
   'admin@latero.local',
   crypt('LateroAdmin1!', gen_salt('bf', 12)),
   TRUE,
+  TRUE,
   TRUE
 )
 ON CONFLICT (email) DO UPDATE SET
-  password_hash = crypt('LateroAdmin1!', gen_salt('bf', 12)),
-  is_admin      = TRUE,
-  active        = TRUE;
+  password_hash  = crypt('LateroAdmin1!', gen_salt('bf', 12)),
+  is_admin       = TRUE,
+  is_break_glass = TRUE,
+  active         = TRUE;
 
 -- Koppel admin aan de SSO test installatie
 INSERT INTO insights_user_installations (user_id, installation_id, role)

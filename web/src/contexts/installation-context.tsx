@@ -29,7 +29,7 @@ interface InstallationContextValue {
   user: SessionUser | null;
   validating: boolean;
   authError: string | null;
-  authenticate: (email: string, password: string) => Promise<boolean>;
+  authenticate: (email: string, password: string) => Promise<boolean | "pending_2fa">;
   switchInstallation: (installationId: string) => Promise<boolean>;
   logout: () => void;
 }
@@ -65,7 +65,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const authenticate = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const authenticate = useCallback(async (email: string, password: string): Promise<boolean | "pending_2fa"> => {
     setValidating(true);
     setAuthError(null);
     try {
@@ -75,8 +75,17 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = (await res.json()) as SessionResponse & { error?: string };
-      if (!res.ok || !data.authenticated) {
+      const data = (await res.json()) as SessionResponse & { error?: string; pending_2fa?: boolean };
+      if (!res.ok) {
+        setAuthError(data.error ?? "Sign-in failed. Please check your credentials.");
+        setValidating(false);
+        return false;
+      }
+      if (data.pending_2fa) {
+        setValidating(false);
+        return "pending_2fa";
+      }
+      if (!data.authenticated) {
         setAuthError(data.error ?? "Sign-in failed. Please check your credentials.");
         setValidating(false);
         return false;

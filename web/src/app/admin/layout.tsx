@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { checkIsAdmin, getSessionFromToken } from "@/lib/session-auth";
+import { checkIsBreakGlass, getSessionFromToken } from "@/lib/session-auth";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -20,9 +20,9 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     redirect("/settings?error=auth-required&next=%2Fadmin");
   }
 
-  const isAdmin = await checkIsAdmin(session.user_id);
-  if (!isAdmin) {
-    redirect("/settings?error=admin-required&next=%2Fadmin");
+  const isBreakGlass = await checkIsBreakGlass(session.user_id);
+  if (!isBreakGlass) {
+    redirect("/pipelines");
   }
 
   return (

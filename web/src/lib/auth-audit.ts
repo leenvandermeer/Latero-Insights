@@ -19,7 +19,8 @@ export type AuditEventType =
   | "sso_login"
   | "sso_callback_failure"
   | "logout"
-  | "installation_switch";
+  | "installation_switch"
+  | "2fa_verify";
 
 export interface AuditEventParams {
   event_type: AuditEventType;

@@ -195,7 +195,7 @@ export async function PUT(
         s.client_id ?? null,
         s.client_secret_ref !== undefined ? s.client_secret_ref : null,
         s.redirect_uri ?? null,
-        s.scopes ? JSON.stringify(s.scopes) : null,
+        s.scopes ?? null,
         s.allowed_groups !== undefined ? s.allowed_groups : null,
         s.pkce_required ?? null,
         s.enabled ?? null,

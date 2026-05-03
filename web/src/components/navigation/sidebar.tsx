@@ -20,9 +20,11 @@ import {
   Trash2,
   Info,
   LogOut,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboards } from "@/contexts/dashboard-context";
+import { useInstallation } from "@/contexts/installation-context";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
 import { useBreakpoint } from "@/hooks";
 
@@ -47,6 +49,8 @@ export function Sidebar() {
   const [newDashOpen, setNewDashOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const { userDashboards, deleteDash } = useDashboards();
+  const { user } = useInstallation();
+  const isAdmin = user?.is_admin ?? false;
   const { isTablet, isSmallDesktop } = useBreakpoint();
   // isTablet      = 768–1023px: always collapsed, no expand button
   // isSmallDesktop = 1024–1279px: collapsed by default, user can expand
@@ -338,6 +342,17 @@ export function Sidebar() {
         {/* Bottom */}
         <div className="px-2 pb-3 space-y-0.5" style={{ borderTop: "1px solid var(--color-sidebar-border)", paddingTop: 12 }}>
           <Link
+            href="/account"
+            className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
+            style={pathname === "/account" ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
+            onMouseEnter={(e) => { if (pathname !== "/account") { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
+            onMouseLeave={(e) => { if (pathname !== "/account") { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
+            title={collapsed ? "Account" : undefined}
+          >
+            <UserCircle className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Account</span>}
+          </Link>
+          <Link
             href="/about"
             className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
             style={pathname === "/about" ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
@@ -348,17 +363,19 @@ export function Sidebar() {
             <Info className="h-4 w-4 shrink-0" />
             {!collapsed && <span>About</span>}
           </Link>
-          <Link
-            href="/settings"
-            className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
-            style={pathname === "/settings" ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
-            onMouseEnter={(e) => { if (pathname !== "/settings") { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
-            onMouseLeave={(e) => { if (pathname !== "/settings") { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
-            title={collapsed ? "Settings" : undefined}
-          >
-            <Settings className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Settings</span>}
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/settings"
+              className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
+              style={pathname === "/settings" ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
+              onMouseEnter={(e) => { if (pathname !== "/settings") { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
+              onMouseLeave={(e) => { if (pathname !== "/settings") { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
+              title={collapsed ? "Settings" : undefined}
+            >
+              <Settings className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>Settings</span>}
+            </Link>
+          )}
           <button
             onClick={toggleTheme}
             className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors w-full", collapsed && "justify-center px-2")}

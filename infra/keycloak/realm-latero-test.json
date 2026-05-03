@@ -25,10 +25,12 @@
       "authorizationServicesEnabled": false,
       "frontchannelLogout": false,
       "redirectUris": [
+        "http://localhost:3000/api/auth/sso/callback",
         "http://localhost:3010/api/auth/sso/callback",
         "https://app.latero.local/api/auth/sso/callback"
       ],
       "webOrigins": [
+        "http://localhost:3000",
         "http://localhost:3010",
         "https://app.latero.local"
       ],

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useInstallation } from "@/contexts/installation-context";
-import { Loader2, Mail, Lock, Building2, Eye, EyeOff, ArrowRight, AlertTriangle } from "lucide-react";
+import { Loader2, Mail, Lock, Building2, Eye, EyeOff, ArrowRight, AlertTriangle, KeyRound } from "lucide-react";
 
 type AuthMode = "local_only" | "sso_only" | "sso_with_break_glass" | "sso_with_local_fallback";
 
@@ -44,8 +44,8 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
 
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
-  // Step 1: email input; Step 2: policy-driven login
-  const [step, setStep] = useState<"email" | "login">("email");
+  // Step 1: email input; Step 2: policy-driven login; Step 3: 2FA
+  const [step, setStep] = useState<"email" | "login" | "2fa">("email");
   const [email, setEmail] = useState("");
   const [emailFocused, setEmailFocused] = useState(false);
   const [password, setPassword] = useState("");
@@ -54,6 +54,10 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
   const [showLocalForm, setShowLocalForm] = useState(false);
   const [policy, setPolicy] = useState<PolicyResult | null>(null);
   const [policyLoading, setPolicyLoading] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpError, setTotpError] = useState<string | null>(null);
+  const [totpLoading, setTotpLoading] = useState(false);
+  const totpInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const stored = (localStorage.getItem("theme") as "light" | "dark") ?? "light";
@@ -84,7 +88,7 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
       const res = await fetch(`/api/auth/policy?hint=${encodeURIComponent(domain)}`);
       const data: PolicyResult = res.ok ? await res.json() : { auth_mode: "local_only", sso_available: false, sso_label: null };
       setPolicy(data);
-      setShowLocalForm(data.auth_mode === "local_only" || data.auth_mode === "sso_with_local_fallback");
+      setShowLocalForm(data.auth_mode === "local_only");
       setStep("login");
     } catch {
       setPolicy({ auth_mode: "local_only", sso_available: false, sso_label: null });
@@ -99,10 +103,46 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
   async function handleLocalSubmit(e: FormEvent) {
     e.preventDefault();
     if (!email.trim() || !password.trim()) return;
-    const ok = await authenticate(email.trim(), password);
-    if (ok && redirectTarget?.startsWith("/")) {
+    const result = await authenticate(email.trim(), password);
+    if (result === "pending_2fa") {
+      setStep("2fa");
+      setTimeout(() => totpInputRef.current?.focus(), 50);
+      return;
+    }
+    if (result === true && redirectTarget?.startsWith("/")) {
       router.push(redirectTarget);
       router.refresh();
+    }
+  }
+
+  // ── Step 3: TOTP verificatie ──
+  async function handleTotpSubmit(e: FormEvent) {
+    e.preventDefault();
+    const code = totpCode.trim().replace(/\s/g, "");
+    if (!code) return;
+    setTotpLoading(true);
+    setTotpError(null);
+    try {
+      const res = await fetch("/api/auth/2fa/verify", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json() as { authenticated?: boolean; error?: string };
+      if (!res.ok || !data.authenticated) {
+        setTotpError(data.error ?? "Invalid code. Please try again.");
+        setTotpCode("");
+        return;
+      }
+      // Trigger session refresh via full reload
+      const target = redirectTarget?.startsWith("/") ? redirectTarget : "/pipelines";
+      router.push(target);
+      router.refresh();
+    } catch {
+      setTotpError("Something went wrong. Please try again.");
+    } finally {
+      setTotpLoading(false);
     }
   }
 
@@ -115,11 +155,13 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
 
   const isSsoAvailable = policy?.sso_available && policy.auth_mode !== "local_only";
   const subtitle =
-    step === "email"
-      ? "Enter your work email to continue."
-      : isSsoAvailable
-        ? "Your organisation uses single sign-on (SSO)."
-        : "Sign in with your email and password.";
+    step === "2fa"
+      ? "Enter the 6-digit code from your authenticator app."
+      : step === "email"
+        ? "Enter your work email to continue."
+        : isSsoAvailable
+          ? "Your organisation uses single sign-on (SSO)."
+          : "Sign in with your email and password.";
 
   return (
     <div
@@ -310,6 +352,58 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
             )}
 
           </div>
+        )}
+
+        {/* ── Stap 3: TOTP verificatie ── */}
+        {step === "2fa" && (
+          <form onSubmit={handleTotpSubmit} className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <KeyRound className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
+              <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>{email}</span>
+            </div>
+            <input
+              ref={totpInputRef}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9A-Fa-f\s]{6,18}"
+              maxLength={18}
+              value={totpCode}
+              onChange={(e) => setTotpCode(e.target.value)}
+              placeholder="000 000"
+              autoComplete="one-time-code"
+              className="w-full py-3 text-center text-xl font-mono tracking-[0.4em] outline-none transition-colors"
+              style={{ ...inputStyle(false), borderRadius: 12 }}
+              disabled={totpLoading}
+            />
+            {totpError && (
+              <p className="text-sm text-center" style={{ color: "var(--color-error, #dc2626)" }}>
+                {totpError}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={totpLoading || totpCode.replace(/\s/g, "").length < 6}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+              style={{ background: "var(--color-brand, #1B3B6B)", color: "#fff", borderRadius: 100 }}
+            >
+              {totpLoading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Verifying…</>
+              ) : (
+                <><KeyRound className="h-4 w-4" /> Verify</>
+              )}
+            </button>
+            <p className="text-xs text-center" style={{ color: "var(--color-text-muted)" }}>
+              Lost access?{" "}
+              <button
+                type="button"
+                className="underline"
+                style={{ color: "var(--color-brand, #1B3B6B)" }}
+                onClick={() => { setTotpCode(""); setTotpError(null); }}
+              >
+                Use a backup code
+              </button>
+            </p>
+          </form>
         )}
       </div>
     </div>

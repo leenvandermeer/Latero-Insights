@@ -156,10 +156,17 @@
 
 **Goal**: Advanced metrics, two-factor admin verification, bearer token.
 
+**Status (2026-05-03):** TOTP 2FA volledig geïmplementeerd — zie LADR-036. Bearer token, bulk ops en metrics zijn nog open.
+
 ### Backend
 
 - [ ] Create admin bearer token table + verification
-- [ ] Implement two-factor verification endpoint (if 2FA enabled on user)
+- [x] Implement two-factor verification endpoint (if 2FA enabled on user)
+      → `POST /api/auth/2fa/verify` — verifieert TOTP-token of backup code na wachtwoordlogin
+      → `POST /api/account/2fa/setup/initiate` — genereert secret + QR code (server-side)
+      → `POST /api/account/2fa/setup/confirm` — bevestigt eerste code, slaat secret op
+      → `DELETE /api/account/2fa` — gebruiker schakelt eigen 2FA uit
+      → `DELETE /api/v1/admin/users/[id]/2fa` — admin reset zonder code (break_glass vereist)
 - [ ] Add health timeline computation (per-installation, 7-day history)
 - [ ] Add bulk archive/reactivate endpoint
 
@@ -167,8 +174,24 @@
 
 - [ ] Enhanced health metrics page (graph of metrics over time)
 - [ ] Bulk select + actions (archive multiple installations)
-- [ ] Two-factor prompt in admin login flow
+- [x] Two-factor prompt in admin login flow
+      → TOTP-stap geïntegreerd in `installation-gate.tsx` (stap 3: 6-cijferig invoerveld + backup code toggle)
 - [ ] Export audit log to CSV
+- [x] TOTP self-enrollment UI voor gebruikers (`/account` pagina) — QR code setup, bevestigingsstap, backup codes, disable flow; sidebar-link toegevoegd voor alle ingelogde gebruikers
+
+### Admin users — 2FA beheer
+
+- [x] "Reset 2FA" knop op admin gebruikerspagina (`/admin/users`)
+- [x] Bevestigingsdialoog voor 2FA reset
+- [x] `useResetAdmin2FA()` TanStack Query hook
+- [x] `AdminUser.two_factor_enabled` type uitgebreid
+
+### Break-glass scheiding
+
+- [x] `is_break_glass` kolom op `insights_users` — aparte bewaker voor `/admin` toegang
+- [x] `checkIsBreakGlass()` helper in `session-auth.ts`
+- [x] `/admin/layout.tsx` gebruikt `checkIsBreakGlass` (niet `checkIsAdmin`)
+- [x] `requireAdminSession()` in `admin-auth.ts` geüpdatet naar break_glass guard
 
 ### Testing & Deployment
 
@@ -176,6 +199,7 @@
 - [ ] Performance test: health check caching (verify 5-min TTL)
 - [ ] Security review: admin role bypass attempts
 - [ ] Load test: concurrent admin actions (create installation, rotate keys)
+- [ ] TOTP end-to-end test: setup → verify login → backup code → admin reset
 
 ---
 

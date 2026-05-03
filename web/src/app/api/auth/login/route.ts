@@ -10,6 +10,12 @@ import {
 } from "@/lib/session-auth";
 import { getAuthPolicyByInstallation, isBreakGlassUser } from "@/lib/auth-policy";
 import { logAuthEvent } from "@/lib/auth-audit";
+import {
+  makePending2FAPayload,
+  serializePending2FA,
+  PENDING_COOKIE_NAME,
+  PENDING_2FA_TTL_SECONDS,
+} from "@/lib/totp";
 
 export async function POST(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -85,9 +91,6 @@ async function handleLogin(
   }
   // sso_with_local_fallback en local_only: lokale login altijd toegestaan.
 
-  const rawToken = await createSession(user.user_id, activeInstallation, request);
-  const isAdmin = await checkIsAdmin(user.user_id);
-
   await logAuthEvent({
     event_type: "local_login",
     outcome: "success",
@@ -97,12 +100,35 @@ async function handleLogin(
     user_agent: userAgent,
   });
 
+  // LADR-036: If 2FA is enabled, don't create a session yet.
+  // Issue a short-lived pending cookie and tell the client to show the TOTP step.
+  if (user.two_factor_enabled) {
+    const pending = makePending2FAPayload(user.user_id, activeInstallation);
+    const signed = serializePending2FA(pending);
+    const useSecure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https"
+      && !["localhost", "127.0.0.1"].includes(request.nextUrl.hostname);
+    const response = NextResponse.json({ pending_2fa: true });
+    response.cookies.set({
+      name: PENDING_COOKIE_NAME,
+      value: signed,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: useSecure,
+      path: "/",
+      maxAge: PENDING_2FA_TTL_SECONDS,
+    });
+    return response;
+  }
+
+  const rawToken = await createSession(user.user_id, activeInstallation, request);
+  const isAdmin = await checkIsAdmin(user.user_id);
+
   const response = NextResponse.json({
     authenticated: true,
     user: {
       email: user.email,
       two_factor_enabled: user.two_factor_enabled,
-      two_factor_required: false,
+      two_factor_required: user.two_factor_enabled,
       is_admin: isAdmin,
     },
     active_installation: installations.find((i) => i.installation_id === activeInstallation) ?? null,

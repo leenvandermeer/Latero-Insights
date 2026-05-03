@@ -92,3 +92,19 @@ voldoen voordat merge is toegestaan.
 - [ ] Cross-tenant access via auth-bugs faalt aantoonbaar
 - [ ] CSRF-aanval op logout faalt aantoonbaar
 - [ ] Rate-limit (>5/min login) retourneert HTTP 429 aantoonbaar
+
+## 9. TOTP / lokale MFA (lokale accounts)
+
+**Geïmplementeerd: 2026-05-03 — zie LADR-036**
+
+- [x] TOTP 2FA beschikbaar voor lokale accounts (`two_factor_enabled` op `insights_users`)
+- [x] TOTP secret wordt versleuteld opgeslagen (AES-256-GCM, sleutel via `TOTP_ENCRYPTION_KEY`)
+- [x] Pending 2FA cookie (`insights_pending_2fa`) is HMAC-gesigned, 5 minuten TTL
+- [x] Backup codes zijn gehashed (SHA-256), single-use, op te vragen na setup
+- [x] Login-flow splitst na wachtwoordcheck: sessie direct (geen 2FA) of pending-cookie + TOTP-stap
+- [x] Eigen 2FA uitschakelen vereist een geldig TOTP-token of backup code
+- [x] Admin reset van gebruiker-TOTP vereist `is_break_glass` — niet `is_admin`
+- [x] Break-glass accounts zijn expliciet gemarkeerd (`is_break_glass` kolom); scheiding van tenant-admin (`is_admin`)
+- [x] TOTP audit event `2fa_verify` toegevoegd aan `AuditEventType`
+- [x] TOTP self-enrollment UI beschikbaar voor gebruikers — `/account` pagina in `(dashboard)` groep, toegankelijk voor alle ingelogde gebruikers; sidebar-link toegevoegd
+- [x] TOTP setup en verify vallen onder rate-limiting norm (≤5/min per IP) — rate limit toegevoegd op `POST /api/account/2fa/setup/initiate`, `POST /api/account/2fa/setup/confirm` en `DELETE /api/account/2fa`

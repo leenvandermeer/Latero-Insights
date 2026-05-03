@@ -9,6 +9,7 @@ import {
   useDeactivateAdminUser,
   useResetAdminUserPassword,
   useUpdateAdminUser,
+  useResetAdmin2FA,
 } from "@/hooks/use-admin";
 import type { AdminPasswordResetResult, AdminUser, AdminUserProvisionResult } from "@/types/admin";
 
@@ -19,11 +20,13 @@ export default function AdminUsersPage() {
   const updateUserMutation = useUpdateAdminUser();
   const resetPasswordMutation = useResetAdminUserPassword();
   const deactivateUserMutation = useDeactivateAdminUser();
+  const reset2FAMutation = useResetAdmin2FA();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<AdminUser | null>(null);
+  const [reset2FATarget, setReset2FATarget] = useState<AdminUser | null>(null);
   const [generatedCredentials, setGeneratedCredentials] = useState<AdminUserProvisionResult | null>(null);
   const [resetResult, setResetResult] = useState<AdminPasswordResetResult | null>(null);
   const [deactivationMessage, setDeactivationMessage] = useState<string | null>(null);
@@ -179,6 +182,12 @@ export default function AdminUsersPage() {
     const result = await deactivateUserMutation.mutateAsync({ userId: deactivateTarget.user_id });
     setDeactivationMessage(`${result.email} is now inactive.`);
     setDeactivateTarget(null);
+  };
+
+  const confirmReset2FA = async () => {
+    if (!reset2FATarget) return;
+    await reset2FAMutation.mutateAsync({ userId: reset2FATarget.user_id });
+    setReset2FATarget(null);
   };
 
   return (
@@ -513,6 +522,37 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      {/* Reset 2FA confirm dialog */}
+      {reset2FATarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl p-6 shadow-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+            <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>Reset 2FA?</h3>
+            <p className="text-xs mb-1" style={{ color: "var(--color-text-muted)" }}>
+              This will remove the 2FA configuration for <span className="font-semibold">{reset2FATarget.email}</span>.
+              They will need to set up 2FA again on next login.
+            </p>
+            <p className="text-xs mb-5" style={{ color: "var(--color-text-subtle, var(--color-text-muted))" }}>Use this when a user has lost access to their authenticator app.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setReset2FATarget(null)}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium"
+                style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReset2FA}
+                disabled={reset2FAMutation.isPending}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                style={{ background: "var(--color-warning, #d97706)" }}
+              >
+                {reset2FAMutation.isPending ? "Resetting..." : "Reset 2FA"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Users Table */}
       <div className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         {isLoading ? (
@@ -573,6 +613,17 @@ export default function AdminUsersPage() {
                           <KeyRound className="h-3.5 w-3.5" />
                           Reset password
                         </button>
+                        {user.two_factor_enabled && (
+                          <button
+                            onClick={() => setReset2FATarget(user)}
+                            className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
+                            style={{ borderColor: "var(--color-warning)", color: "var(--color-warning-text, #92400e)" }}
+                            disabled={reset2FAMutation.isPending}
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Reset 2FA
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDeactivateUser(user)}
                           className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium hover:opacity-80 transition-opacity"

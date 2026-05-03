@@ -211,6 +211,27 @@ export function useDeactivateAdminUser() {
   });
 }
 
+export function useResetAdmin2FA() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { userId: string }) => {
+      const res = await adminRequest(
+        `/api/v1/admin/users/${encodeURIComponent(data.userId)}/2fa`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: string };
+        throw new Error(body.error ?? "Failed to reset 2FA");
+      }
+      return res.json() as Promise<{ reset: boolean }>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+  });
+}
+
 // Auth config
 export function useAdminAuthConfig(installationId: string) {
   return useQuery({

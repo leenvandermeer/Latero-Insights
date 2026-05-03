@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
         u.user_id,
         u.email,
         u.is_admin,
+        u.two_factor_enabled,
         u.created_at,
         COALESCE(json_agg(
           json_build_object(
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
       FROM insights_users u
       LEFT JOIN insights_user_installations ui ON u.user_id = ui.user_id
       WHERE u.active = TRUE
-      GROUP BY u.user_id, u.email, u.is_admin, u.created_at
+      GROUP BY u.user_id, u.email, u.is_admin, u.two_factor_enabled, u.created_at
       ORDER BY u.created_at DESC
     `);
 

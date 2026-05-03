@@ -41,3 +41,4 @@ Naming note:
 | [LADR-033](20260503-global-form-baseline.md) | 2026-05-03 | Globale form-element baseline styling | ACCEPTED |
 | [LADR-034](20260503-sso-hybrid-auth-architecture.md) | 2026-05-03 | SSO-first hybrid authentication with installation-scoped policy | ACCEPTED |
 | [LADR-035](20260503-keycloak-as-local-dev-idp.md) | 2026-05-03 | Keycloak als lokale dev-IdP voor SSO-testomgeving | ACCEPTED |
+| [LADR-036](20260503-totp-2fa-local-accounts.md) | 2026-05-03 | TOTP 2FA voor lokale accounts (break-glass) | ACCEPTED |

@@ -77,6 +77,25 @@ export async function ensureAuthSchema(): Promise<void> {
   await pool.query(
     "ALTER TABLE insights_installations ADD COLUMN IF NOT EXISTS last_token_used_at TIMESTAMPTZ",
   );
+
+  // LADR-036: TOTP 2FA
+  await pool.query(
+    "ALTER TABLE insights_users ADD COLUMN IF NOT EXISTS totp_secret_enc TEXT",
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS insights_totp_backup_codes (
+      id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id    UUID        NOT NULL REFERENCES insights_users(user_id) ON DELETE CASCADE,
+      code_hash  TEXT        NOT NULL,
+      used_at    TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_totp_backup_codes_user_id ON insights_totp_backup_codes(user_id)",
+  );
 }
 
 export async function verifyUserPassword(
@@ -321,10 +340,27 @@ export async function noteInstallationTokenUsed(installationId: string): Promise
 }
 
 // Admin role helpers
+
+/**
+ * Checks if a user is a tenant admin (can access /settings, manage their installation).
+ */
 export async function checkIsAdmin(userId: string): Promise<boolean> {
   const pool = getPgPool();
   const result = await pool.query(`SELECT is_admin FROM insights_users WHERE user_id = $1`, [userId]);
   return result.rows[0]?.is_admin ?? false;
+}
+
+/**
+ * Checks if a user is a break-glass / platform operator account.
+ * Only break-glass accounts may access the /admin section.
+ */
+export async function checkIsBreakGlass(userId: string): Promise<boolean> {
+  const pool = getPgPool();
+  const result = await pool.query(
+    `SELECT is_break_glass FROM insights_users WHERE user_id = $1`,
+    [userId],
+  );
+  return result.rows[0]?.is_break_glass ?? false;
 }
 
 export async function grantAdminRole(userId: string): Promise<void> {
@@ -433,4 +469,93 @@ export async function getInstallationHealthTimeline(
   );
 
   return result.rows;
+}
+
+// ── TOTP DB helpers (LADR-036) ───────────────────────────────────────────────
+
+/** Persist an encrypted TOTP secret and enable 2FA for the user. */
+export async function saveTotpSecretAndEnable(
+  userId: string,
+  encryptedSecret: string,
+  backupCodeHashes: string[],
+): Promise<void> {
+  const pool = getPgPool();
+  await pool.query("BEGIN");
+  try {
+    await pool.query(
+      `UPDATE insights_users
+       SET totp_secret_enc = $1, two_factor_enabled = TRUE, updated_at = NOW()
+       WHERE user_id = $2`,
+      [encryptedSecret, userId],
+    );
+    // Replace any existing backup codes
+    await pool.query(`DELETE FROM insights_totp_backup_codes WHERE user_id = $1`, [userId]);
+    for (const hash of backupCodeHashes) {
+      await pool.query(
+        `INSERT INTO insights_totp_backup_codes (user_id, code_hash) VALUES ($1, $2)`,
+        [userId, hash],
+      );
+    }
+    await pool.query("COMMIT");
+  } catch (err) {
+    await pool.query("ROLLBACK");
+    throw err;
+  }
+}
+
+/** Retrieve the encrypted TOTP secret for a user (null if not set). */
+export async function getTotpSecretEnc(userId: string): Promise<string | null> {
+  const pool = getPgPool();
+  const result = await pool.query(
+    `SELECT totp_secret_enc FROM insights_users WHERE user_id = $1 AND active = TRUE`,
+    [userId],
+  );
+  return (result.rows[0]?.totp_secret_enc as string | undefined) ?? null;
+}
+
+/**
+ * Consume a backup code: marks it as used (single-use).
+ * Returns true if a valid, unused code was found and consumed.
+ */
+export async function consumeBackupCode(userId: string, codeHash: string): Promise<boolean> {
+  const pool = getPgPool();
+  const result = await pool.query(
+    `UPDATE insights_totp_backup_codes
+     SET used_at = NOW()
+     WHERE user_id = $1
+       AND code_hash = $2
+       AND used_at IS NULL
+     RETURNING id`,
+    [userId, codeHash],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+/** Disable 2FA for a user and remove all TOTP data (admin reset). */
+export async function resetTotpForUser(userId: string): Promise<void> {
+  const pool = getPgPool();
+  await pool.query("BEGIN");
+  try {
+    await pool.query(
+      `UPDATE insights_users
+       SET totp_secret_enc = NULL, two_factor_enabled = FALSE, updated_at = NOW()
+       WHERE user_id = $1`,
+      [userId],
+    );
+    await pool.query(`DELETE FROM insights_totp_backup_codes WHERE user_id = $1`, [userId]);
+    await pool.query("COMMIT");
+  } catch (err) {
+    await pool.query("ROLLBACK");
+    throw err;
+  }
+}
+
+/** Return remaining (unused) backup code count for a user. */
+export async function getBackupCodeCount(userId: string): Promise<number> {
+  const pool = getPgPool();
+  const result = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM insights_totp_backup_codes WHERE user_id = $1 AND used_at IS NULL`,
+    [userId],
+  );
+  return Number(result.rows[0]?.cnt ?? 0);
 }

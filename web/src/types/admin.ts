@@ -48,6 +48,7 @@ export interface AdminUser {
   user_id: string;
   email: string;
   is_admin: boolean;
+  two_factor_enabled: boolean;
   created_at: string;
   installations: Array<{
     installation_id: string;

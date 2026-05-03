@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession, checkIsAdmin } from "@/lib/session-auth";
+import { requireSession, checkIsBreakGlass } from "@/lib/session-auth";
 
 export async function requireAdminSession(request: NextRequest) {
   // First, require valid session
@@ -22,13 +22,13 @@ export async function requireAdminSession(request: NextRequest) {
     throw error;
   }
 
-  // Then, check admin role
-  const isAdmin = await checkIsAdmin(session.user_id);
-  if (!isAdmin) {
+  // Then, check break-glass (platform operator) role
+  const isBreakGlass = await checkIsBreakGlass(session.user_id);
+  if (!isBreakGlass) {
     return {
       error: true,
       status: 403,
-      message: "Admin access required",
+      message: "Platform admin access required",
     };
   }
 
