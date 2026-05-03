@@ -19,7 +19,8 @@
     "dev:docker:logs": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.dev.yml logs -f app",
     "sso:up": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.sso.yml up -d",
     "sso:down": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.sso.yml down",
-    "sso:logs": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.sso.yml logs -f keycloak caddy-sso"
+    "sso:logs": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.sso.yml logs -f keycloak caddy-sso",
+    "sso:seed": "docker exec insights-local-postgres psql -U insights -d insights -f /dev/stdin < infra/sql/sso-test-seed.sql"
   },
   "dependencies": {
     "date-fns": "^4.1.0"
