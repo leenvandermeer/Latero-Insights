@@ -9,6 +9,8 @@ export interface PipelineRun {
   run_status: string;
   duration_ms: number | null;
   environment: string | null;
+  job_name?: string | null;
+  parent_run_id?: string | null;
 }
 
 export interface DataQualityCheck {
@@ -22,6 +24,10 @@ export interface DataQualityCheck {
   check_status: string;
   check_category: string | null;
   policy_version: string | null;
+  environment?: string | null;
+  check_mode?: string | null;
+  check_result?: string | null;
+  parent_run_id?: string | null;
 }
 
 export interface LineageHop {

@@ -178,5 +178,20 @@
     "id": "ff52ddce-7b4f-4e3f-b246-b18523560920",
     "installation_id": "latero2",
     "publishedAt": "2026-04-27T17:17:23.438Z"
+  },
+  {
+    "label": "Recent Pipeline Runs",
+    "description": "Table of latest pipeline run results with status and duration",
+    "templateType": "pipeline-runs-table",
+    "category": "tables",
+    "defaultSize": {
+      "w": 12,
+      "h": 4,
+      "minW": 6,
+      "minH": 3
+    },
+    "id": "11089c27-9f57-4641-b57d-437146a25943",
+    "installation_id": "prod_ko5o09uj9",
+    "publishedAt": "2026-05-03T07:36:18.150Z"
   }
 ]

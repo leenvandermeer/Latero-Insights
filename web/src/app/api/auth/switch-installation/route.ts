@@ -4,7 +4,7 @@ import { getActiveInstallationFromSession, switchActiveInstallation } from "@/li
 
 export async function POST(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const { allowed } = rateLimit(`auth:switch:${clientIp}`);
+  const { allowed } = rateLimit(`auth:switch:${clientIp}`, 30);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }

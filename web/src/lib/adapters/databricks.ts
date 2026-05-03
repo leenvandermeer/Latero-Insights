@@ -211,7 +211,8 @@ export class DatabricksAdapter implements DataAdapter {
   async getPipelineRuns(range: DateRange): Promise<PipelineRun[]> {
     const id = this.installationId;
     const columns = await describeColumns("pipeline_runs", id);
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, source_system, step, run_id, run_status, duration_ms, environment FROM ${fqTable("pipeline_runs", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("pipeline_runs", columns, id)} ORDER BY timestamp_utc DESC`;
+    const optional = ["job_name", "parent_run_id"].filter((name) => hasColumn(columns, name));
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, source_system, step, run_id, run_status, duration_ms, environment${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("pipeline_runs", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("pipeline_runs", columns, id)} ORDER BY timestamp_utc DESC`;
     const resp = await executeStatement(sql, [
       { name: "date_from", value: range.from, type: "STRING" },
       { name: "date_to", value: range.to, type: "STRING" },
@@ -227,13 +228,16 @@ export class DatabricksAdapter implements DataAdapter {
       run_status: col(row, cols, "run_status") ?? "",
       duration_ms: col(row, cols, "duration_ms") ? Number(col(row, cols, "duration_ms")) : null,
       environment: col(row, cols, "environment"),
+      job_name: col(row, cols, "job_name"),
+      parent_run_id: col(row, cols, "parent_run_id"),
     }));
   }
 
   async getDataQualityChecks(range: DateRange): Promise<DataQualityCheck[]> {
     const id = this.installationId;
     const columns = await describeColumns("data_quality_checks", id);
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, step, run_id, check_id, check_status, check_category, policy_version FROM ${fqTable("data_quality_checks", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("data_quality_checks", columns, id)} ORDER BY timestamp_utc DESC`;
+    const optional = ["environment", "check_mode", "check_result", "parent_run_id"].filter((name) => hasColumn(columns, name));
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, step, run_id, check_id, check_status, check_category, policy_version${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("data_quality_checks", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("data_quality_checks", columns, id)} ORDER BY timestamp_utc DESC`;
     const resp = await executeStatement(sql, [
       { name: "date_from", value: range.from, type: "STRING" },
       { name: "date_to", value: range.to, type: "STRING" },
@@ -249,6 +253,10 @@ export class DatabricksAdapter implements DataAdapter {
       check_status: col(row, cols, "check_status") ?? "",
       check_category: col(row, cols, "check_category"),
       policy_version: col(row, cols, "policy_version"),
+      environment: col(row, cols, "environment"),
+      check_mode: col(row, cols, "check_mode"),
+      check_result: col(row, cols, "check_result"),
+      parent_run_id: col(row, cols, "parent_run_id"),
     }));
   }
 

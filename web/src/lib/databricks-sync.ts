@@ -1,6 +1,7 @@
 import { DatabricksAdapter } from "@/lib/adapters/databricks";
 import { getPgPool } from "@/lib/insights-saas-db";
 
+// Fallback installation_id used when no session is available (e.g. CLI/admin triggers).
 const SYNC_INSTALLATION_ID = "databricks-sync";
 
 export interface SyncResult {
@@ -18,16 +19,22 @@ function assertDate(value: string): string {
 
 async function ensureSyncIndexes(): Promise<void> {
   const pool = getPgPool();
+  // Drop old partial indexes (WHERE installation_id = 'databricks-sync') if they
+  // still exist — migration 006 handles this for existing deployments, but we
+  // guard here too so on-conflict clauses work without a WHERE predicate.
+  await Promise.all([
+    pool.query(`DROP INDEX IF EXISTS uq_pipeline_runs_sync_key`),
+    pool.query(`DROP INDEX IF EXISTS uq_dq_checks_sync_key`),
+    pool.query(`DROP INDEX IF EXISTS uq_lineage_sync_key`),
+  ]);
   await Promise.all([
     pool.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS uq_pipeline_runs_sync_key
       ON pipeline_runs (installation_id, run_id, step, event_date)
-      WHERE installation_id = 'databricks-sync'
     `),
     pool.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS uq_dq_checks_sync_key
       ON data_quality_checks (installation_id, check_id, run_id, step, event_date)
-      WHERE installation_id = 'databricks-sync'
     `),
     pool.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS uq_lineage_sync_key
@@ -41,7 +48,6 @@ async function ensureSyncIndexes(): Promise<void> {
         target_attribute,
         event_date
       )
-      WHERE installation_id = 'databricks-sync'
     `),
   ]);
 }
@@ -49,6 +55,10 @@ async function ensureSyncIndexes(): Promise<void> {
 export async function syncFromDatabricks(range: { from: string; to: string }, installationId?: string): Promise<SyncResult> {
   const from = assertDate(range.from);
   const to = assertDate(range.to);
+
+  // Use the caller's installationId so synced rows are visible to the same
+  // session's dashboard queries. Fall back to SYNC_INSTALLATION_ID for CLI use.
+  const effectiveInstallationId = installationId ?? SYNC_INSTALLATION_ID;
 
   const adapter = new DatabricksAdapter(installationId);
   const pool = getPgPool();
@@ -63,9 +73,9 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
 
   // Keep sync scope aligned with requested date range while preserving idempotency.
   await Promise.all([
-    pool.query(`DELETE FROM pipeline_runs WHERE installation_id = $1 AND event_date BETWEEN $2 AND $3`, [SYNC_INSTALLATION_ID, from, to]),
-    pool.query(`DELETE FROM data_quality_checks WHERE installation_id = $1 AND event_date BETWEEN $2 AND $3`, [SYNC_INSTALLATION_ID, from, to]),
-    pool.query(`DELETE FROM data_lineage WHERE installation_id = $1 AND event_date BETWEEN $2 AND $3`, [SYNC_INSTALLATION_ID, from, to]),
+    pool.query(`DELETE FROM pipeline_runs WHERE installation_id = $1 AND event_date BETWEEN $2 AND $3`, [effectiveInstallationId, from, to]),
+    pool.query(`DELETE FROM data_quality_checks WHERE installation_id = $1 AND event_date BETWEEN $2 AND $3`, [effectiveInstallationId, from, to]),
+    pool.query(`DELETE FROM data_lineage WHERE installation_id = $1 AND event_date BETWEEN $2 AND $3`, [effectiveInstallationId, from, to]),
   ]);
 
   for (const run of runs) {
@@ -73,10 +83,10 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       `
         INSERT INTO pipeline_runs (
           event_type, timestamp_utc, dataset_id, source_system, step,
-          run_id, run_status, duration_ms, installation_id, environment, payload
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+          run_id, run_status, duration_ms, installation_id, environment,
+          job_name, parent_run_id, payload
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
         ON CONFLICT (installation_id, run_id, step, event_date)
-        WHERE installation_id = 'databricks-sync'
         DO UPDATE SET
           event_type = EXCLUDED.event_type,
           timestamp_utc = EXCLUDED.timestamp_utc,
@@ -85,6 +95,8 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
           run_status = EXCLUDED.run_status,
           duration_ms = EXCLUDED.duration_ms,
           environment = EXCLUDED.environment,
+          job_name = EXCLUDED.job_name,
+          parent_run_id = EXCLUDED.parent_run_id,
           payload = EXCLUDED.payload
       `,
       [
@@ -96,8 +108,10 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
         run.run_id,
         run.run_status,
         run.duration_ms ?? null,
-        SYNC_INSTALLATION_ID,
+        effectiveInstallationId,
         run.environment || "",
+        run.job_name ?? null,
+        run.parent_run_id ?? null,
         "{}",
       ],
     );
@@ -112,10 +126,10 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
         INSERT INTO data_quality_checks (
           event_type, timestamp_utc, dataset_id, step, run_id,
           check_id, check_name, check_status, severity, check_category,
-          policy_version, message, installation_id, environment, payload
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+          policy_version, message, installation_id, environment,
+          check_mode, check_result, parent_run_id, payload
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
         ON CONFLICT (installation_id, check_id, run_id, step, event_date)
-        WHERE installation_id = 'databricks-sync'
         DO UPDATE SET
           event_type = EXCLUDED.event_type,
           timestamp_utc = EXCLUDED.timestamp_utc,
@@ -127,6 +141,9 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
           policy_version = EXCLUDED.policy_version,
           message = EXCLUDED.message,
           environment = EXCLUDED.environment,
+          check_mode = EXCLUDED.check_mode,
+          check_result = EXCLUDED.check_result,
+          parent_run_id = EXCLUDED.parent_run_id,
           payload = EXCLUDED.payload
       `,
       [
@@ -136,14 +153,17 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
         step,
         runId,
         check.check_id,
-        check.check_id, // check_name defaults to check_id for synced records
+        check.check_id,
         check.check_status,
-        "medium", // severity not available in Databricks source; default to medium
+        "medium",
         check.check_category ?? null,
         check.policy_version ?? null,
         null,
-        SYNC_INSTALLATION_ID,
-        "", // environment not always present in DQ checks from Databricks
+        effectiveInstallationId,
+        check.environment || "",
+        check.check_mode ?? null,
+        check.check_result ?? null,
+        check.parent_run_id ?? null,
         "{}",
       ],
     );
@@ -172,7 +192,6 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
           target_attribute,
           event_date
         )
-        WHERE installation_id = 'databricks-sync'
         DO UPDATE SET
           event_type = EXCLUDED.event_type,
           timestamp_utc = EXCLUDED.timestamp_utc,
@@ -204,7 +223,7 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
         targetAttribute,
         hop.hop_kind || "data_flow",
         hop.source_system ?? null,
-        SYNC_INSTALLATION_ID,
+        effectiveInstallationId,
         hop.environment || "",
         hop.schema_version ?? null,
         hop.lineage_evidence ?? null,

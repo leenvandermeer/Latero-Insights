@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
   run_id TEXT NOT NULL,
   run_status TEXT NOT NULL,
   duration_ms BIGINT,
+  job_name TEXT,
+  parent_run_id TEXT,
   installation_id TEXT NOT NULL,
   environment TEXT NOT NULL,
   payload JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -43,6 +45,9 @@ CREATE TABLE IF NOT EXISTS data_quality_checks (
   severity TEXT NOT NULL,
   check_category TEXT,
   policy_version TEXT,
+  check_mode TEXT,
+  check_result TEXT,
+  parent_run_id TEXT,
   message TEXT,
   installation_id TEXT NOT NULL,
   environment TEXT NOT NULL,
@@ -108,12 +113,10 @@ CREATE INDEX IF NOT EXISTS idx_lineage_hop_kind
   ON data_lineage (hop_kind);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_pipeline_runs_sync_key
-  ON pipeline_runs (installation_id, run_id, step, event_date)
-  WHERE installation_id = 'databricks-sync';
+  ON pipeline_runs (installation_id, run_id, step, event_date);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dq_checks_sync_key
-  ON data_quality_checks (installation_id, check_id, run_id, step, event_date)
-  WHERE installation_id = 'databricks-sync';
+  ON data_quality_checks (installation_id, check_id, run_id, step, event_date);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_lineage_sync_key
   ON data_lineage (
@@ -125,5 +128,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_lineage_sync_key
     source_attribute,
     target_attribute,
     event_date
-  )
-  WHERE installation_id = 'databricks-sync';
+  );

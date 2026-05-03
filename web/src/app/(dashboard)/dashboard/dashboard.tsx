@@ -7,7 +7,8 @@ import { ResponsiveGridLayout, verticalCompactor, type LayoutItem, type Responsi
 import "react-grid-layout/css/styles.css";
 import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2, Check, MoreHorizontal, Sparkles, Plus, Globe } from "lucide-react";
 import { useDateRange } from "@/hooks/use-date-range";
-import { DateRangePicker, Button } from "@/components/ui";
+import { useHealth } from "@/hooks/use-health";
+import { DateRangePicker, Button, SourceIndicator } from "@/components/ui";
 import { useDashboards } from "@/contexts/dashboard-context";
 import { useInstallation } from "@/contexts/installation-context";
 import { useSharedWidgets, useUpdateSharedWidget } from "@/hooks/use-shared-widgets";
@@ -59,6 +60,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
   const { installation, installations, switchInstallation, validating } = useInstallation();
   const { mutateAsync: updateSharedWidget } = useUpdateSharedWidget();
   const { from, to, setRange } = useDateRange();
+  const { data: health } = useHealth();
   const [editMode, setEditMode] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishDone, setPublishDone] = useState(false);
@@ -301,28 +303,14 @@ export function DashboardCanvas({ dashboardId }: Props) {
             )}
           </div>
 
-          {/* Right: env pill + date + controls */}
+          {/* Right: date + controls */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {(() => {
-              const env = installation?.environment;
-              if (!env) return null;
-              const styles: Record<string, { bg: string; color: string; dot: string }> = {
-                prod:       { bg: "rgba(239,68,68,0.10)",  color: "#dc2626", dot: "#ef4444" },
-                production: { bg: "rgba(239,68,68,0.10)",  color: "#dc2626", dot: "#ef4444" },
-                staging:    { bg: "rgba(245,158,11,0.11)", color: "#b45309", dot: "#f59e0b" },
-                acc:        { bg: "rgba(245,158,11,0.11)", color: "#b45309", dot: "#f59e0b" },
-                dev:        { bg: "rgba(8,145,178,0.10)",  color: "#0e7490", dot: "#06b6d4" },
-              };
-              const s = styles[env.toLowerCase()] ?? { bg: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)", dot: "var(--color-text-muted)" };
-              return (
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"
-                  style={{ background: s.bg, color: s.color }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.dot }} />
-                  {env}
-                </span>
-              );
+            {health && (() => {
+              let source: string | null = null;
+              if (health.cache.cacheOnly) source = "cache";
+              else if (health.status === "ok") source = "insights-saas";
+              else if (health.cache.fileCount > 0) source = "fallback";
+              return source ? <SourceIndicator source={source} /> : null;
             })()}
 
             <DateRangePicker from={from} to={to} onChange={setRange} />

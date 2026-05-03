@@ -37,3 +37,7 @@ Naming note:
 | [LADR-029](20260425-tenant-data-isolation-security-hardening.md) | 2026-04-25 | Tenant Data Isolation Security Hardening: LINS-016 enforcement (shared widgets, personal dashboards, API routes) | ACCEPTED |
 | [LADR-030](20260501-installation-scoped-adapter-settings.md) | 2026-05-01 | Installation-scoped DatabricksAdapter settings resolution | ACCEPTED |
 | [LADR-031](20260501-slim-page-header-pattern.md) | 2026-05-01 | Slim page header pattern voor alle dashboard-pagina's | ACCEPTED |
+| [LADR-032](20260503-uniform-source-indicator.md) | 2026-05-03 | Uniforme data-statusindicator op alle dashboard-pagina's | ACCEPTED |
+| [LADR-033](20260503-global-form-baseline.md) | 2026-05-03 | Globale form-element baseline styling | ACCEPTED |
+| [LADR-034](20260503-sso-hybrid-auth-architecture.md) | 2026-05-03 | SSO-first hybrid authentication with installation-scoped policy | ACCEPTED |
+| [LADR-035](20260503-keycloak-as-local-dev-idp.md) | 2026-05-03 | Keycloak als lokale dev-IdP voor SSO-testomgeving | ACCEPTED |

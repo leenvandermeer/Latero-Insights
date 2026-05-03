@@ -6,24 +6,30 @@ interface RateLimitEntry {
 const store = new Map<string, RateLimitEntry>();
 
 const WINDOW_MS = 60_000; // 1 minute
-const MAX_REQUESTS = 120; // 120 requests per minute per IP
+const DEFAULT_MAX_REQUESTS = 120; // 120 requests per minute per IP (general)
 
-export function rateLimit(identifier: string): { allowed: boolean; remaining: number } {
+/** Max attempts per minute for credential-processing auth endpoints (login, callback, password-reset). */
+export const AUTH_MAX_REQUESTS = 5;
+
+export function rateLimit(
+  identifier: string,
+  maxRequests: number = DEFAULT_MAX_REQUESTS,
+): { allowed: boolean; remaining: number } {
   const now = Date.now();
   const entry = store.get(identifier);
 
   if (!entry || now > entry.resetAt) {
     store.set(identifier, { count: 1, resetAt: now + WINDOW_MS });
-    return { allowed: true, remaining: MAX_REQUESTS - 1 };
+    return { allowed: true, remaining: maxRequests - 1 };
   }
 
   entry.count++;
 
-  if (entry.count > MAX_REQUESTS) {
+  if (entry.count > maxRequests) {
     return { allowed: false, remaining: 0 };
   }
 
-  return { allowed: true, remaining: MAX_REQUESTS - entry.count };
+  return { allowed: true, remaining: maxRequests - entry.count };
 }
 
 // Periodic cleanup of expired entries

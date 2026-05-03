@@ -13,10 +13,10 @@ export function SourceIndicator({ source, cachedAt, className }: SourceIndicator
   const configs: Record<KnownSource, { icon: typeof Database; label: string; bg: string; color: string; title: string }> = {
     "insights-saas": {
       icon: Database,
-      label: "Insights SaaS",
+      label: "Connected",
       bg: "color-mix(in srgb, var(--color-success-light) 72%, white)",
       color: "var(--color-success)",
-      title: "Live data from the Insights SaaS store",
+      title: "Live data from the Insights store",
     },
     databricks: {
       icon: Database,

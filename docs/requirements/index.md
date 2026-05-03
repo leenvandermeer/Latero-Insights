@@ -16,6 +16,10 @@ documents that still match the current product.
 - [Admin Developer Quick Start](./admin-developer-quick-start.md)
 - [Admin Implementation Checklist](./admin-implementation-checklist.md)
 - [Admin Execution Checklist](./ADMIN_EXECUTION_CHECKLIST.md)
+- [SSO and Local Authentication Feature](./sso-auth-feature.md)
+- [SSO and Hybrid Auth Work Packages](./sso-auth-workpackages.md)
+- [SSO Authentication Implementation Plan](./sso-auth-implementation-plan.md)
+- [SSO Authentication UX Requirements](./sso-auth-ux.md)
 - [Security Guidelines](./security-guidelines.md)
 - [Go-Live Checklist](./go-live-checklist.md)
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHealth } from "@/hooks";
 import { fetchSettings, updateSettings } from "@/lib/api";
+import type { ApiHealthResponse } from "@/lib/api";
 import { PageHeader } from "@/components/ui";
 import { Save, PlugZap, Settings2, CheckCircle2, AlertTriangle, RefreshCw, Loader2 } from "lucide-react";
 
@@ -17,6 +18,8 @@ export function SettingsDashboard() {
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [diagnoseResult, setDiagnoseResult] = useState<Record<string, unknown> | null>(null);
   const [form, setForm] = useState({
     connectionMode: "databricks" as "databricks" | "api",
     databricksHost: "",
@@ -98,7 +101,12 @@ export function SettingsDashboard() {
         ok,
         message: data.message ?? data.error ?? (data.connected ? "Connected" : "Failed"),
       });
-      if (ok) void refetchHealth();
+      if (ok) {
+        queryClient.setQueryData(["health"], (old: ApiHealthResponse | undefined) =>
+          old ? { ...old, databricks: true } : old
+        );
+        await refetchHealth();
+      }
     } catch (err) {
       setTestResult({ ok: false, message: err instanceof Error ? err.message : "Connection test failed." });
     } finally {
@@ -111,19 +119,45 @@ export function SettingsDashboard() {
     setSyncResult(null);
     try {
       const res = await fetch("/api/sync/databricks", { method: "POST", credentials: "include" });
-      const data = await res.json() as { synced?: Record<string, number>; duration_ms?: number; error?: string };
+      const data = await res.json() as { synced?: Record<string, number>; duration_ms?: number; error?: string; range?: { from: string; to: string } };
       if (!res.ok) {
         setSyncResult({ ok: false, message: data.error ?? "Sync failed." });
       } else {
         const counts = data.synced ?? {};
         const total = Object.values(counts).reduce((s, n) => s + n, 0);
         setSyncResult({ ok: true, message: `Synced ${total} records in ${Math.round((data.duration_ms ?? 0) / 1000)}s` });
+
+        // Warm the read-API cache so the snapshot counter reflects the synced data.
+        if (data.range?.from && data.range?.to) {
+          const { from, to } = data.range;
+          await Promise.all([
+            fetch(`/api/pipelines?from=${from}&to=${to}`, { credentials: "include" }),
+            fetch(`/api/quality?from=${from}&to=${to}`, { credentials: "include" }),
+            fetch(`/api/lineage?from=${from}&to=${to}`, { credentials: "include" }),
+          ]);
+        }
+
         await queryClient.invalidateQueries();
+        await refetchHealth();
       }
     } catch (err) {
       setSyncResult({ ok: false, message: err instanceof Error ? err.message : "Sync failed." });
     } finally {
       setIsSyncing(false);
+    }
+  }
+
+  async function handleDiagnose() {
+    setIsDiagnosing(true);
+    setDiagnoseResult(null);
+    try {
+      const res = await fetch("/api/sync/databricks/diagnose", { credentials: "include" });
+      const data = await res.json() as Record<string, unknown>;
+      setDiagnoseResult(data);
+    } catch (err) {
+      setDiagnoseResult({ error: err instanceof Error ? err.message : "Diagnose failed." });
+    } finally {
+      setIsDiagnosing(false);
     }
   }
 
@@ -316,14 +350,56 @@ export function SettingsDashboard() {
             {isSyncing ? "Syncing…" : "Sync now"}
           </button>
         )}
+        {isDatabricks && (
+          <button
+            type="button"
+            onClick={handleDiagnose}
+            disabled={isDiagnosing}
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-60"
+            style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "transparent" }}
+          >
+            {isDiagnosing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            {isDiagnosing ? "Diagnosing…" : "Diagnose"}
+          </button>
+        )}
       </div>
+
+      {/* Diagnose output */}
+      {diagnoseResult && (
+        <section className="space-y-2">
+          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>
+            Diagnose output
+          </h2>
+          <pre
+            className="rounded-lg p-3 text-xs overflow-auto"
+            style={{
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text)",
+              maxHeight: 320,
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-all",
+            }}
+          >
+            {JSON.stringify(diagnoseResult, null, 2)}
+          </pre>
+          <button
+            type="button"
+            onClick={() => setDiagnoseResult(null)}
+            className="text-xs"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            Clear
+          </button>
+        </section>
+      )}
     </div>
   );
 }
 
 function Field({ label, children, inline }: { label: string; children: React.ReactNode; inline?: boolean }) {
   return (
-    <label className={inline ? "flex items-center gap-2" : "space-y-1.5"}>
+    <label className={inline ? "flex items-center gap-2" : "flex flex-col gap-2"}>
       <span className="text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>
         {label}
       </span>

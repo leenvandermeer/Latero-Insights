@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimit, AUTH_MAX_REQUESTS } from "@/lib/rate-limit";
 import {
   attachSessionCookie,
   createSession,
@@ -11,7 +11,7 @@ import {
 
 export async function POST(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const { allowed } = rateLimit(`auth:login:${clientIp}`);
+  const { allowed } = rateLimit(`auth:login:${clientIp}`, AUTH_MAX_REQUESTS);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }

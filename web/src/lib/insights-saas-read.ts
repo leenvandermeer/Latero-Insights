@@ -35,7 +35,9 @@ export async function getPipelineRunsFromSaaS(range: DateRange): Promise<Pipelin
         run_id,
         run_status,
         duration_ms,
-        environment
+        environment,
+        job_name,
+        parent_run_id
       FROM pipeline_runs
       WHERE ${where}
       ORDER BY timestamp_utc DESC
@@ -73,7 +75,11 @@ export async function getDataQualityChecksFromSaaS(range: DateRange): Promise<Da
         check_id,
         check_status,
         check_category,
-        policy_version
+        policy_version,
+        environment,
+        check_mode,
+        check_result,
+        parent_run_id
       FROM data_quality_checks
       WHERE ${where}
       ORDER BY timestamp_utc DESC

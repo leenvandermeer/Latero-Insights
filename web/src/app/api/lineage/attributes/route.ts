@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     writeToCache(CACHE_KEY, cacheParams, attributes);
     const response = NextResponse.json({
       data: attributes,
-      source: "postgres",
+      source: "insights-saas",
       meta: {
         resolution: "data_lineage_derived",
         provenanceCounts: {

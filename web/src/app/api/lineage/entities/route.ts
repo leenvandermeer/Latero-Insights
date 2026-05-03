@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     writeToCache(CACHE_KEY, cacheParams, entities);
     const response = NextResponse.json({
       data: entities,
-      source: "postgres",
+      source: "insights-saas",
       meta: {
         resolution: "data_lineage_derived",
       },

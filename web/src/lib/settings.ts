@@ -174,14 +174,15 @@ export function saveSettings(settings: AppSettings, installationId?: string): vo
   };
 
   if (installationId) {
-    const scoped = {
-      ...(current.scoped ?? {}),
-      [installationId]: encoded,
-    };
-
+    // Save scoped AND globally so endpoints without a session (e.g. /api/health)
+    // can still load the correct settings via loadSettings(undefined).
     writeSettingsFile({
       ...current,
-      scoped,
+      ...encoded,
+      scoped: {
+        ...(current.scoped ?? {}),
+        [installationId]: encoded,
+      },
     });
     return;
   }
