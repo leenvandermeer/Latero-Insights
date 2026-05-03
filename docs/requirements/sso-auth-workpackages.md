@@ -149,6 +149,8 @@ Indicatie:
 
 ## Werkpakket 5 — Provisioning en role mapping
 
+**Status: COMPLETED**
+
 Doel:
 - Toegang op een veilige manier toekennen na federated login.
 
@@ -172,6 +174,8 @@ Indicatie:
 - 2 tot 3 dagen
 
 ## Werkpakket 6 — Audit logging, session lifecycle en CSRF-hardening
+
+**Status: COMPLETED**
 
 Doel:
 - Auth-events volledig zichtbaar en forensisch bruikbaar maken; muterende sessie-endpoints beveiligen tegen cross-site aanvallen.

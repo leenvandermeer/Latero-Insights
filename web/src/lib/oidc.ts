@@ -249,6 +249,10 @@ export interface IdTokenClaims {
   nonce: string;
   exp: number;
   iat: number;
+  /** Groups claim — gangbaar bij Keycloak, Okta, Azure AD, Entra ID. */
+  groups?: string[];
+  /** Roles claim — alternatieve naam voor groups bij sommige IdPs. */
+  roles?: string[];
 }
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();

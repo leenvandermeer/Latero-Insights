@@ -33,6 +33,12 @@ export interface SsoConfig {
   allowed_groups: string[] | null;
   pkce_required: boolean;
   enabled: boolean;
+  /**
+   * Mapping van IdP-groepsnaam naar installation-rol.
+   * Formaat: { "GroupName": "member", "AdminGroup": "admin" }
+   * Admin-escalatie via SSO-claims raakt NOOIT insights_users.is_admin (FP-006).
+   */
+  role_mapping: Record<string, string>;
 }
 
 export interface PolicyForDomain {
@@ -110,13 +116,35 @@ export async function getSsoConfig(installationId: string): Promise<SsoConfig | 
   const pool = getPgPool();
   const result = await pool.query<SsoConfig>(
     `SELECT installation_id, issuer, client_id, client_secret_ref,
-            redirect_uri, scopes, allowed_groups, pkce_required, enabled
+            redirect_uri, scopes, allowed_groups, pkce_required, enabled,
+            COALESCE(role_mapping, '{}')::jsonb AS role_mapping
      FROM installation_sso_config
      WHERE installation_id = $1`,
     [installationId],
   );
   if (result.rowCount === 0) return null;
   return result.rows[0];
+}
+
+/**
+ * Bepaalt de installation-rol op basis van groups/roles claims uit het ID token.
+ *
+ * Doorloopt de claim-groepen in volgorde; retourneert de eerste match in roleMapping.
+ * Fallback: defaultRole.
+ *
+ * Security: deze functie kent NOOIT admin-rechten toe op insights_users.is_admin.
+ * De geretourneerde rol is uitsluitend geldig als insights_user_installations.role.
+ */
+export function resolveRoleFromClaims(
+  groupsClaims: string[],
+  roleMapping: Record<string, string>,
+  defaultRole: string,
+): string {
+  for (const group of groupsClaims) {
+    const mapped = roleMapping[group];
+    if (mapped) return mapped;
+  }
+  return defaultRole;
 }
 
 /**

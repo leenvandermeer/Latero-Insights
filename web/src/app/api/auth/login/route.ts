@@ -9,9 +9,11 @@ import {
   checkIsAdmin,
 } from "@/lib/session-auth";
 import { getAuthPolicyByInstallation, isBreakGlassUser } from "@/lib/auth-policy";
+import { logAuthEvent } from "@/lib/auth-audit";
 
 export async function POST(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const userAgent = request.headers.get("user-agent") ?? null;
   const { allowed } = rateLimit(`auth:login:${clientIp}`, AUTH_MAX_REQUESTS);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
@@ -33,11 +35,13 @@ export async function POST(request: NextRequest) {
   await ensureAuthSchema();
   const user = await verifyUserPassword(email, password);
   if (!user) {
+    await logAuthEvent({ event_type: "local_login", outcome: "failure", ip_address: clientIp, user_agent: userAgent, detail: "invalid_credentials" });
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
 
   const installations = await getUserInstallations(user.user_id);
   if (installations.length === 0) {
+    await logAuthEvent({ event_type: "local_login", outcome: "failure", user_id: user.user_id, ip_address: clientIp, user_agent: userAgent, detail: "no_installations" });
     return NextResponse.json({ error: "No active organizations assigned" }, { status: 403 });
   }
 
@@ -57,6 +61,7 @@ export async function POST(request: NextRequest) {
   if (authMode === "sso_only" || authMode === "sso_with_break_glass") {
     const breakGlass = await isBreakGlassUser(user.user_id);
     if (!breakGlass) {
+      await logAuthEvent({ event_type: "local_login_blocked", outcome: "failure", user_id: user.user_id, installation_id: activeInstallation, ip_address: clientIp, user_agent: userAgent, detail: authMode });
       return NextResponse.json(
         { error: "local_login_disabled", hint: "sso" },
         { status: 403 },
@@ -67,6 +72,15 @@ export async function POST(request: NextRequest) {
 
   const rawToken = await createSession(user.user_id, activeInstallation, request);
   const isAdmin = await checkIsAdmin(user.user_id);
+
+  await logAuthEvent({
+    event_type: "local_login",
+    outcome: "success",
+    user_id: user.user_id,
+    installation_id: activeInstallation,
+    ip_address: clientIp,
+    user_agent: userAgent,
+  });
 
   const response = NextResponse.json({
     authenticated: true,
