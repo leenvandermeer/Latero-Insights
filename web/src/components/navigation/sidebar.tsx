@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Trash2,
   Info,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboards } from "@/contexts/dashboard-context";
@@ -87,6 +88,12 @@ export function Sidebar() {
     setTheme(next);
     localStorage.setItem("theme", next);
     document.documentElement.setAttribute("data-theme", next);
+  };
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    router.push("/");
+    router.refresh();
   };
 
   const handleCollapseToggle = (next: boolean) => {
@@ -362,6 +369,17 @@ export function Sidebar() {
           >
             {theme === "light" ? <Moon className="h-4 w-4 shrink-0" /> : <Sun className="h-4 w-4 shrink-0" />}
             {!collapsed && <span>{theme === "light" ? "Dark mode" : "Light mode"}</span>}
+          </button>
+          <button
+            onClick={handleLogout}
+            className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors w-full", collapsed && "justify-center px-2")}
+            style={{ color: "var(--color-error, #dc2626)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+            title={collapsed ? "Log out" : undefined}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Log out</span>}
           </button>
         </div>
       </aside>
