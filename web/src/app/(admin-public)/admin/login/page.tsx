@@ -25,7 +25,7 @@ export default async function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#f8fafc", colorScheme: "light" }}>
       <AdminLoginForm />
     </div>
   );

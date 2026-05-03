@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { AlertTriangle, Eye, EyeOff, KeyRound, Lock, Mail, ShieldAlert } from "lucide-react";
 
 export function AdminLoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totpCode, setTotpCode] = useState("");
@@ -85,24 +83,25 @@ export function AdminLoginForm() {
     }
   }
 
-  const fieldStyle = (focused: boolean) => ({
-    background: "transparent",
+  const fieldStyle = (focused: boolean): React.CSSProperties => ({
+    background: "#ffffff",
     border: `1px solid ${focused ? "#1e293b" : "#e2e8f0"}`,
     color: "#0f172a",
     outline: "none",
+    colorScheme: "light",
   });
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm" style={{ colorScheme: "light" }}>
       {/* Header */}
       <div className="mb-8 flex flex-col items-center gap-2">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-900 dark:bg-white">
-          <ShieldAlert className="h-5 w-5 text-white dark:text-slate-900" />
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-900">
+          <ShieldAlert className="h-5 w-5 text-white" />
         </div>
-        <h1 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+        <h1 className="text-lg font-bold text-slate-900 tracking-tight">
           Latero Control
         </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-500">
           {step === "totp"
             ? "Enter the 6-digit code from your authenticator app."
             : "Platform operator access. Authorised personnel only."}
@@ -119,9 +118,9 @@ export function AdminLoginForm() {
       {step === "credentials" ? (
         <form onSubmit={(e) => void handleCredentials(e)} className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Email</label>
+            <label className="text-xs font-medium text-slate-700">Email</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="email"
                 autoComplete="username"
@@ -129,7 +128,7 @@ export function AdminLoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 onFocus={() => setEmailFocused(true)}
                 onBlur={() => setEmailFocused(false)}
-                className="w-full rounded-lg pl-9 pr-3 py-2.5 text-sm"
+                className="w-full rounded-lg pl-10 pr-3 py-2.5 text-sm"
                 style={fieldStyle(emailFocused)}
                 placeholder="operator@latero.local"
                 required
@@ -138,9 +137,9 @@ export function AdminLoginForm() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Password</label>
+            <label className="text-xs font-medium text-slate-700">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
@@ -148,7 +147,7 @@ export function AdminLoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setPasswordFocused(true)}
                 onBlur={() => setPasswordFocused(false)}
-                className="w-full rounded-lg pl-9 pr-9 py-2.5 text-sm"
+                className="w-full rounded-lg pl-10 pr-9 py-2.5 text-sm"
                 style={fieldStyle(passwordFocused)}
                 placeholder="••••••••"
                 required
@@ -167,7 +166,7 @@ export function AdminLoginForm() {
           <button
             type="submit"
             disabled={loading || !email.trim() || !password.trim()}
-            className="mt-2 w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+            className="mt-2 w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50 bg-slate-900 hover:bg-slate-800"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
@@ -175,11 +174,11 @@ export function AdminLoginForm() {
       ) : (
         <form onSubmit={(e) => void handleTotp(e)} className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+            <label className="text-xs font-medium text-slate-700">
               Authenticator code
             </label>
             <div className="relative">
-              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="text"
                 inputMode="numeric"
@@ -190,7 +189,7 @@ export function AdminLoginForm() {
                 onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
                 onFocus={() => setTotpFocused(true)}
                 onBlur={() => setTotpFocused(false)}
-                className="w-full rounded-lg pl-9 pr-3 py-2.5 text-sm font-mono tracking-widest text-center"
+                className="w-full rounded-lg pl-10 pr-3 py-2.5 text-sm font-mono tracking-widest text-center"
                 style={fieldStyle(totpFocused)}
                 placeholder="000000"
                 required
