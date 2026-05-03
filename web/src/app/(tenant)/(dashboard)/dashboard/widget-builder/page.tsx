@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Database, BarChart2, Eye, Tag, Layers, X } from "lucide-react";
 import { useFieldValues } from "@/hooks";
 import { usePublishWidget } from "@/hooks/use-shared-widgets";
-import { WIDGET_REGISTRY } from "@/app/(dashboard)/dashboard/registry";
+import { WIDGET_REGISTRY } from "@/app/(tenant)/(dashboard)/dashboard/registry";
 import {
   DATA_SOURCE_LABELS,
   DATA_SOURCE_FIELDS,

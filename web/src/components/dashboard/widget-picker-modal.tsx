@@ -9,7 +9,7 @@ import { useDashboards } from "@/contexts/dashboard-context";
 import { useSharedWidgets } from "@/hooks/use-shared-widgets";
 import { useFieldValues } from "@/hooks";
 import { executeQuery, DATA_SOURCE_LABELS, DATA_SOURCE_FIELDS, FIELD_LABELS, NUMERIC_FIELDS } from "@/lib/query-engine";
-import { WidgetRenderer } from "@/app/(dashboard)/dashboard/widgets/widget-renderer";
+import { WidgetRenderer } from "@/app/(tenant)/(dashboard)/dashboard/widgets/widget-renderer";
 import type { WidgetCategory } from "@/types/dashboard";
 import type { DataSource, GroupBy, MeasureType, QueryConfig, QueryFilter, VisualType } from "@/types/dashboard";
 
