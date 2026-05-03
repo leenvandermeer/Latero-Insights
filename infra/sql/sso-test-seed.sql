@@ -1,7 +1,7 @@
--- SSO test seed — Acme Corp installatie met Keycloak config
+-- SSO test seed — Latero installatie met Keycloak config
 --
 -- Dit script maakt een kant-en-klare testomgeving:
---   1. Installatie "Acme Corp (SSO Test)"
+--   1. Installatie "Latero (SSO Test)"
 --   2. Auth policy: sso_with_local_fallback + JIT provisioning
 --   3. SSO config: lokale Keycloak (latero-test realm)
 --   4. Break-glass admin: admin@latero.local / LateroAdmin1!
@@ -22,7 +22,7 @@
 -- Na dit script:
 --   1. Start de app: npm run dev
 --   2. Log in op http://localhost:3010 met admin@latero.local / LateroAdmin1!
---   3. Ga naar Admin → Installaties → Acme Corp (SSO Test)
+--   3. Ga naar Admin → Installaties → Latero (SSO Test)
 --   4. Klik "Auth configuration" → config is al ingevuld
 --   5. Test de SSO login via: http://localhost:3010 met alice@acme.test
 
@@ -34,7 +34,7 @@
 INSERT INTO insights_installations (installation_id, label, environment, tier, token_hash, active)
 VALUES (
   'sso-test-acme',
-  'Acme Corp (SSO Test)',
+  'Latero (SSO Test)',
   'test',
   'enterprise',
   -- token hash van 'sso-test-token-local' (SHA-256, nooit in productie gebruiken)
