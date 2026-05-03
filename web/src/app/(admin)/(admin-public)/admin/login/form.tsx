@@ -14,10 +14,7 @@ export function AdminLoginForm() {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [totpFocused, setTotpFocused] = useState(false);
-  const [theme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined") return "light";
-    return (localStorage.getItem("theme") as "light" | "dark") ?? "light";
-  });
+
 
   async function handleCredentials(e: FormEvent) {
     e.preventDefault();
@@ -100,14 +97,11 @@ export function AdminLoginForm() {
     <div className="w-full max-w-sm rounded-2xl p-8 shadow-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
       {/* Header */}
       <div className="mb-8 flex flex-col items-center gap-2">
+        {/* Logo: CSS-only theme switching via data-theme — geen JS, geen hydration mismatch */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={theme === "dark" ? "/logo/latero-mark-dark.svg" : "/logo/latero-mark-light.svg"}
-          alt="Latero"
-          width={40}
-          height={40}
-          className="mb-1"
-        />
+        <img src="/logo/latero-mark-light.svg" alt="Latero" width={40} height={40} className="mb-1 block [html[data-theme=dark]_&]:hidden" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo/latero-mark-dark.svg" alt="" width={40} height={40} className="mb-1 hidden [html[data-theme=dark]_&]:block" aria-hidden="true" />
         <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
           Latero Control
         </h1>
