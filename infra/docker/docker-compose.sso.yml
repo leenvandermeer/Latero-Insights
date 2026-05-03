@@ -1,0 +1,63 @@
+# Docker SSO test stack — Keycloak + Caddy voor lokale HTTPS
+#
+# Gebruik altijd samen met docker-compose.local.yml:
+#   docker compose -f infra/docker/docker-compose.local.yml \
+#                  -f infra/docker/docker-compose.sso.yml up -d
+#
+# Of via npm:
+#   npm run sso:up
+#
+# Vereisten:
+#   1. Voeg toe aan /etc/hosts:
+#        127.0.0.1  app.latero.local
+#        127.0.0.1  idp.latero.local
+#   2. Vertrouw het Caddy root-certificaat (zie infra/README.md §SSO)
+#   3. Kopieer infra/.env.sso.example naar web/.env.local en vul aan
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: insights-sso-keycloak
+    command: start-dev --import-realm
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8080
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../keycloak:/opt/keycloak/data/import:ro
+      - insights_keycloak_data:/opt/keycloak/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health/ready || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+
+  caddy-sso:
+    image: caddy:2-alpine
+    container_name: insights-sso-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.sso:/etc/caddy/Caddyfile:ro
+      - insights_caddy_sso_data:/data
+      - insights_caddy_sso_config:/config
+    extra_hosts:
+      # Linux-compatibel: laat Caddy het host-netwerk bereiken voor app.latero.local
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+volumes:
+  insights_keycloak_data:
+  insights_caddy_sso_data:
+  insights_caddy_sso_config:

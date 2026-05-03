@@ -1,0 +1,21 @@
+# Caddyfile.sso — lokale TLS voor SSO testomgeving
+#
+# Hosts die vereist zijn in /etc/hosts:
+#   127.0.0.1  app.latero.local
+#   127.0.0.1  idp.latero.local
+#
+# Vertrouw het Caddy root-certificaat na eerste start:
+#   docker exec insights-sso-caddy caddy trust
+#   (of installeer het cert uit insights_caddy_sso_data/caddy/pki/authorities/local/root.crt)
+
+# app.latero.local → lokale Next.js dev server (localhost:3010)
+app.latero.local {
+  tls internal
+  reverse_proxy host.docker.internal:3010
+}
+
+# idp.latero.local → Keycloak (in Docker-netwerk)
+idp.latero.local {
+  tls internal
+  reverse_proxy keycloak:8080
+}
