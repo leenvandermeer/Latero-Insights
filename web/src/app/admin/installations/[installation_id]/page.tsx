@@ -110,6 +110,8 @@ export default function AdminInstallationDetailPage() {
       <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-6">
           <button
+            type="button"
+            onClick={() => setShowRotateConfirm(true)}
             disabled={rotating}
             className="rounded bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
           >
