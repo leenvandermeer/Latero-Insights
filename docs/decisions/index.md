@@ -44,3 +44,4 @@ Naming note:
 | [LADR-036](20260503-totp-2fa-local-accounts.md) | 2026-05-03 | TOTP 2FA voor lokale accounts (break-glass) | ACCEPTED |
 | [LADR-037](20260503-admin-login-entrypoint.md) | 2026-05-03 | Separate login entrypoint voor platform operators (/admin/login) | ACCEPTED |
 | [LADR-038](20260503-installation-switcher-env-default.md) | 2026-05-03 | Installation switcher: environment indicator en default-installatie | ACCEPTED |
+| [LADR-039](20260503-admin-tenant-layout-css-isolation.md) | 2026-05-03 | Admin/Tenant layout- en CSS-isolatie via Next.js route group root layouts | ACCEPTED |

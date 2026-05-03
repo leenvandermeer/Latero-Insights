@@ -1,8 +1,9 @@
 # Admin/App Separation Work Packages
 
-Status: Draft  
+Status: Active — LADR-039 vastgesteld (2026-05-03)  
 Owner: Product + Engineering  
-Date: 2026-04-25
+Date: 2026-04-25  
+Updated: 2026-05-03
 
 ## Context
 
@@ -10,17 +11,45 @@ De huidige applicatie heeft al een functionele scheiding tussen tenant-app en ad
 
 Dit document zet de opsplitsing neer in uitvoerbare werkpakketten, zodat implementatie later gefaseerd kan gebeuren.
 
+**Architectuurbeslissing:** Zie [LADR-039](../decisions/20260503-admin-tenant-layout-css-isolation.md)
+voor de gekozen strategie: Next.js route group root layouts als isolatiemodel.
+
 ## Doel
 
 - Tenant-gebruikersflow en admin-gebruikersflow technisch isoleren.
 - Regressies voorkomen waarbij tenant-routing admin-routing beïnvloedt (of omgekeerd).
 - Beheer van organisaties en admin-operaties stabiel en voorspelbaar houden.
+- Gedeelde CSS-cascade elimineren als bron van workarounds.
 
 ## Niet-doelen
 
 - Geen herontwerp van het volledige UI-thema.
 - Geen wijziging aan de functionele scope van tenant-features.
 - Geen migratie naar een aparte repository in deze fase.
+
+## Werkpakket 0 — CSS- en layout-isolatie (PRIORITEIT)
+
+Doel:
+- Admin-app en tenant-app volledig uit dezelfde CSS-cascade halen.
+
+Scope:
+- Nieuwe `(tenant)/` en `(admin)/` route group root layouts.
+- `admin-globals.css` zonder conflicterende input-selectors.
+- Verwijdering van inline `paddingLeft`/`paddingRight` workarounds.
+
+Deliverables:
+- `src/app/(tenant)/layout.tsx` als tenant root layout.
+- `src/app/(admin)/layout.tsx` als admin root layout.
+- `src/styles/admin-globals.css` als geïsoleerde admin baseline.
+- Geen `globals.css` of `tokens.css` import in admin root layout.
+
+Acceptatiecriteria:
+- Wijzigingen aan `globals.css` veroorzaken geen visuele regressies in admin-UI.
+- Admin-formulieren hebben geen inline-style workarounds meer.
+- TypeScript build slaagt. URL-structuur ongewijzigd.
+
+Indicatie:
+- 0.5 tot 1 dag.
 
 ## Werkpakket 1 — Route-architectuur hard scheiden
 
