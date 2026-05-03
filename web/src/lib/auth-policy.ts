@@ -120,6 +120,20 @@ export async function getSsoConfig(installationId: string): Promise<SsoConfig | 
 }
 
 /**
+ * Controleert of een gebruiker een break-glass account is.
+ * Break-glass accounts mogen lokaal inloggen ook als de installatie sso_only is.
+ */
+export async function isBreakGlassUser(userId: string): Promise<boolean> {
+  const pool = getPgPool();
+  const result = await pool.query<{ is_break_glass: boolean }>(
+    `SELECT is_break_glass FROM insights_users WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  if (result.rowCount === 0) return false;
+  return result.rows[0].is_break_glass === true;
+}
+
+/**
  * Haalt het OIDC client secret op uit environment variabelen.
  * Secret is nooit opgeslagen in de database of .cache/settings.json (FP-005).
  */

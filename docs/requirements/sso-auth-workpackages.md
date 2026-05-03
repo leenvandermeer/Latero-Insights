@@ -123,6 +123,8 @@ Indicatie:
 
 ## Werkpakket 4 — Hybride auth policy en lokale fallback
 
+**Status: COMPLETED**
+
 Doel:
 - SSO en lokale login gecontroleerd naast elkaar laten bestaan.
 

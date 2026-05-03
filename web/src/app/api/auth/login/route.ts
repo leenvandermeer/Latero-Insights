@@ -8,6 +8,7 @@ import {
   verifyUserPassword,
   checkIsAdmin,
 } from "@/lib/session-auth";
+import { getAuthPolicyByInstallation, isBreakGlassUser } from "@/lib/auth-policy";
 
 export async function POST(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -41,9 +42,28 @@ export async function POST(request: NextRequest) {
   }
 
   const preferredInstallation = String(body.installation_id ?? "").trim();
-  const activeInstallation = preferredInstallation && installations.some((i) => i.installation_id === preferredInstallation)
-    ? preferredInstallation
-    : installations[0].installation_id;
+  const activeInstallation =
+    preferredInstallation && installations.some((i) => i.installation_id === preferredInstallation)
+      ? preferredInstallation
+      : installations[0].installation_id;
+
+  // WP4 — Hybride auth policy check
+  // Lokale login is alleen toegestaan als de policy van de actieve installatie dat toelaat.
+  // sso_only en sso_with_break_glass blokkeren lokale login, tenzij de gebruiker
+  // een break-glass account is.
+  const policy = await getAuthPolicyByInstallation(activeInstallation);
+  const authMode = policy?.auth_mode ?? "local_only";
+
+  if (authMode === "sso_only" || authMode === "sso_with_break_glass") {
+    const breakGlass = await isBreakGlassUser(user.user_id);
+    if (!breakGlass) {
+      return NextResponse.json(
+        { error: "local_login_disabled", hint: "sso" },
+        { status: 403 },
+      );
+    }
+  }
+  // sso_with_local_fallback en local_only: lokale login altijd toegestaan.
 
   const rawToken = await createSession(user.user_id, activeInstallation, request);
   const isAdmin = await checkIsAdmin(user.user_id);

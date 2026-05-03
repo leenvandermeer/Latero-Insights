@@ -23,6 +23,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   rate_limited: "Too many attempts. Please wait a moment before trying again.",
 };
 
+// Mapping voor API-foutcodes die terugkomen als authError vanuit de login-context.
+const AUTH_API_ERRORS: Record<string, string> = {
+  local_login_disabled: "Your organisation requires sign-in through your identity provider. Use the SSO option above.",
+};
+
 function inputStyle(focused: boolean) {
   return {
     background: "var(--color-input, var(--color-bg))",
@@ -279,7 +284,7 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
 
                 {authError && (
                   <p className="text-sm" style={{ color: "var(--color-error, #dc2626)" }}>
-                    {authError}
+                    {AUTH_API_ERRORS[authError] ?? authError}
                   </p>
                 )}
 
@@ -336,7 +341,7 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
 
                 {authError && (
                   <p className="text-sm" style={{ color: "var(--color-error, #dc2626)" }}>
-                    {authError}
+                    {AUTH_API_ERRORS[authError] ?? authError}
                   </p>
                 )}
 
