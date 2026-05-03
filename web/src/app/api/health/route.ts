@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   const session = await getSessionFromRequest(request);
-  const installationId = session?.active_installation_id;
+  const installationId = session?.active_installation_id ?? undefined;
   const settings = loadSettings(installationId);
   const cacheOnly = isCacheOnly();
   const databricksEnabled = settings.connectionMode === "databricks";

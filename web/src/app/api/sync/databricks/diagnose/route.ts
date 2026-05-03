@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const settings = loadSettings(session.active_installation_id);
+  const settings = loadSettings(session.active_installation_id ?? undefined);
 
   if (settings.connectionMode !== "databricks") {
     return NextResponse.json({ error: "Not in Databricks mode." }, { status: 409 });

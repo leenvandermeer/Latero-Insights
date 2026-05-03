@@ -189,7 +189,7 @@ function getPendingSecret(): string {
 
 export interface Pending2FAPayload {
   user_id: string;
-  installation_id: string;
+  installation_id: string | null;
   exp: number;
 }
 
@@ -225,7 +225,7 @@ export function deserializePending2FA(value: string): Pending2FAPayload | null {
   }
 }
 
-export function makePending2FAPayload(userId: string, installationId: string): Pending2FAPayload {
+export function makePending2FAPayload(userId: string, installationId: string | null): Pending2FAPayload {
   return {
     user_id: userId,
     installation_id: installationId,

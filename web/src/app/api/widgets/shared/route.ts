@@ -21,7 +21,7 @@ function writeWidgets(widgets: SharedWidgetDef[]) {
 
 export async function GET(request: NextRequest) {
   // LINS-016: Verify user session and scope to active installation
-  let installationId: string;
+  let installationId: string | null;
   try {
     const session = await requireSession(request);
     installationId = session.active_installation_id;
@@ -36,12 +36,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // LINS-016: Verify user session and validate installation ownership
-  let installationId: string;
+  let installationId: string | null;
   try {
     const session = await requireSession(request);
     installationId = session.active_installation_id;
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!installationId) {
+    return NextResponse.json({ error: "No installation context" }, { status: 403 });
   }
   const body = await request.json() as Omit<SharedWidgetDef, "id" | "publishedAt" | "installation_id">;
   if (!body.label?.trim()) {

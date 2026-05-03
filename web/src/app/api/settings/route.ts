@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const settings = loadSettings(session.active_installation_id);
+  const settings = loadSettings(session.active_installation_id ?? undefined);
   const masked = maskSettings(settings);
   const response = NextResponse.json({ settings: masked, installation_id: session.active_installation_id });
   response.headers.set("X-RateLimit-Remaining", String(remaining));
@@ -53,7 +53,7 @@ export async function PUT(request: NextRequest) {
   }
 
   // Load current settings as base
-  const current = loadSettings(session.active_installation_id);
+  const current = loadSettings(session.active_installation_id ?? undefined);
 
   // Merge — only update fields that are provided
   const updated: AppSettings = {
@@ -81,7 +81,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "cacheTtlSeconds must be between 0 and 604800 (7 days)" }, { status: 400 });
   }
 
-  saveSettings(updated, session.active_installation_id);
+  saveSettings(updated, session.active_installation_id ?? undefined);
 
   const masked = maskSettings(updated);
   const response = NextResponse.json({ settings: masked, message: "Settings saved", installation_id: session.active_installation_id });

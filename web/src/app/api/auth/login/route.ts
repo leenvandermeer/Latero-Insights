@@ -8,6 +8,7 @@ import {
   verifyUserPassword,
   checkIsAdmin,
   getDefaultInstallationId,
+  checkIsBreakGlass,
 } from "@/lib/session-auth";
 import { getAuthPolicyByInstallation, isBreakGlassUser } from "@/lib/auth-policy";
 import { logAuthEvent } from "@/lib/auth-audit";
@@ -62,9 +63,37 @@ async function handleLogin(
   }
 
   const installations = await getUserInstallations(user.user_id);
-  if (installations.length === 0) {
+  const isBreakGlass = await checkIsBreakGlass(user.user_id);
+
+  // Break-glass platform operators have no tenant installation — allow login without one
+  if (installations.length === 0 && !isBreakGlass) {
     await logAuthEvent({ event_type: "local_login", outcome: "failure", user_id: user.user_id, ip_address: clientIp, user_agent: userAgent, detail: "no_installations" });
     return NextResponse.json({ error: "No active organizations assigned" }, { status: 403 });
+  }
+
+  // Break-glass with no installations: skip policy check and go straight to session
+  if (isBreakGlass && installations.length === 0) {
+    await logAuthEvent({ event_type: "local_login", outcome: "success", user_id: user.user_id, ip_address: clientIp, user_agent: userAgent });
+
+    if (user.two_factor_enabled) {
+      const pending = makePending2FAPayload(user.user_id, null);
+      const signed = serializePending2FA(pending);
+      const useSecure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https"
+        && !["localhost", "127.0.0.1"].includes(request.nextUrl.hostname);
+      const response = NextResponse.json({ pending_2fa: true });
+      response.cookies.set({ name: PENDING_COOKIE_NAME, value: signed, httpOnly: true, sameSite: "lax", secure: useSecure, path: "/", maxAge: PENDING_2FA_TTL_SECONDS });
+      return response;
+    }
+
+    const rawToken = await createSession(user.user_id, null, request);
+    const response = NextResponse.json({
+      authenticated: true,
+      user: { email: user.email, two_factor_enabled: user.two_factor_enabled, two_factor_required: user.two_factor_enabled, is_admin: false },
+      active_installation: null,
+      installations: [],
+    });
+    attachSessionCookie(response, rawToken, request);
+    return response;
   }
 
   const preferredInstallation = String(body.installation_id ?? "").trim();

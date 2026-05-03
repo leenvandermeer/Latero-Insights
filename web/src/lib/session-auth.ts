@@ -17,7 +17,7 @@ export interface AuthSession {
   user_id: string;
   email: string;
   two_factor_enabled: boolean;
-  active_installation_id: string;
+  active_installation_id: string | null;
   installations: SessionInstallation[];
 }
 
@@ -101,6 +101,20 @@ export async function ensureAuthSchema(): Promise<void> {
   await pool.query(
     "ALTER TABLE insights_users ADD COLUMN IF NOT EXISTS default_installation_id TEXT REFERENCES insights_installations(installation_id) ON DELETE SET NULL",
   );
+
+  // LADR-037: nullable active_installation_id for break-glass platform sessions
+  await pool.query("ALTER TABLE insights_sessions ALTER COLUMN active_installation_id DROP NOT NULL");
+  await pool.query(
+    `ALTER TABLE insights_sessions
+       DROP CONSTRAINT IF EXISTS insights_sessions_active_installation_id_fkey`,
+  );
+  await pool.query(
+    `ALTER TABLE insights_sessions
+       ADD CONSTRAINT IF NOT EXISTS insights_sessions_active_installation_id_fkey
+         FOREIGN KEY (active_installation_id)
+         REFERENCES insights_installations(installation_id)
+         ON DELETE SET NULL`,
+  );
 }
 
 export async function verifyUserPassword(
@@ -137,7 +151,7 @@ export async function getUserInstallations(userId: string): Promise<SessionInsta
 
 export async function createSession(
   userId: string,
-  activeInstallationId: string,
+  activeInstallationId: string | null,
   request: NextRequest,
 ): Promise<string> {
   const pool = getPgPool();
@@ -176,13 +190,16 @@ async function resolveSession(token: string): Promise<AuthSession | null> {
 
   const row = sessionResult.rows[0] as {
     user_id: string;
-    active_installation_id: string;
+    active_installation_id: string | null;
     email: string;
     two_factor_enabled: boolean;
   };
 
   const installations = await getUserInstallations(row.user_id);
-  const hasActive = installations.some((i) => i.installation_id === row.active_installation_id);
+  // Break-glass accounts have no installation (active_installation_id = null)
+  const hasActive = row.active_installation_id === null
+    ? true
+    : installations.some((i) => i.installation_id === row.active_installation_id);
   if (!hasActive) return null;
 
   await pool.query(

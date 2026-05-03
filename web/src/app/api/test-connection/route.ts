@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const settings = loadSettings(session.active_installation_id);
+  const settings = loadSettings(session.active_installation_id ?? undefined);
 
   if (settings.connectionMode !== "databricks") {
     return NextResponse.json({

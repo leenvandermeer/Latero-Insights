@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const settings = loadSettings(session.active_installation_id);
+  const settings = loadSettings(session.active_installation_id ?? undefined);
   if (settings.connectionMode !== "databricks") {
     return NextResponse.json(
       { error: "Databricks sync is disabled while connection mode is API ingest." },

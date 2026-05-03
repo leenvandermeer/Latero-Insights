@@ -24,7 +24,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // LINS-016: Verify session and validate widget belongs to active installation
-  let installationId: string;
+  let installationId: string | null;
   try {
     const session = await requireSession(request);
     installationId = session.active_installation_id;
@@ -53,7 +53,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // LINS-016: Verify session and validate widget belongs to active installation
-  let installationId: string;
+  let installationId: string | null;
   try {
     const session = await requireSession(request);
     installationId = session.active_installation_id;
