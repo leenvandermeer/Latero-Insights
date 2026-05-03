@@ -173,8 +173,8 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@organisation.com"
                 autoComplete="email"
-                className="w-full pl-9 pr-4 py-2.5 text-sm outline-none transition-colors"
-                style={{ ...inputStyle(emailFocused), borderRadius: 12 }}
+                className="w-full pr-4 py-2.5 text-sm outline-none transition-colors"
+                style={{ ...inputStyle(emailFocused), borderRadius: 12, paddingLeft: "2.5rem" }}
                 onFocus={() => setEmailFocused(true)}
                 onBlur={() => setEmailFocused(false)}
                 disabled={policyLoading}
@@ -265,8 +265,8 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Your password"
                     autoComplete="current-password"
-                    className="w-full pl-9 pr-10 py-2.5 text-sm outline-none transition-colors"
-                    style={{ ...inputStyle(passwordFocused), borderRadius: 12 }}
+                    className="w-full pr-10 py-2.5 text-sm outline-none transition-colors"
+                    style={{ ...inputStyle(passwordFocused), borderRadius: 12, paddingLeft: "2.5rem" }}
                     onFocus={() => setPasswordFocused(true)}
                     onBlur={() => setPasswordFocused(false)}
                     disabled={validating}
