@@ -45,6 +45,10 @@ export async function ensureAuthSchema(): Promise<void> {
     "ALTER TABLE insights_users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE",
   );
 
+  await pool.query(
+    "ALTER TABLE insights_users ADD COLUMN IF NOT EXISTS is_break_glass BOOLEAN NOT NULL DEFAULT FALSE",
+  );
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS insights_user_installations (
       user_id UUID NOT NULL REFERENCES insights_users(user_id) ON DELETE CASCADE,

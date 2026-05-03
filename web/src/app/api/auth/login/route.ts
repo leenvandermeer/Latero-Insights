@@ -26,6 +26,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  try {
+    return await handleLogin(body, clientIp, userAgent, request);
+  } catch (err) {
+    console.error("[auth/login] unexpected error:", err);
+    return NextResponse.json({ error: "Sign-in failed. Please try again." }, { status: 500 });
+  }
+}
+
+async function handleLogin(
+  body: Record<string, unknown>,
+  clientIp: string,
+  userAgent: string | null,
+  request: NextRequest,
+): Promise<NextResponse> {
+
   const email = String(body.email ?? "").trim().toLowerCase();
   const password = String(body.password ?? "").trim();
   if (!email || !password) {

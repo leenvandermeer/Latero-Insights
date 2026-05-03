@@ -73,8 +73,8 @@ export async function getAuthPolicyByDomain(domain: string): Promise<PolicyForDo
      JOIN insights_installations i ON i.installation_id = p.installation_id
      LEFT JOIN installation_sso_config s ON s.installation_id = p.installation_id
      WHERE i.active = TRUE
-       AND s.allowed_domains IS NOT NULL
-       AND $1 = ANY(s.allowed_domains)
+       AND p.allowed_domains IS NOT NULL
+       AND $1 = ANY(p.allowed_domains)
      LIMIT 1`,
     [domain.toLowerCase()],
   );
