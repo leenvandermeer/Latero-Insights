@@ -120,7 +120,7 @@ export function AdminLoginForm() {
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-700">Email</label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
               <input
                 type="email"
                 autoComplete="username"
@@ -128,7 +128,7 @@ export function AdminLoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 onFocus={() => setEmailFocused(true)}
                 onBlur={() => setEmailFocused(false)}
-                className="w-full rounded-lg pl-10 pr-3 py-2.5 text-sm"
+                className="w-full rounded-lg pl-11 pr-3 py-2.5 text-sm"
                 style={fieldStyle(emailFocused)}
                 placeholder="operator@latero.local"
                 required
@@ -139,7 +139,7 @@ export function AdminLoginForm() {
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-700">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
               <input
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
@@ -147,7 +147,7 @@ export function AdminLoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setPasswordFocused(true)}
                 onBlur={() => setPasswordFocused(false)}
-                className="w-full rounded-lg pl-10 pr-9 py-2.5 text-sm"
+                className="w-full rounded-lg pl-11 pr-10 py-2.5 text-sm"
                 style={fieldStyle(passwordFocused)}
                 placeholder="••••••••"
                 required
@@ -178,7 +178,7 @@ export function AdminLoginForm() {
               Authenticator code
             </label>
             <div className="relative">
-              <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 inputMode="numeric"
@@ -189,7 +189,7 @@ export function AdminLoginForm() {
                 onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
                 onFocus={() => setTotpFocused(true)}
                 onBlur={() => setTotpFocused(false)}
-                className="w-full rounded-lg pl-10 pr-3 py-2.5 text-sm font-mono tracking-widest text-center"
+                className="w-full rounded-lg pl-11 pr-3 py-2.5 text-sm font-mono tracking-widest text-center"
                 style={fieldStyle(totpFocused)}
                 placeholder="000000"
                 required
