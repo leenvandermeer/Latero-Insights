@@ -42,3 +42,5 @@ Naming note:
 | [LADR-034](20260503-sso-hybrid-auth-architecture.md) | 2026-05-03 | SSO-first hybrid authentication with installation-scoped policy | ACCEPTED |
 | [LADR-035](20260503-keycloak-as-local-dev-idp.md) | 2026-05-03 | Keycloak als lokale dev-IdP voor SSO-testomgeving | ACCEPTED |
 | [LADR-036](20260503-totp-2fa-local-accounts.md) | 2026-05-03 | TOTP 2FA voor lokale accounts (break-glass) | ACCEPTED |
+| [LADR-037](20260503-admin-login-entrypoint.md) | 2026-05-03 | Separate login entrypoint voor platform operators (/admin/login) | ACCEPTED |
+| [LADR-038](20260503-installation-switcher-env-default.md) | 2026-05-03 | Installation switcher: environment indicator en default-installatie | ACCEPTED |

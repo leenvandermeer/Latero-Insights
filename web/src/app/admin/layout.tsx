@@ -17,12 +17,12 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   const session = await getSessionFromToken(sessionToken);
 
   if (!session) {
-    redirect("/settings?error=auth-required&next=%2Fadmin");
+    redirect("/admin/login");
   }
 
   const isBreakGlass = await checkIsBreakGlass(session.user_id);
   if (!isBreakGlass) {
-    redirect("/pipelines");
+    redirect("/admin/login");
   }
 
   return (

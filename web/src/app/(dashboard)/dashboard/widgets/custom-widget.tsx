@@ -31,6 +31,23 @@ export function CustomWidgetRenderer({ customWidgetId, from, to, titleOverride }
     customWidgets.find((w) => w.id === customWidgetId) ??
     sharedWidgets.find((w) => w.id === customWidgetId);
 
+  // ── Data-driven widgets: QueryEngine path ──────────────────────────────────
+  // useQuery must always be called before any conditional returns (Rules of Hooks).
+  const endpoint = widget?.queryConfig && !widget?.templateType
+    ? getApiEndpoint(widget.queryConfig.dataSource)
+    : null;
+
+  const { data: rawData, isLoading, error } = useQuery<Record<string, unknown>[]>({
+    queryKey: ["custom-widget", customWidgetId, from, to],
+    queryFn: async () => {
+      const res = await fetch(`${endpoint}?from=${from}&to=${to}`);
+      if (!res.ok) throw new Error("fetch failed");
+      const json = await res.json() as { data?: Record<string, unknown>[] };
+      return json.data ?? (json as unknown as Record<string, unknown>[]);
+    },
+    enabled: !!endpoint,
+  });
+
   // ── Template widgets: route directly to the registry component ─────────────
   if (widget?.templateType) {
     const def = getWidgetDef(widget.templateType);
@@ -43,20 +60,6 @@ export function CustomWidgetRenderer({ customWidgetId, from, to, titleOverride }
     }
     return <def.component from={from} to={to} titleOverride={titleOverride ?? widget.label} />;
   }
-
-  // ── Data-driven widgets: QueryEngine path ──────────────────────────────────
-  const endpoint = widget?.queryConfig ? getApiEndpoint(widget.queryConfig.dataSource) : null;
-
-  const { data: rawData, isLoading, error } = useQuery<Record<string, unknown>[]>({
-    queryKey: ["custom-widget", customWidgetId, from, to],
-    queryFn: async () => {
-      const res = await fetch(`${endpoint}?from=${from}&to=${to}`);
-      if (!res.ok) throw new Error("fetch failed");
-      const json = await res.json() as { data?: Record<string, unknown>[] };
-      return json.data ?? (json as unknown as Record<string, unknown>[]);
-    },
-    enabled: !!endpoint,
-  });
 
   if (!widget) {
     return (

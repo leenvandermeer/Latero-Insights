@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Activity, ActivitySquare, Building2, Home, LogOut, Moon, Settings, Sun, Users } from "lucide-react";
 
 interface AdminShellProps {
@@ -13,7 +13,6 @@ interface AdminShellProps {
 
 export function AdminShell({ children, sessionEmail }: AdminShellProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
@@ -32,8 +31,7 @@ export function AdminShell({ children, sessionEmail }: AdminShellProps) {
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    router.push("/");
-    router.refresh();
+    window.location.href = "/admin/login";
   };
 
   const toggleTheme = () => {

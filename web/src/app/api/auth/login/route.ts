@@ -7,6 +7,7 @@ import {
   getUserInstallations,
   verifyUserPassword,
   checkIsAdmin,
+  getDefaultInstallationId,
 } from "@/lib/session-auth";
 import { getAuthPolicyByInstallation, isBreakGlassUser } from "@/lib/auth-policy";
 import { logAuthEvent } from "@/lib/auth-audit";
@@ -67,10 +68,13 @@ async function handleLogin(
   }
 
   const preferredInstallation = String(body.installation_id ?? "").trim();
+  const defaultInstallation = await getDefaultInstallationId(user.user_id);
   const activeInstallation =
     preferredInstallation && installations.some((i) => i.installation_id === preferredInstallation)
       ? preferredInstallation
-      : installations[0].installation_id;
+      : defaultInstallation && installations.some((i) => i.installation_id === defaultInstallation)
+        ? defaultInstallation
+        : installations[0].installation_id;
 
   // WP4 — Hybride auth policy check
   // Lokale login is alleen toegestaan als de policy van de actieve installatie dat toelaat.

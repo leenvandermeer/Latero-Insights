@@ -105,20 +105,19 @@ VALUES (
   'admin@latero.local',
   crypt('LateroAdmin1!', gen_salt('bf', 12)),
   TRUE,
-  TRUE,
+  FALSE,  -- platform-only account: is_admin=FALSE, toegang via is_break_glass
   TRUE
 )
 ON CONFLICT (email) DO UPDATE SET
   password_hash  = crypt('LateroAdmin1!', gen_salt('bf', 12)),
-  is_admin       = TRUE,
+  is_admin       = FALSE,
   is_break_glass = TRUE,
   active         = TRUE;
 
--- Koppel admin aan de SSO test installatie
-INSERT INTO insights_user_installations (user_id, installation_id, role)
-SELECT user_id, 'sso-test-acme', 'admin'
-FROM insights_users WHERE email = 'admin@latero.local'
-ON CONFLICT (user_id, installation_id) DO UPDATE SET role = 'admin';
+-- admin@latero.local is een platform operator, geen tenant-lid.
+-- Verwijder eventuele installation_members koppelingen.
+DELETE FROM insights_user_installations
+WHERE user_id = '00000000-0000-0000-0000-000000000001';
 
 -- is_break_glass zorgt ervoor dat lokale login werkt ook bij sso_only policy
 UPDATE insights_users SET is_break_glass = TRUE WHERE email = 'admin@latero.local';

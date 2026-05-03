@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
-import { ensureAuthSchema, getActiveInstallationFromSession, getSessionFromRequest, checkIsAdmin } from "@/lib/session-auth";
+import { ensureAuthSchema, getActiveInstallationFromSession, getSessionFromRequest, checkIsAdmin, getDefaultInstallationId } from "@/lib/session-auth";
 
 export async function GET(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   const isAdmin = await checkIsAdmin(session.user_id);
+  const defaultInstallationId = await getDefaultInstallationId(session.user_id);
 
   return NextResponse.json({
     authenticated: true,
@@ -27,5 +28,6 @@ export async function GET(request: NextRequest) {
     },
     active_installation: getActiveInstallationFromSession(session),
     installations: session.installations,
+    default_installation_id: defaultInstallationId,
   });
 }

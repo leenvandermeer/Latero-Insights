@@ -96,6 +96,11 @@ export async function ensureAuthSchema(): Promise<void> {
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_totp_backup_codes_user_id ON insights_totp_backup_codes(user_id)",
   );
+
+  // LADR-038: default installation per user
+  await pool.query(
+    "ALTER TABLE insights_users ADD COLUMN IF NOT EXISTS default_installation_id TEXT REFERENCES insights_installations(installation_id) ON DELETE SET NULL",
+  );
 }
 
 export async function verifyUserPassword(
@@ -350,6 +355,12 @@ export async function checkIsAdmin(userId: string): Promise<boolean> {
   return result.rows[0]?.is_admin ?? false;
 }
 
+export async function getUserEmail(userId: string): Promise<string | null> {
+  const pool = getPgPool();
+  const result = await pool.query(`SELECT email FROM insights_users WHERE user_id = $1 AND active = TRUE`, [userId]);
+  return result.rows[0]?.email ?? null;
+}
+
 /**
  * Checks if a user is a break-glass / platform operator account.
  * Only break-glass accounts may access the /admin section.
@@ -559,3 +570,41 @@ export async function getBackupCodeCount(userId: string): Promise<number> {
   );
   return Number(result.rows[0]?.cnt ?? 0);
 }
+
+// ── Default installation (LADR-038) ─────────────────────────────────────────
+
+/** Get the user's preferred default installation, if set and still accessible. */
+export async function getDefaultInstallationId(userId: string): Promise<string | null> {
+  const pool = getPgPool();
+  const result = await pool.query(
+    `SELECT u.default_installation_id
+     FROM insights_users u
+     JOIN insights_user_installations ui
+       ON ui.user_id = u.user_id AND ui.installation_id = u.default_installation_id
+     JOIN insights_installations i
+       ON i.installation_id = u.default_installation_id AND i.active = TRUE
+     WHERE u.user_id = $1
+     LIMIT 1`,
+    [userId],
+  );
+  return (result.rows[0]?.default_installation_id as string | null) ?? null;
+}
+
+/** Persist the user's preferred default installation (must be an accessible, active installation). */
+export async function setDefaultInstallationId(userId: string, installationId: string): Promise<boolean> {
+  const pool = getPgPool();
+  // Verify the user has access to this installation and it is active
+  const access = await pool.query(
+    `SELECT 1 FROM insights_user_installations ui
+     JOIN insights_installations i ON i.installation_id = ui.installation_id
+     WHERE ui.user_id = $1 AND ui.installation_id = $2 AND i.active = TRUE`,
+    [userId, installationId],
+  );
+  if ((access.rowCount ?? 0) === 0) return false;
+  await pool.query(
+    `UPDATE insights_users SET default_installation_id = $1, updated_at = NOW() WHERE user_id = $2`,
+    [installationId, userId],
+  );
+  return true;
+}
+

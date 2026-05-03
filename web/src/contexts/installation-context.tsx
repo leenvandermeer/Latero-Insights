@@ -21,6 +21,7 @@ interface SessionResponse {
   user?: SessionUser;
   active_installation?: Installation | null;
   installations?: Installation[];
+  default_installation_id?: string | null;
 }
 
 interface InstallationContextValue {
@@ -29,8 +30,10 @@ interface InstallationContextValue {
   user: SessionUser | null;
   validating: boolean;
   authError: string | null;
+  defaultInstallationId: string | null;
   authenticate: (email: string, password: string) => Promise<boolean | "pending_2fa">;
   switchInstallation: (installationId: string) => Promise<boolean>;
+  setDefaultInstallation: (installationId: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -53,6 +56,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
   const [validating, setValidating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [defaultInstallationId, setDefaultInstallationId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSession().then((session) => {
@@ -60,6 +64,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
         setInstallation(session.active_installation ?? null);
         setInstallations(session.installations ?? []);
         setUser(session.user ?? null);
+        setDefaultInstallationId(session.default_installation_id ?? null);
       }
       setHydrated(true);
     });
@@ -130,6 +135,23 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setDefaultInstallation = useCallback(async (installationId: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/auth/set-default-installation", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ installation_id: installationId }),
+      });
+      const data = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !data.success) return false;
+      setDefaultInstallationId(installationId);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const logout = useCallback(() => {
     void fetch("/api/auth/logout", {
       method: "POST",
@@ -151,8 +173,10 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
         user,
         validating,
         authError,
+        defaultInstallationId,
         authenticate,
         switchInstallation,
+        setDefaultInstallation,
         logout,
       }}
     >

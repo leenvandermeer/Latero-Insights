@@ -15,6 +15,7 @@ import {
   createSession,
   checkIsAdmin,
   getUserInstallations,
+  getUserEmail,
   getTotpSecretEnc,
   consumeBackupCode,
   ensureAuthSchema,
@@ -93,13 +94,14 @@ export async function POST(request: NextRequest) {
   const rawToken = await createSession(pending.user_id, pending.installation_id, request);
   const isAdmin = await checkIsAdmin(pending.user_id);
   const installations = await getUserInstallations(pending.user_id);
+  const userEmail = await getUserEmail(pending.user_id);
 
   await logAuthEvent({ event_type: "2fa_verify", outcome: "success", user_id: pending.user_id, installation_id: pending.installation_id, ip_address: clientIp, user_agent: userAgent });
 
   const response = NextResponse.json({
     authenticated: true,
     user: {
-      email: installations.length > 0 ? undefined : null,
+      email: userEmail,
       two_factor_enabled: true,
       two_factor_required: true,
       is_admin: isAdmin,

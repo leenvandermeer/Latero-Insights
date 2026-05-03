@@ -135,10 +135,10 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
         setTotpCode("");
         return;
       }
-      // Trigger session refresh via full reload
+      // Full page navigation so the InstallationProvider re-fetches the session
+      // and the InstallationGate unmounts correctly.
       const target = redirectTarget?.startsWith("/") ? redirectTarget : "/pipelines";
-      router.push(target);
-      router.refresh();
+      window.location.href = target;
     } catch {
       setTotpError("Something went wrong. Please try again.");
     } finally {
