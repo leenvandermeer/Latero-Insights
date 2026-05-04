@@ -79,7 +79,7 @@ export function InstallationPicker({ collapsed }: Props) {
           onClick={logout}
           className="flex items-center justify-center w-8 h-8 rounded-md transition-colors"
           style={{ color: "var(--color-sidebar-muted)" }}
-          title="Uitloggen"
+          title="Sign out"
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
         >
@@ -128,7 +128,7 @@ export function InstallationPicker({ collapsed }: Props) {
               onClick={(e) => { e.stopPropagation(); logout(); }}
               className="p-1 rounded-md transition-colors"
               style={{ color: "var(--color-sidebar-muted)" }}
-              title="Uitloggen"
+              title="Sign out"
               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-sidebar-foreground)"; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-sidebar-muted)"; }}
             >

@@ -141,7 +141,7 @@ export function InstallationsManager({ adminToken }: { adminToken: string }) {
     mutationFn: (id: string) => rotateInstallationKey(adminToken, id),
     onSuccess: (result) => {
       setNewKey(result);
-      setFeedback({ type: "success", message: `Nieuwe key uitgegeven voor ${result.installation_id}` });
+      setFeedback({ type: "success", message: `New key issued for ${result.installation_id}` });
       void queryClient.invalidateQueries({ queryKey: ["v1-installations"] });
     },
     onError: (err) => {
