@@ -10,6 +10,7 @@ import {
   GitBranch,
   Package,
   Boxes,
+  Database,
   Settings,
   Sun,
   Moon,
@@ -36,6 +37,7 @@ const OBSERVE_NAV = [
 ];
 
 const EXPLORE_NAV = [
+  { label: "Datasets",     href: "/datasets",      icon: Database },
   { label: "Entities",     href: "/entities",      icon: Boxes },
   { label: "Catalog",      href: "/catalog",       icon: Package },
   { label: "Lineage",      href: "/lineage",       icon: GitBranch },
