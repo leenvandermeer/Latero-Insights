@@ -11,6 +11,9 @@ export interface PipelineRun {
   environment: string | null;
   job_name?: string | null;
   parent_run_id?: string | null;
+  // LMETA-015: logische pipelinelagen (landing/raw/bronze/silver/gold)
+  source_layer?: string | null;
+  target_layer?: string | null;
 }
 
 export interface DataQualityCheck {
@@ -52,6 +55,10 @@ export interface LineageHop {
   schema_version?: string | null;
   lineage_evidence?: string | null;
   hop_kind?: string | null;
+  // LMETA-014: logische pipelinelagen, aanwezig in workspace.meta.lineage_dataset
+  source_layer?: string | null;
+  target_layer?: string | null;
+  lineage_group_id?: string | null;
 }
 
 export interface LineageEntity {
@@ -76,6 +83,9 @@ export interface LineageAttribute {
   source_layer?: string | null;
   target_layer?: string | null;
   is_current: boolean;
+  // OpenLineage ColumnLineageFacet — afgeleid van is_direct + transformation_mode in Databricks
+  transformation_type?: "DIRECT" | "INDIRECT" | "UNKNOWN" | null;
+  transformation_subtype?: string | null;
   provenance?: "lineage_attributes_current";
   evidence?: string | null;
 }

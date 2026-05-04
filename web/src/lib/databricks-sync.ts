@@ -5,6 +5,15 @@ import { writeMetaDqCheck, writeMetaLineage, writeMetaPipelineRun } from "@/lib/
 // Fallback installation_id used when no session is available (e.g. CLI/admin triggers).
 const SYNC_INSTALLATION_ID = "databricks-sync";
 
+const PIPELINE_LAYER_NAMES = new Set(["landing", "raw", "bronze", "silver", "gold"]);
+
+/** Leid logische pipelinelaag af uit FQN (bijv. workspace.bronze.fact_sales → bronze). */
+function extractLayerFromFqnSync(fqn: string): string | null {
+  const parts = fqn.split(".").filter(Boolean);
+  const penultimate = parts.at(-2)?.toLowerCase() ?? "";
+  return PIPELINE_LAYER_NAMES.has(penultimate) ? penultimate : null;
+}
+
 export interface SyncResult {
   pipeline_runs: number;
   dq_checks: number;
@@ -97,6 +106,9 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       sourceAttribute: hop.source_attribute ?? null,
       targetAttribute: hop.target_attribute ?? null,
       sourceSystem: hop.source_system ?? null,
+      // Gebruik native layer uit Databricks lineage_dataset; val terug op FQN-afleiding
+      sourceLayer: hop.source_layer ?? extractLayerFromFqnSync(hop.source_entity),
+      targetLayer: hop.target_layer ?? extractLayerFromFqnSync(hop.target_entity),
       timestampUtc: hop.timestamp_utc,
     });
   }

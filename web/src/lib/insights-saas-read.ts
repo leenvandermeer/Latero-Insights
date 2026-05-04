@@ -164,20 +164,24 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
     `
       WITH upstream AS (
         SELECT
-          target_dataset_id                                           AS dataset_id,
-          ARRAY_AGG(DISTINCT source_dataset_id ORDER BY source_dataset_id)
-                                                                      AS upstream_entity_fqns
-        FROM meta.lineage_edges
-        WHERE installation_id = $1
-        GROUP BY target_dataset_id
+          e.target_dataset_id                                         AS dataset_id,
+          ARRAY_AGG(DISTINCT src.fqn ORDER BY src.fqn)               AS upstream_entity_fqns
+        FROM meta.lineage_edges e
+        JOIN meta.datasets src
+          ON src.dataset_id      = e.source_dataset_id
+         AND src.installation_id = e.installation_id
+        WHERE e.installation_id = $1
+        GROUP BY e.target_dataset_id
       ),
       downstream AS (
         SELECT
-          source_dataset_id                                           AS dataset_id,
-          ARRAY_AGG(DISTINCT target_dataset_id ORDER BY target_dataset_id)
-                                                                      AS downstream_entity_fqns
-        FROM meta.lineage_edges
-        WHERE installation_id = $1
+          e.source_dataset_id                                         AS dataset_id,
+          ARRAY_AGG(DISTINCT tgt.fqn ORDER BY tgt.fqn)               AS downstream_entity_fqns
+        FROM meta.lineage_edges e
+        JOIN meta.datasets tgt
+          ON tgt.dataset_id      = e.target_dataset_id
+         AND tgt.installation_id = e.installation_id
+        WHERE e.installation_id = $1
         GROUP BY source_dataset_id
       ),
       latest_run AS (
@@ -214,7 +218,24 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
       SELECT
         d.dataset_id,
         d.fqn                                                         AS entity_fqn,
-        COALESCE(NULLIF(d.platform, 'UNKNOWN'), 'UNKNOWN')            AS layer,
+        -- Gebruik expliciete layer-kolom (migratie 015); val terug op FQN-afleiding
+        -- voor datasets geschreven vóór de migratie (voorlaatste FQN-segment als laagnaam).
+        COALESCE(
+          d.layer,
+          CASE
+            WHEN lower(
+              (string_to_array(d.fqn, '.'))[
+                array_length(string_to_array(d.fqn, '.'), 1) - 1
+              ]
+            ) IN ('landing', 'raw', 'bronze', 'silver', 'gold')
+            THEN lower(
+              (string_to_array(d.fqn, '.'))[
+                array_length(string_to_array(d.fqn, '.'), 1) - 1
+              ]
+            )
+          END,
+          'UNKNOWN'
+        )                                                             AS layer,
         COALESCE(lr.latest_status, 'UNKNOWN')                         AS latest_status,
         CASE COALESCE(sr.worst_rank, 0)
           WHEN 3 THEN 'FAILED'
@@ -267,12 +288,12 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
   const result = await pool.query(
     `
       SELECT
-        c.source_dataset_id   AS source_entity_fqn,
-        c.source_column       AS source_attribute,
-        c.target_dataset_id   AS target_entity_fqn,
-        c.target_column       AS target_attribute,
-        src.platform          AS source_layer,
-        tgt.platform          AS target_layer
+        COALESCE(src.fqn, c.source_dataset_id)   AS source_entity_fqn,
+        c.source_column                           AS source_attribute,
+        COALESCE(tgt.fqn, c.target_dataset_id)   AS target_entity_fqn,
+        c.target_column                           AS target_attribute,
+        src.layer                                 AS source_layer,
+        tgt.layer                                 AS target_layer
       FROM meta.lineage_columns c
       LEFT JOIN meta.datasets src
         ON src.installation_id = c.installation_id
@@ -281,7 +302,7 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
         ON tgt.installation_id = c.installation_id
        AND tgt.dataset_id      = c.target_dataset_id
       WHERE c.installation_id = $1
-      ORDER BY c.source_dataset_id, c.source_column
+      ORDER BY source_entity_fqn, c.source_column
     `,
     [installationId],
   );
