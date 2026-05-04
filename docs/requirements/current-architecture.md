@@ -38,13 +38,21 @@ The current product uses a hybrid ingest model with a single read store:
 
 The authoritative read store for the web application is Postgres.
 
-Core operational datasets:
+Core operational datasets (V2 `meta.*` schema):
 
-- `pipeline_runs`
-- `data_quality_checks`
-- `data_lineage`
-- `insights_installations`
-- `ingest_audit`
+- `meta.datasets` — data asset catalog
+- `meta.jobs` — pipeline/job definitions
+- `meta.runs` — execution instances
+- `meta.run_io` — input/output relations per run
+- `meta.quality_rules` — check definitions
+- `meta.quality_results` — check results per run
+- `meta.lineage_edges` — table-level lineage
+- `meta.lineage_columns` — column-level lineage
+- `meta.entities` — entity registry (V2, migration 017)
+- `meta.data_products` — data product registry (V2, migration 017)
+
+The legacy event tables (`public.pipeline_runs`, `public.data_quality_checks`,
+`public.data_lineage`) were dropped in migration 014.
 
 Bootstrap SQL lives under:
 

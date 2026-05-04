@@ -1,221 +1,163 @@
 # Latero Control SQL Schema Reference
 
-This document describes the bootstrap SQL schema used by Latero Control in
-local and development environments.
+Status: CURRENT — bijgewerkt 2026-05-04  
+Owner: Latero product
 
-Authoritative SQL source:
+This document describes the Postgres schema used by Latero Control.
 
-- [infra/sql/init/001_insights_saas_init.sql](/Users/leenvandermeer/Git/Latero%20Insights/infra/sql/init/001_insights_saas_init.sql)
+Authoritative SQL source: `infra/sql/init/` (migrations 001–017)
 
-## Purpose
+## Overview
 
-The bootstrap schema initializes the Insights read and ingest store in
-PostgreSQL.
+The schema uses two namespaces:
 
-It currently creates:
-- installation registry
-- event tables
-- ingest audit table
-- supporting indexes
+- **`public.*`** — installation registry, session, auth, audit tables
+- **`meta.*`** — operational metadata store (V2 canonical read/write schema)
 
-## Tables
+The `public.pipeline_runs`, `public.data_quality_checks`, and
+`public.data_lineage` legacy event tables were dropped in migration 014.
+All operational data is now in `meta.*`.
+
+---
+
+## Public Schema Tables
 
 ### `insights_installations`
 
-Purpose:
-- registry of known installations and their API token hash
+Purpose: installation registry with API token hash and active flag.
 
-Columns:
-- `installation_id` primary key
-- `environment`
-- `token_hash`
-- `active`
-- `created_at`
-- `updated_at`
+Key columns: `installation_id` (PK), `environment`, `token_hash`, `active`, `created_at`, `updated_at`
 
-Used for:
-- installation-bound Bearer token validation on `/api/v1/*`
+### `app_users`
 
-### `pipeline_runs`
+User accounts with password hash, role, and 2FA fields.
 
-Purpose:
-- store pipeline execution events
+Key columns: `user_id`, `email`, `password_hash`, `is_admin`, `totp_secret`, `totp_enabled`
 
-Key columns:
-- `id`
-- `event_type`
-- `timestamp_utc`
-- `event_date`
-- `dataset_id`
-- `source_system`
-- `step`
-- `run_id`
-- `run_status`
-- `duration_ms`
-- `installation_id`
-- `environment`
-- `payload`
-- `created_at`
+### `user_sessions`
 
-Notes:
-- `event_date` is generated from `timestamp_utc`
-- `payload` stores the raw event body as `JSONB`
+Active session store.
 
-Read usage:
-- `/api/pipelines`
+Key columns: `session_id`, `user_id`, `installation_id`, `expires_at`
 
-Write usage:
-- `/api/v1/pipeline-runs`
-- Databricks sync
+### `sso_configs`
 
-### `data_quality_checks`
+Per-installation SSO/OIDC configuration.
 
-Purpose:
-- store data-quality evaluation events
+Key columns: `installation_id`, `provider`, `issuer_url`, `client_id`, `client_secret`
+
+### `admin_audit_log` / `auth_audit_log`
+
+Audit trails for admin actions and authentication events.
+
+---
+
+## Meta Schema Tables (`meta.*`)
+
+### `meta.datasets`
+
+Catalog of known data assets observed across runs.
 
 Key columns:
-- `id`
-- `event_type`
-- `timestamp_utc`
-- `event_date`
-- `dataset_id`
-- `step`
-- `run_id`
-- `check_id`
-- `check_name`
-- `check_status`
-- `severity`
-- `check_category`
-- `policy_version`
-- `message`
-- `installation_id`
-- `environment`
-- `payload`
-- `created_at`
+- `dataset_id` — scoped identifier
+- `installation_id` — FK to `insights_installations`
+- `fqn` — fully qualified name
+- `namespace`, `object_name`
+- `platform` — `ICEBERG`, `DELTA`, `HIVE`, `JDBC`, `FILE`, `TOPIC`, `UNKNOWN`
+- `entity_type` — `TABLE`, `VIEW`, `STREAM`, `FILE`, `TOPIC`
+- `entity_id` — FK (soft) to `meta.entities`
+- `group_id` — layer-scoped grouping key (migration 016)
+- `dataset_facets` — JSONB facets from OpenLineage (migration 017)
+- `first_seen_at`, `last_seen_at`
 
-Notes:
-- `event_date` is generated from `timestamp_utc`
-- `payload` stores the raw event body as `JSONB`
+### `meta.jobs`
 
-Read usage:
-- `/api/quality`
+Pipeline / job definitions (stable, not per-run).
 
-Write usage:
-- `/api/v1/dq-checks`
-- Databricks sync
+Key columns: `job_id` (UUID PK), `installation_id`, `job_name`, `job_type` (`PIPELINE`, `SYNC`, `VALIDATION`)
 
-### `data_lineage`
+### `meta.runs`
 
-Purpose:
-- store lineage hops and evidence events
+Execution instances of jobs.
 
 Key columns:
-- `id`
-- `event_type`
-- `timestamp_utc`
-- `event_date`
-- `dataset_id`
-- `step`
-- `run_id`
-- `source_entity`
-- `source_type`
-- `source_ref`
-- `source_attribute`
-- `target_entity`
-- `target_type`
-- `target_ref`
-- `target_attribute`
-- `hop_kind`
-- `source_system`
-- `installation_id`
-- `environment`
-- `schema_version`
-- `lineage_evidence`
-- `payload`
-- `created_at`
+- `run_id` (UUID PK)
+- `job_id` (FK), `installation_id`
+- `external_run_id`, `parent_run_id`
+- `step`, `status` (`SUCCESS`, `FAILED`, `WARNING`, `RUNNING`)
+- `environment`, `started_at`, `ended_at`, `duration_ms`
+- `run_date` (generated from `started_at`)
+- `run_facets` — JSONB facets from OpenLineage (migration 017)
 
-Important semantics:
-- `source_ref` and `target_ref` are the canonical references used to identify
-  assets more reliably than display names alone
-- `hop_kind` distinguishes meaningful data movement from context
-  - `data_flow`
-  - `context`
+### `meta.run_io`
 
-Read usage:
-- `/api/lineage`
-- `/api/lineage/entities`
-- `/api/lineage/attributes`
+Which datasets a run reads (INPUT) or writes (OUTPUT).
 
-Write usage:
-- `/api/v1/lineage`
-- Databricks sync
+Key columns: `run_id` (FK), `dataset_id`, `role` (`INPUT`, `OUTPUT`), `observed_at`
 
-### `ingest_audit`
+### `meta.quality_rules`
 
-Purpose:
-- simple audit trail for ingest requests and responses
+Check definitions (stable, not per-result).
 
-Columns:
-- `id`
-- `endpoint`
-- `installation_id`
-- `status_code`
-- `request_body`
-- `response_body`
-- `created_at`
+Key columns: `check_id`, `installation_id`, `check_name`, `check_category`, `severity` (`HIGH`, `MEDIUM`, `LOW`), `dataset_id`
 
-Used for:
-- basic ingest observability and troubleshooting
+### `meta.quality_results`
 
-## Indexes
+Check execution results per run.
 
-The bootstrap script creates the following important indexes.
+Key columns: `result_id` (UUID), `check_id`, `run_id`, `status` (`SUCCESS`, `FAILED`, `WARNING`), `result_value`, `threshold_value`, `executed_at`
 
-### `pipeline_runs`
+### `meta.lineage_edges`
 
-- `idx_pipeline_runs_installation_date`
-- `idx_pipeline_runs_dataset_date`
+Table-level lineage graph — upsert model (one row per unique source→target pair).
 
-### `data_quality_checks`
+Key columns: `edge_id` (UUID), `installation_id`, `source_dataset_id`, `target_dataset_id`, `first_observed_at`, `last_observed_at`, `observation_count`
 
-- `idx_dq_installation_date`
-- `idx_dq_dataset_date`
+### `meta.lineage_columns`
 
-### `data_lineage`
+Column-level lineage.
 
-- `idx_lineage_installation_date`
-- `idx_lineage_dataset_date`
-- `idx_lineage_hop_kind`
+Key columns: `column_edge_id` (UUID), `source_dataset_id`, `source_column`, `target_dataset_id`, `target_column`, `transformation_type`
 
-## Sync-Specific Unique Indexes
+Valid `transformation_type`: `IDENTITY`, `AGGREGATION`, `DERIVED`, `FILTER`, `RENAME`, `UNKNOWN`
 
-The schema also creates partial unique indexes for records imported through the
-Databricks sync path, where `installation_id = 'databricks-sync'`.
+### `meta.data_products`
 
-These are:
-- `uq_pipeline_runs_sync_key`
-- `uq_dq_checks_sync_key`
-- `uq_lineage_sync_key`
+Data product registry.
 
-Purpose:
-- prevent duplicate sync inserts for the same logical event key
+Key columns: `data_product_id`, `installation_id`, `display_name`, `description`, `owner`, `domain`, `tags` (JSONB)
 
-## How This Maps To The App
+### `meta.entities`
 
-In the current product:
+Entity registry — grouping of related datasets across layers.
 
-- the ingest API writes into these tables
-- the read API reads from these tables
-- local Docker infra initializes them on first Postgres startup
+Key columns: `entity_id`, `installation_id`, `data_product_id` (FK), `display_name`, `description`, `owner`, `tags` (JSONB)
 
-Bootstrap location:
-- [infra/sql/init/001_insights_saas_init.sql](/Users/leenvandermeer/Git/Latero%20Insights/infra/sql/init/001_insights_saas_init.sql)
+---
 
-Docker mount:
-- [infra/docker/docker-compose.local.yml](/Users/leenvandermeer/Git/Latero%20Insights/infra/docker/docker-compose.local.yml)
+## Migrations
+
+| File | Content |
+|------|---------|
+| 001 | Base installation + event tables (legacy) |
+| 002 | License and installations |
+| 003 | Session auth |
+| 004 | Admin audit |
+| 007 | SSO auth |
+| 008 | SSO role mapping |
+| 009 | Auth audit log |
+| 010 | TOTP 2FA |
+| 011 | Default installation |
+| 012 | Nullable session installation |
+| 013 | `meta.*` schema (datasets, jobs, runs, run_io, quality_rules/results, lineage_edges/columns) |
+| 014 | Drop legacy event tables (`public.pipeline_runs`, `public.data_quality_checks`, `public.data_lineage`) |
+| 015 | OpenLineage alignment |
+| 016 | Layer-scoped dataset IDs + `group_id` |
+| 017 | V2 data model: `meta.data_products`, `meta.entities`, `entity_id` FK, `run_facets`, `dataset_facets` |
+
+---
 
 ## Related Documents
 
 - [Current API Reference](./current-api-reference.md)
 - [Current Architecture](./current-architecture.md)
-- [Insights SaaS API Contract](./mdcf-integration/INSIGHTS_SAAS_API_CONTRACT.yml)

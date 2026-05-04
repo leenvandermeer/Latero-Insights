@@ -214,21 +214,22 @@ Requirements:
 
 This requirement is the foundation for multi-tenant safe operation.
 
-## Deferred Backlog
+## Implemented (was Deferred Backlog)
 
-### B-001 — Full Session Auth (Future Option B)
+### B-001 — Full Session Auth ✓ IMPLEMENTED
 
-The product MAY evolve from installation API key login to full user/session
-authentication using NextAuth.js or Clerk.
+Session authentication with username/password, TOTP 2FA, and SSO (OIDC/Keycloak)
+is now implemented as the primary auth model.
 
-If implemented, the authenticated session SHOULD carry an installation/tenant
-claim, and all read APIs MUST continue enforcing installation scoping based on
-that claim.
+The authenticated session carries an `installation_id` claim. All read APIs
+enforce installation scoping based on that claim. Bearer token auth (`/api/v1/*`)
+remains available for ingest clients.
 
-This is explicitly deferred and not part of the current implementation scope.
+Reference: LADR-020 (session auth), LADR-030 (SSO), LADR-031 (Keycloak), LADR-032 (2FA)
 
 ## Authoritative Companion Documents
 
 - [Current Architecture](./current-architecture.md)
-- [Latero Meta Table Contract](./meta-table-contract.mdcf.md)
+- [Current API Reference](./current-api-reference.md)
+- [SQL Schema Reference](./sql-schema-reference.md)
 - [Insights SaaS Integration Guide](./mdcf-integration/INSIGHTS_SAAS_INTEGRATION_GUIDE.md)

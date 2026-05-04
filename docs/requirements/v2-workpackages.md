@@ -1,9 +1,9 @@
 # Latero Control V2 — Werkpakketten
 
-**Versie:** 2.0-draft  
+**Versie:** 2.0  
 **Datum:** 2026-05-04  
 **Auteur:** Leen van der Meer  
-**Status:** DRAFT — ter review
+**Status:** COMPLETED — alle WPs geïmplementeerd (commit baf41a4)
 
 Zie [v2-product-design.md](v2-product-design.md) voor de volledige product-context
 en [docs/decisions/](../decisions/) voor de gerelateerde ADRs (LADR-059 t/m LADR-062).
@@ -42,15 +42,15 @@ datasets omzet naar entities.
 **ADR:** LADR-060
 
 **Deliverables:**
-- [ ] SQL migratiescript: `meta.data_products` tabel aanmaken
-- [ ] SQL migratiescript: `meta.entities` tabel aanmaken
-- [ ] SQL migratiescript: `entity_id` FK kolom toevoegen aan `meta.datasets`
-- [ ] SQL migratiescript: `run_facets JSONB` kolom aan `meta.runs`
-- [ ] SQL migratiescript: `dataset_facets JSONB` kolom aan `meta.datasets`
-- [ ] Bootstrap-query: vul `meta.entities` vanuit bestaande `meta.datasets`
-- [ ] Bootstrap-query: vul `meta.data_products` vanuit `lineage_group_id`
-- [ ] TypeScript types: `DataProduct`, `Entity` (in `src/types/`)
-- [ ] Migratie test: bestaande data blijft intact na uitvoering scripts
+- [x] SQL migratiescript: `meta.data_products` tabel aanmaken
+- [x] SQL migratiescript: `meta.entities` tabel aanmaken
+- [x] SQL migratiescript: `entity_id` FK kolom toevoegen aan `meta.datasets`
+- [x] SQL migratiescript: `run_facets JSONB` kolom aan `meta.runs`
+- [x] SQL migratiescript: `dataset_facets JSONB` kolom aan `meta.datasets`
+- [x] Bootstrap-query: vul `meta.entities` vanuit bestaande `meta.datasets`
+- [x] Bootstrap-query: vul `meta.data_products` vanuit `lineage_group_id`
+- [x] TypeScript types: `DataProduct`, `Entity` (in `src/types/`)
+- [x] Migratie test: bestaande data blijft intact na uitvoering scripts
 
 **Schattingen:** M (3-5 dagen)
 
@@ -70,15 +70,15 @@ Run Explorer met timeline-weergave, uitgebreide filters, en navigatie naar run-d
 **Afhankelijk van:** WP-V2-001 (voor data product filter)
 
 **Deliverables:**
-- [ ] Route: `/runs` (next.js page component)
-- [ ] Route: `/pipelines` → `/runs` redirect (301)
-- [ ] API: uitbreiding `GET /api/pipelines` met `?step=`, `?product_id=` filters
-- [ ] Component: `RunTimeline` — dag-gegroepeerde tijdlijn van runs
-- [ ] Component: `RunRow` — één rij in de tijdlijn (status, job, I/O count, duration)
-- [ ] Component: `RunFilters` — datum range, status, environment, step, product
-- [ ] Hook: `useRuns` — uitbreiding van `usePipelines` of vervanging
-- [ ] Paginering: cursor-based voor grote run-sets (>1000 runs/dag)
-- [ ] Empty state: "Geen runs gevonden voor dit filter"
+- [x] Route: `/runs` (next.js page component)
+- [x] Route: `/pipelines` → `/runs` redirect (301)
+- [x] API: uitbreiding `GET /api/pipelines` met `?step=`, `?product_id=` filters
+- [x] Component: `RunTimeline` — dag-gegroepeerde tijdlijn van runs
+- [x] Component: `RunRow` — één rij in de tijdlijn (status, job, I/O count, duration)
+- [x] Component: `RunFilters` — datum range, status, environment, step, product
+- [x] Hook: `useRuns` — uitbreiding van `usePipelines` of vervanging
+- [x] Paginering: cursor-based voor grote run-sets (>1000 runs/dag)
+- [x] Empty state: "Geen runs gevonden voor dit filter"
 
 **Schattingen:** M (4-6 dagen)
 
@@ -100,18 +100,18 @@ I/O Datasets, DQ Checks, Lineage Activity, Child Runs.
 **Afhankelijk van:** WP-V2-001, WP-V2-002
 
 **Deliverables:**
-- [ ] Route: `/runs/[run_id]`
-- [ ] API: `GET /api/runs/:run_id` — run detail met I/O, checks, lineage edges, children
+- [x] Route: `/runs/[run_id]`
+- [x] API: `GET /api/runs/:run_id` — run detail met I/O, checks, lineage edges, children
   - Query: `meta.runs` + `meta.run_io` + `meta.quality_results` + `meta.lineage_edges` + child `meta.runs`
-- [ ] Component: `RunHeader` — status, metadata, duurtijd
-- [ ] Component: `RunIOTab` — tabel van input/output datasets met layer-badge en status
-- [ ] Component: `RunDQTab` — tabel van DQ checks met check_name, status, severity, result_value
-- [ ] Component: `RunLineageTab` — lijst van lineage edges bevestigd in deze run
-- [ ] Component: `RunChildrenTab` — lijst van child runs (orchestrator chains)
-- [ ] Cross-navigatie: vanuit RunIOTab → `/entities/[fqn]`
-- [ ] Cross-navigatie: vanuit RunDQTab → `/quality?run_id=[run_id]`
-- [ ] Breadcrumb: `Runs > [run_id]`
-- [ ] Hook: `useRunDetail` voor `GET /api/runs/:run_id`
+- [x] Component: `RunHeader` — status, metadata, duurtijd
+- [x] Component: `RunIOTab` — tabel van input/output datasets met layer-badge en status
+- [x] Component: `RunDQTab` — tabel van DQ checks met check_name, status, severity, result_value
+- [x] Component: `RunLineageTab` — lijst van lineage edges bevestigd in deze run
+- [x] Component: `RunChildrenTab` — lijst van child runs (orchestrator chains)
+- [x] Cross-navigatie: vanuit RunIOTab → `/entities/[fqn]`
+- [x] Cross-navigatie: vanuit RunDQTab → `/quality?run_id=[run_id]`
+- [x] Breadcrumb: `Runs > [run_id]`
+- [x] Hook: `useRunDetail` voor `GET /api/runs/:run_id`
 
 **Schattingen:** L (6-8 dagen)
 
@@ -132,16 +132,16 @@ met status-overzicht, filter op data product, en navigatie naar entity-detail.
 **Afhankelijk van:** WP-V2-001
 
 **Deliverables:**
-- [ ] Route: `/entities`
-- [ ] Route: `/datasets` → `/entities` redirect (301)
-- [ ] API: `GET /api/entities` — lijst van entiteiten met geaggregeerde status
+- [x] Route: `/entities`
+- [x] Route: `/datasets` → `/entities` redirect (301)
+- [x] API: `GET /api/entities` — lijst van entiteiten met geaggregeerde status
   - Query: `meta.entities JOIN meta.datasets JOIN meta.runs` (laatste status per laag)
-- [ ] Component: `EntityList` — tabel met entity_id, display_name, data product, status per laag, DQ pass rate
-- [ ] Component: `EntityStatusBadge` — kleurgecodeerde status (SUCCESS/WARNING/FAILED/UNKNOWN)
-- [ ] Filter: data product, status, source system
-- [ ] Zoekbalk: op entity_id of display_name
-- [ ] Kolommen: Entity, Data Product, Landing, Raw, Bronze, Silver, Gold, DQ%, Laatste run
-- [ ] Hook: `useEntities` voor `GET /api/entities`
+- [x] Component: `EntityList` — tabel met entity_id, display_name, data product, status per laag, DQ pass rate
+- [x] Component: `EntityStatusBadge` — kleurgecodeerde status (SUCCESS/WARNING/FAILED/UNKNOWN)
+- [x] Filter: data product, status, source system
+- [x] Zoekbalk: op entity_id of display_name
+- [x] Kolommen: Entity, Data Product, Landing, Raw, Bronze, Silver, Gold, DQ%, Laatste run
+- [x] Hook: `useEntities` voor `GET /api/entities`
 
 **Schattingen:** M (4-5 dagen)
 
@@ -162,21 +162,21 @@ run-geschiedenis, DQ samenvatting, en link naar entity lineage.
 **Afhankelijk van:** WP-V2-001, WP-V2-004
 
 **Deliverables:**
-- [ ] Route: `/entities/[fqn]`
-- [ ] Route: `/entities/[fqn]/quality`
-- [ ] Route: `/entities/[fqn]/lineage`
-- [ ] API: `GET /api/entities/:fqn` — entity detail
+- [x] Route: `/entities/[fqn]`
+- [x] Route: `/entities/[fqn]/quality`
+- [x] Route: `/entities/[fqn]/lineage`
+- [x] API: `GET /api/entities/:fqn` — entity detail
   - Cross-layer status tabel (één rij per laag: dataset_id, laatste run, status, DQ%)
-- [ ] API: `GET /api/entities/:fqn/runs` — run-geschiedenis voor deze entiteit
-- [ ] API: `GET /api/entities/:fqn/quality` — DQ checks voor alle lagen
-- [ ] API: `GET /api/entities/:fqn/lineage` — lineage subgraph voor entiteit
-- [ ] Component: `EntityHeader` — display_name, data product badge, health status
-- [ ] Component: `LayerStatusTable` — tabel met één rij per laag
-- [ ] Component: `EntityRunHistory` — recentste N runs voor deze entiteit (alle lagen)
-- [ ] Component: `EntityDQSummary` — check categorieën met trend (7-daags)
-- [ ] Cross-navigatie: vanuit LayerStatusTable → `/runs/[run_id]`
-- [ ] Cross-navigatie: "Bekijk lineage" → `/entities/[fqn]/lineage`
-- [ ] Breadcrumb: `Entities > [entity_fqn]`
+- [x] API: `GET /api/entities/:fqn/runs` — run-geschiedenis voor deze entiteit
+- [x] API: `GET /api/entities/:fqn/quality` — DQ checks voor alle lagen
+- [x] API: `GET /api/entities/:fqn/lineage` — lineage subgraph voor entiteit
+- [x] Component: `EntityHeader` — display_name, data product badge, health status
+- [x] Component: `LayerStatusTable` — tabel met één rij per laag
+- [x] Component: `EntityRunHistory` — recentste N runs voor deze entiteit (alle lagen)
+- [x] Component: `EntityDQSummary` — check categorieën met trend (7-daags)
+- [x] Cross-navigatie: vanuit LayerStatusTable → `/runs/[run_id]`
+- [x] Cross-navigatie: "Bekijk lineage" → `/entities/[fqn]/lineage`
+- [x] Breadcrumb: `Entities > [entity_fqn]`
 
 **Schattingen:** L (7-9 dagen)
 
@@ -196,16 +196,16 @@ hun health score, en doorlink naar data product detail.
 **Afhankelijk van:** WP-V2-001, WP-V2-004
 
 **Deliverables:**
-- [ ] Route: `/catalog`
-- [ ] Route: `/catalog/[product_id]`
-- [ ] API: `GET /api/data-products` — lijst van data products met health scores
-- [ ] API: `GET /api/data-products/:id` — data product detail met entiteiten
-- [ ] Component: `CatalogGrid` — grid van data product cards
-- [ ] Component: `DataProductCard` — naam, domein, owner, health badge, entity count
-- [ ] Component: `DataProductDetail` — header + entiteiten-lijst
-- [ ] Filter: domein, owner, health status
-- [ ] Hook: `useDataProducts`, `useDataProduct`
-- [ ] Admin: basis data product beheer (naam, beschrijving, owner, domein bewerken)
+- [x] Route: `/catalog`
+- [x] Route: `/catalog/[product_id]`
+- [x] API: `GET /api/data-products` — lijst van data products met health scores
+- [x] API: `GET /api/data-products/:id` — data product detail met entiteiten
+- [x] Component: `CatalogGrid` — grid van data product cards
+- [x] Component: `DataProductCard` — naam, domein, owner, health badge, entity count
+- [x] Component: `DataProductDetail` — header + entiteiten-lijst
+- [x] Filter: domein, owner, health status
+- [x] Hook: `useDataProducts`, `useDataProduct`
+- [x] Admin: basis data product beheer (naam, beschrijving, owner, domein bewerken)
   - Initieel als JSON-edit in admin interface, later als form
 
 **Schattingen:** M (5-6 dagen)
@@ -226,21 +226,21 @@ hun health score, en doorlink naar data product detail.
 **Afhankelijk van:** WP-V2-001
 
 **Deliverables:**
-- [ ] API: `POST /api/v1/events` — OpenLineage RunEvent ingest
-- [ ] Parser: RunEvent → `meta.runs` INSERT/UPDATE
-- [ ] Parser: `inputs[]` → `meta.run_io` (role=INPUT) + `meta.lineage_edges`
-- [ ] Parser: `outputs[]` → `meta.run_io` (role=OUTPUT) + `meta.lineage_edges`
-- [ ] Facet: `SchemaFacet` → kolom-metadata in `meta.datasets`
-- [ ] Facet: `DataQualityAssertionsFacet` → `meta.quality_results`
-- [ ] Facet: `ColumnLineageFacet` → `meta.lineage_columns`
-- [ ] Facet: `OwnershipFacet` → `meta.entities.owner`
-- [ ] Facet: `ParentRunFacet` → `meta.runs.parent_run_id`
-- [ ] Facet: overige → opslaan in `run_facets`/`dataset_facets` JSONB kolom
-- [ ] Namespace mapping: `namespace/name` → `entity_id::layer` (met configureerbare regels)
-- [ ] Batch ingest: array van RunEvents in één request
-- [ ] TypeScript types: `OpenLineageRunEvent`, `JobFacets`, `DatasetFacets`, `RunFacets`
-- [ ] Validatie: strict JSON schema validatie met foutmeldingen
-- [ ] Backward compatibility: legacy endpoints blijven werken (deprecated header)
+- [x] API: `POST /api/v1/events` — OpenLineage RunEvent ingest
+- [x] Parser: RunEvent → `meta.runs` INSERT/UPDATE
+- [x] Parser: `inputs[]` → `meta.run_io` (role=INPUT) + `meta.lineage_edges`
+- [x] Parser: `outputs[]` → `meta.run_io` (role=OUTPUT) + `meta.lineage_edges`
+- [x] Facet: `SchemaFacet` → kolom-metadata in `meta.datasets`
+- [x] Facet: `DataQualityAssertionsFacet` → `meta.quality_results`
+- [x] Facet: `ColumnLineageFacet` → `meta.lineage_columns`
+- [x] Facet: `OwnershipFacet` → `meta.entities.owner`
+- [x] Facet: `ParentRunFacet` → `meta.runs.parent_run_id`
+- [x] Facet: overige → opslaan in `run_facets`/`dataset_facets` JSONB kolom
+- [x] Namespace mapping: `namespace/name` → `entity_id::layer` (met configureerbare regels)
+- [x] Batch ingest: array van RunEvents in één request
+- [x] TypeScript types: `OpenLineageRunEvent`, `JobFacets`, `DatasetFacets`, `RunFacets`
+- [x] Validatie: strict JSON schema validatie met foutmeldingen
+- [x] Backward compatibility: legacy endpoints blijven werken (deprecated header)
 
 **Schattingen:** XL (10-14 dagen)
 
@@ -261,16 +261,16 @@ conform de V2 navigatiestructuur (LADR-061).
 **Afhankelijk van:** WP-V2-002, WP-V2-004, WP-V2-006 (routes moeten bestaan)
 
 **Deliverables:**
-- [ ] Nav config: update `nav-config.ts` naar V2 structuur
-- [ ] Navigatiemenu: nieuwe secties OBSERVE / EXPLORE / CUSTOMIZE
-- [ ] Route: `/openlineage` → `/lineage` redirect (301) + verwijder pagina
-- [ ] Export button: `[Export OL JSON]` knop in `/lineage` pagina
-- [ ] Route: `/dashboard` → `/dashboards` redirect (301)
-- [ ] Route: `/pipelines` → `/runs` redirect (301)
-- [ ] Route: `/datasets` → `/entities` redirect (301)
-- [ ] Breadcrumb component: `Breadcrumb` met contextbehoud via URL params
-- [ ] Active nav-item highlighting op basis van huidige route
-- [ ] Mobile nav: update voor nieuwe structuur
+- [x] Nav config: update `nav-config.ts` naar V2 structuur
+- [x] Navigatiemenu: nieuwe secties OBSERVE / EXPLORE / CUSTOMIZE
+- [x] Route: `/openlineage` → `/lineage` redirect (301) + verwijder pagina
+- [x] Export button: `[Export OL JSON]` knop in `/lineage` pagina
+- [x] Route: `/dashboard` → `/dashboards` redirect (301)
+- [x] Route: `/pipelines` → `/runs` redirect (301)
+- [x] Route: `/datasets` → `/entities` redirect (301)
+- [x] Breadcrumb component: `Breadcrumb` met contextbehoud via URL params
+- [x] Active nav-item highlighting op basis van huidige route
+- [x] Mobile nav: update voor nieuwe structuur
 
 **Schattingen:** S (2-3 dagen)
 
@@ -286,14 +286,14 @@ dashboard met estate health scores, data product kaarten, en recent activity fee
 **Afhankelijk van:** WP-V2-004, WP-V2-006
 
 **Deliverables:**
-- [ ] Route: `/` → Health Overview (vervangt lege dashboard)
-- [ ] API: `GET /api/health/estate` — geaggregeerde health: products, entities, DQ pass rate, last sync
-- [ ] Component: `EstateHealthSummary` — 4 tellers (products, issues, entities, DQ%)
-- [ ] Component: `DataProductHealthList` — data products met kleurgecodeerde health
-- [ ] Component: `RecentActivityFeed` — laatste 10 runs/checks, meest recent eerst
-- [ ] Component: `OpenIssuesList` — open FAILED DQ checks met severity
-- [ ] Automatische refresh: elke 60 seconden (via TanStack Query staleTime)
-- [ ] "Lege estate" state: instructies voor eerste ingest
+- [x] Route: `/` → Health Overview (vervangt lege dashboard)
+- [x] API: `GET /api/health/estate` — geaggregeerde health: products, entities, DQ pass rate, last sync
+- [x] Component: `EstateHealthSummary` — 4 tellers (products, issues, entities, DQ%)
+- [x] Component: `DataProductHealthList` — data products met kleurgecodeerde health
+- [x] Component: `RecentActivityFeed` — laatste 10 runs/checks, meest recent eerst
+- [x] Component: `OpenIssuesList` — open FAILED DQ checks met severity
+- [x] Automatische refresh: elke 60 seconden (via TanStack Query staleTime)
+- [x] "Lege estate" state: instructies voor eerste ingest
 
 **Schattingen:** M (4-5 dagen)
 
@@ -309,15 +309,15 @@ highlighting, impact analysis, en column lineage toggle.
 **Afhankelijk van:** WP-V2-003, WP-V2-005
 
 **Deliverables:**
-- [ ] Run-triggered highlighting: highlight edges van geselecteerde run
+- [x] Run-triggered highlighting: highlight edges van geselecteerde run
   - Koppeling: `meta.lineage_edges.last_observed_run` → run selectie in UI
-- [ ] Impact analysis: "Toon downstream" knop per node
+- [x] Impact analysis: "Toon downstream" knop per node
   - BFS downstream subgraph vanuit geselecteerde entiteit
   - Kleurcodering op basis van huidige status
-- [ ] Column lineage toggle: klik op edge → toon kolom-flows als sub-panel
-- [ ] Data product filter: uitbreiding van bestaand dataset-focus filter
-- [ ] Export knop: [Export OL JSON] in de lineage-toolbar
-- [ ] Entity detail panel: slide-in panel bij node-klik (zonder navigatie)
+- [x] Column lineage toggle: klik op edge → toon kolom-flows als sub-panel
+- [x] Data product filter: uitbreiding van bestaand dataset-focus filter
+- [x] Export knop: [Export OL JSON] in de lineage-toolbar
+- [x] Entity detail panel: slide-in panel bij node-klik (zonder navigatie)
   - Toont: status, laatste run, DQ pass rate, [Open entiteit →] link
 
 **Schattingen:** L (7-10 dagen)
@@ -338,13 +338,13 @@ Quality-pagina, en zorg voor bidirectionele navigatie.
 **Afhankelijk van:** WP-V2-003, WP-V2-005
 
 **Deliverables:**
-- [ ] Quality pagina: filter op `run_id` (URL param `?run_id=`)
-- [ ] Quality pagina: filter op `entity_fqn` (URL param `?entity=`)
-- [ ] Quality tabel: kolom "Run" met link naar `/runs/[run_id]`
-- [ ] Quality tabel: kolom "Entity" met link naar `/entities/[fqn]`
-- [ ] API uitbreiding: `GET /api/quality?run_id=&entity_fqn=`
-- [ ] DQ trend: uitbreiding met entity-filter (niet alleen globaal)
-- [ ] Severity badge: consistent kleurgebruik (HIGH=rood, MEDIUM=oranje, LOW=geel)
+- [x] Quality pagina: filter op `run_id` (URL param `?run_id=`)
+- [x] Quality pagina: filter op `entity_fqn` (URL param `?entity=`)
+- [x] Quality tabel: kolom "Run" met link naar `/runs/[run_id]`
+- [x] Quality tabel: kolom "Entity" met link naar `/entities/[fqn]`
+- [x] API uitbreiding: `GET /api/quality?run_id=&entity_fqn=`
+- [x] DQ trend: uitbreiding met entity-filter (niet alleen globaal)
+- [x] Severity badge: consistent kleurgebruik (HIGH=rood, MEDIUM=oranje, LOW=geel)
 
 **Schattingen:** S (2-3 dagen)
 
@@ -396,12 +396,12 @@ Quality-pagina, en zorg voor bidirectionele navigatie.
 
 ## Definition of Done (per werkpakket)
 
-- [ ] TypeScript types gedocumenteerd in `src/types/`
-- [ ] API routes gedocumenteerd in `docs/requirements/current-api-reference.md`
-- [ ] SQL migraties: getest op lokale Postgres (`insights-local-postgres`)
-- [ ] Redirects: getest op zowel GET als browser-navigatie
-- [ ] Mobile: component werkt op 375px viewport breedte
-- [ ] Dark mode: component toont correct in beide themes
-- [ ] Loading state: skeleton of spinner aanwezig
-- [ ] Error state: foutmelding zichtbaar bij API fout
-- [ ] Empty state: instructieve melding bij lege dataset
+- [x] TypeScript types gedocumenteerd in `src/types/`
+- [x] API routes gedocumenteerd in `docs/requirements/current-api-reference.md`
+- [x] SQL migraties: getest op lokale Postgres (`insights-local-postgres`)
+- [x] Redirects: getest op zowel GET als browser-navigatie
+- [x] Mobile: component werkt op 375px viewport breedte
+- [x] Dark mode: component toont correct in beide themes
+- [x] Loading state: skeleton of spinner aanwezig
+- [x] Error state: foutmelding zichtbaar bij API fout
+- [x] Empty state: instructieve melding bij lege dataset

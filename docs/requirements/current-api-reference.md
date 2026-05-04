@@ -1,345 +1,172 @@
 # Latero Control API Reference
 
-This document is the compact API reference for the current Latero Control
-repository.
+Status: CURRENT — bijgewerkt 2026-05-04  
+Owner: Latero product
 
-For the full external ingest contract, also see:
+For the full external ingest contract, see:
 
 - [Insights SaaS API Contract](./mdcf-integration/INSIGHTS_SAAS_API_CONTRACT.yml)
 - [Insights SaaS Integration Guide](./mdcf-integration/INSIGHTS_SAAS_INTEGRATION_GUIDE.md)
 
+---
+
 ## API Groups
 
-Latero Control currently exposes two API groups:
+| Group | Prefix | Consumers |
+|-------|--------|----------|
+| Dashboard read APIs | `/api/*` | Web UI (TanStack Query hooks) |
+| Auth APIs | `/api/auth/*` | Web UI login/session flows |
+| Versioned ingest | `/api/v1/*` | Latero runtimes, integration clients |
+| Admin | `/api/v1/admin/*` | Admin-only operator tooling |
 
-1. **Web read and admin APIs**
-   - used by the Next.js web application
-   - mostly under `web/src/app/api/*`
-2. **Versioned ingest APIs**
-   - used by Latero runtimes or integration clients
-   - under `web/src/app/api/v1/*`
+---
 
-## Web Read And Admin APIs
+## Dashboard Read APIs
 
 ### `GET /api/health`
+Basic health check. Returns `status`, database connectivity, timestamp.
 
-Purpose:
-- basic application health
-- reports Databricks connectivity and snapshot status
+### `GET /api/health/estate`
+Aggregate estate health across the active installation.  
+Returns: `data_product_count`, `entity_count`, `issue_count`, `dq_pass_rate`, `last_run_at`.
 
-Returns:
-- `status`: `ok` or `error`
-- `databricks`: boolean
-- `cache`: cache/snapshot status object
-- `timestamp`
+### `GET /api/runs`
+Paginated run history.  
+Query params: `from` (YYYY-MM-DD, default last 30 days), `to`, `status`, `step`, `entity`, `product_id`, `cursor`  
+Returns: `{ data, source, next_cursor }`
 
-Source:
-- [web/src/app/api/health/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/health/route.ts)
+### `GET /api/runs/[run_id]`
+Run detail with relations.  
+Returns: run fields + `io_datasets`, `dq_checks`, `lineage_edges`, `child_runs`.
 
-### `GET /api/settings`
+### `GET /api/entities`
+Entity list with aggregated health status per entity.  
+Query params: `product_id`, `status`, `q`
 
-Purpose:
-- return masked runtime settings
+### `GET /api/entities/[fqn]`
+Entity detail with `layer_statuses` array.
 
-Returns:
-- `settings`
+### `GET /api/entities/[fqn]/runs`
+Run history for a specific entity.
 
-### `PUT /api/settings`
-
-Purpose:
-- update runtime settings in the local settings store
-
-Accepted fields:
-- `databricksHost`
-- `databricksToken`
-- `databricksWarehouseId`
-- `databricksCatalog`
-- `databricksSchema`
-- `databricksEnvironment`
-- `cacheTtlSeconds`
-- `cacheOnly`
-
-Validation:
-- `cacheTtlSeconds` must be between `0` and `604800`
-
-Source:
-- [web/src/app/api/settings/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/settings/route.ts)
-
-### `POST /api/test-connection`
-
-Purpose:
-- test Databricks connectivity using the current runtime settings
-
-Source:
-- [web/src/app/api/test-connection/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/test-connection/route.ts)
-
-### `POST /api/sync/databricks`
-
-Purpose:
-- pull metadata from Databricks into the Latero Control read store
-
-Request body:
-- optional JSON
-- `from`: `YYYY-MM-DD`
-- `to`: `YYYY-MM-DD`
-
-Defaults:
-- if omitted, the route syncs the last 7 days
-
-Returns:
-- `synced`
-- `duration_ms`
-- `range`
-
-Source:
-- [web/src/app/api/sync/databricks/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/sync/databricks/route.ts)
+### `GET /api/data-products`
+Data product list with `entity_count` per product.
 
 ### `GET /api/pipelines`
-
-Purpose:
-- read pipeline runs for the selected date range from the Insights store
-
-Query parameters:
-- `from` required, `YYYY-MM-DD`
-- `to` required, `YYYY-MM-DD`
-- `installation_id` optional
-
-Behavior:
-- in normal mode, reads from the Insights store and writes a fresh snapshot
-- in snapshot-only mode, serves from the local snapshot
-- on live read failure, falls back to the latest snapshot when available
-
-Returns:
-- `data`
-- `source`: `insights-saas`, `cache`, or `fallback`
-- `cachedAt` when applicable
-- `warning` when applicable
-
-Source:
-- [web/src/app/api/pipelines/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/pipelines/route.ts)
+Legacy pipeline run read (V1 model). Reads from Insights store with snapshot fallback.  
+Query params: `from` (required), `to` (required)
 
 ### `GET /api/quality`
-
-Purpose:
-- read data-quality checks for the selected date range
-
-Query parameters:
-- `from` required, `YYYY-MM-DD`
-- `to` required, `YYYY-MM-DD`
-- `installation_id` optional
-
-Behavior:
-- same snapshot/fallback behavior as `/api/pipelines`
-
-Source:
-- [web/src/app/api/quality/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/quality/route.ts)
+Data quality check results.  
+Query params: `from` (required), `to` (required), `run_id` (optional), `entity_fqn` (optional)
 
 ### `GET /api/lineage`
-
-Purpose:
-- read lineage hops for the selected date range
-
-Query parameters:
-- `from` required, `YYYY-MM-DD`
-- `to` required, `YYYY-MM-DD`
-- `installation_id` optional
-
-Behavior:
-- same snapshot/fallback behavior as `/api/pipelines`
-
-Source:
-- [web/src/app/api/lineage/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/lineage/route.ts)
+Lineage hops for a date range.  
+Query params: `from` (required), `to` (required)
 
 ### `GET /api/lineage/entities`
-
-Purpose:
-- return the current lineage entity projection derived from `data_lineage`
-
-Behavior:
-- store-backed
-- snapshot fallback supported
-
-Returns:
-- `data`
-- `source`
-- `meta.resolution = "data_lineage_derived"`
-
-Source:
-- [web/src/app/api/lineage/entities/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/lineage/entities/route.ts)
+Current lineage entity projection from `meta.datasets` + `meta.lineage_edges`.
 
 ### `GET /api/lineage/attributes`
+Current lineage attribute projection from `meta.lineage_columns`.
 
-Purpose:
-- return the current lineage attribute projection derived from `data_lineage`
+### `GET /api/settings` / `PUT /api/settings`
+Runtime settings (Databricks host, token, warehouse, catalog, schema, cache TTL).
 
-Behavior:
-- store-backed
-- snapshot fallback supported
+### `POST /api/test-connection`
+Test Databricks connectivity with current runtime settings.
 
-Returns:
-- `data`
-- `source`
-- `meta.resolution = "data_lineage_derived"`
+### `POST /api/sync/databricks`
+Pull sync from Databricks into the Insights store.  
+Body: `{ from?, to? }` (defaults to last 7 days)
 
-Source:
-- [web/src/app/api/lineage/attributes/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/lineage/attributes/route.ts)
+### `GET /api/widgets/shared` / `POST` / `DELETE /api/widgets/shared/[id]`
+Shared widget library. JSON-backed, persisted to `web/data/shared-widgets.json`.
 
-### `GET /api/widgets/shared`
-### `POST /api/widgets/shared`
-### `DELETE /api/widgets/shared`
+### `GET /api/dashboards/system`
+System dashboard registry.
 
-Purpose:
-- manage the shared widget library
+### `GET /api/installations`
+Active installations for the current user session.
 
-Persistence:
-- JSON-backed file store
-- `web/data/shared-widgets.json`
+---
 
-## Versioned Ingest APIs
+## Auth APIs
 
-These routes are intended for Latero runtimes and integration clients.
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/auth/login` | POST | Password login, returns session cookie |
+| `/api/auth/logout` | POST | Invalidate session |
+| `/api/auth/session` | GET | Current session info |
+| `/api/auth/switch-installation` | POST | Switch active installation |
+| `/api/auth/set-default-installation` | POST | Set default installation for user |
+| `/api/auth/password-reset` | POST | Request password reset email |
+| `/api/auth/password-reset/confirm` | POST | Confirm password reset with token |
+| `/api/auth/policy` | GET | Auth policy for a domain (`?hint=email`) |
+| `/api/auth/sso/initiate` | POST | Start OIDC SSO flow |
+| `/api/auth/sso/callback` | GET | OIDC callback handler |
+| `/api/auth/2fa/verify` | POST | Verify TOTP code |
+| `/api/account/2fa` | GET/DELETE | 2FA status and revocation |
+| `/api/account/2fa/setup/initiate` | POST | Begin 2FA setup |
+| `/api/account/2fa/setup/confirm` | POST | Confirm 2FA setup |
+
+---
+
+## Versioned Ingest APIs (`/api/v1/*`)
 
 Common behavior:
-- versioned under `/api/v1`
-- rate-limited
-- Bearer token authorization per installation
-- writes to the Postgres Insights store
+- Bearer token auth per installation (except `/api/v1/health`)
+- Rate-limited
+- Writes to Postgres `meta.*` schema
 
-### `GET /api/v1/health`
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/health` | GET | Ingest API health |
+| `/api/v1/events` | POST | OpenLineage RunEvent ingest (canonical V2) |
+| `/api/v1/pipeline-runs` | POST | Legacy pipeline run ingest |
+| `/api/v1/dq-checks` | POST | Legacy DQ check ingest |
+| `/api/v1/lineage` | POST | Legacy lineage hop ingest |
+| `/api/v1/ingest` | POST | Generic ingest endpoint |
+| `/api/v1/me` | GET | Current user info |
+| `/api/v1/users` | GET | Users for active installation |
+| `/api/v1/installations` | GET | Installations for current user |
+| `/api/v1/installations/[id]` | GET | Installation detail |
+| `/api/v1/installations/[id]/status` | GET | Ingest status counts |
+| `/api/v1/installations/[id]/rotate-key` | POST | Rotate API key |
+| `/api/v1/license/validate` | POST | License validation |
 
-Purpose:
-- verify ingest API availability and database connectivity
+### `POST /api/v1/events` — OpenLineage ingest (V2 canonical)
 
-Returns:
-- `status`
-- `database`
-- `timestamp`
+Primary ingest endpoint for Latero runtimes.  
+Accepts an OpenLineage `RunEvent` or array of `RunEvent`.  
+Auth: Bearer token; `installation_id` from `producer` or `installation_id` field.  
+Processes: runs, run_io, lineage_edges, lineage_columns (ColumnLineageFacet), quality_results (DataQualityAssertionsFacet).
 
-Source:
-- [web/src/app/api/v1/health/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/v1/health/route.ts)
+---
 
-### `POST /api/v1/pipeline-runs`
+## Admin APIs (`/api/v1/admin/*`)
 
-Purpose:
-- ingest pipeline run events
+All routes require `is_admin = true` on the session.
 
-Required request fields:
-- `installation_id`
-- `timestamp_utc`
-- `dataset_id`
-- `run_id`
-- `step`
-- `status`
-- `environment`
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/admin/health` | GET | System-wide health across all installations |
+| `/api/v1/admin/audit` | GET | Admin audit log |
+| `/api/v1/admin/installations` | GET/POST | List / create installations |
+| `/api/v1/admin/installations/[id]` | GET/PATCH/DELETE | Installation CRUD |
+| `/api/v1/admin/installations/[id]/rotate-key` | POST | Force key rotation |
+| `/api/v1/admin/installations/[id]/auth-config` | GET/PUT | SSO auth config per installation |
+| `/api/v1/admin/installations/[id]/auth-config/test` | POST | Test SSO config |
+| `/api/v1/admin/users` | GET/POST | User management |
+| `/api/v1/admin/users/[id]` | GET/PATCH/DELETE | User CRUD |
+| `/api/v1/admin/users/[id]/reset-password` | POST | Force password reset |
+| `/api/v1/admin/users/[id]/2fa` | DELETE | Revoke 2FA |
 
-Optional notable fields:
-- `source_system`
-- `execution_seconds`
+---
 
-Storage target:
-- `pipeline_runs`
+## Storage Model
 
-Source:
-- [web/src/app/api/v1/pipeline-runs/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/v1/pipeline-runs/route.ts)
+**Read side:** all dashboard APIs read from `meta.*` tables in Postgres.  
+**Write side:** `/api/v1/*` writes to `meta.*`; `/api/sync/databricks` pulls from Databricks into the same store.  
+**Schema:** `infra/sql/init/` (migrations 001–017+)
 
-### `POST /api/v1/dq-checks`
-
-Purpose:
-- ingest data-quality check events
-
-Required request fields:
-- `installation_id`
-- `timestamp_utc`
-- `dataset_id`
-- `check_id`
-- `status`
-- `severity`
-- `environment`
-
-Optional notable fields:
-- `step`
-- `run_id`
-- `check_name`
-- `check_category`
-- `policy_version`
-- `message`
-
-Validation:
-- `severity` must be `high`, `medium`, or `low`
-
-Storage target:
-- `data_quality_checks`
-
-Source:
-- [web/src/app/api/v1/dq-checks/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/v1/dq-checks/route.ts)
-
-### `POST /api/v1/lineage`
-
-Purpose:
-- ingest lineage hop events
-
-Required request fields:
-- `installation_id`
-- `timestamp_utc`
-- `dataset_id`
-- `run_id`
-- `step`
-- `input_entity`
-- `output_entity`
-- `environment`
-
-Optional notable fields:
-- `source_type`
-- `source_ref`
-- `source_attribute`
-- `target_type`
-- `target_ref`
-- `target_attribute`
-- `source_system`
-- `schema_version`
-- `lineage_evidence`
-- `hop_kind`
-
-Validation:
-- `hop_kind` must be `data_flow` or `context`
-
-Storage target:
-- `data_lineage`
-
-Source:
-- [web/src/app/api/v1/lineage/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/v1/lineage/route.ts)
-
-### `GET /api/v1/installations/{installation_id}/status`
-
-Purpose:
-- return ingest status for one installation
-
-Returns counts and last event timestamps for:
-- `pipeline_runs`
-- `dq_checks`
-- `lineage`
-
-Authorization:
-- Bearer token required unless `INSIGHTS_AUTH_DISABLED=true`
-
-Source:
-- [web/src/app/api/v1/installations/[installation_id]/status/route.ts](/Users/leenvandermeer/Git/Latero%20Insights/web/src/app/api/v1/installations/[installation_id]/status/route.ts)
-
-## Current Storage Model
-
-Read side:
-- web APIs read from the Latero Control store
-- the current local/dev bootstrap schema is defined in:
-  - [infra/sql/init/001_insights_saas_init.sql](/Users/leenvandermeer/Git/Latero%20Insights/infra/sql/init/001_insights_saas_init.sql)
-
-Write side:
-- `/api/v1/*` writes into Postgres
-- `/api/sync/databricks` pulls Databricks metadata into the same store
-
-## Where To Start
-
-If you want the full repo-level answer quickly:
-
-1. Read this file for the route overview
-2. Read [SQL Schema Reference](./sql-schema-reference.md) for the tables
-3. Read [Insights SaaS API Contract](./mdcf-integration/INSIGHTS_SAAS_API_CONTRACT.yml) for the external ingest contract
