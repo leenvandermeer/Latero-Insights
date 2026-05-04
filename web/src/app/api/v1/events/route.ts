@@ -18,7 +18,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { getPgPool, verifyInstallationToken, getBearerToken } from "@/lib/insights-saas-db";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 
 // ── Namespace → layer mapping ──────────────────────────────────────────────
 
@@ -73,7 +73,7 @@ function normalizeEventStatus(eventType: string): string {
 async function processOLEvent(
   event: Record<string, unknown>,
   installationId: string,
-  pool: Pool
+  pool: PoolClient
 ): Promise<void> {
   const eventType = String(event.eventType ?? "OTHER");
   const eventTime = String(event.eventTime ?? new Date().toISOString());
@@ -346,7 +346,7 @@ export async function POST(request: NextRequest) {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      await processOLEvent(event, installationId, pool);
+      await processOLEvent(event, installationId, client);
       await client.query("COMMIT");
       accepted++;
     } catch (err) {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, Copy, Save, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Building2, Copy, Save, ShieldCheck, Trash2 } from "lucide-react";
 import { useAdminInstallation, useUpdateInstallation } from "@/hooks/use-admin";
 
 export default function AdminInstallationDetailPage() {
@@ -25,6 +25,12 @@ export default function AdminInstallationDetailPage() {
   const [rotating, setRotating] = useState(false);
   const [showRotateConfirm, setShowRotateConfirm] = useState(false);
 
+  // LINS-018: Clear installation data
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearConfirmInput, setClearConfirmInput] = useState("");
+  const [isClearing, setIsClearing] = useState(false);
+  const [clearResult, setClearResult] = useState<{ ok: boolean; message: string } | null>(null);
+
   async function doRotateKey() {
     setShowRotateConfirm(false);
     setRotating(true);
@@ -40,6 +46,31 @@ export default function AdminInstallationDetailPage() {
       setNewApiKey(newToken);
     }
     setRotating(false);
+  }
+
+  async function doClearData() {
+    setIsClearing(true);
+    setClearResult(null);
+    try {
+      const res = await fetch(`/api/v1/admin/installations/${installationId}/data`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: installationId }),
+        credentials: "include",
+      });
+      const data = await res.json() as { success?: boolean; total_deleted?: number; error?: string };
+      if (res.ok && data.success) {
+        setClearResult({ ok: true, message: `Verwijderd — ${data.total_deleted ?? 0} records gewist.` });
+        setShowClearConfirm(false);
+        setClearConfirmInput("");
+      } else {
+        setClearResult({ ok: false, message: data.error ?? "Clear failed." });
+      }
+    } catch (err) {
+      setClearResult({ ok: false, message: err instanceof Error ? err.message : "Clear failed." });
+    } finally {
+      setIsClearing(false);
+    }
   }
 
   useEffect(() => {
@@ -226,6 +257,85 @@ export default function AdminInstallationDetailPage() {
           </div>
         </form>
       </div>
+
+      {/* LINS-018: Danger Zone */}
+      <div className="rounded-lg border-2 p-6 space-y-4" style={{ borderColor: "var(--color-error, #dc2626)" }}>
+        <div className="flex items-center gap-2">
+          <Trash2 className="h-4 w-4" style={{ color: "var(--color-error, #dc2626)" }} />
+          <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: "var(--color-error, #dc2626)" }}>
+            Danger Zone
+          </h2>
+        </div>
+
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-sm font-medium text-slate-900 dark:text-white">Clear operational data</p>
+            <p className="text-xs mt-0.5 text-slate-500 dark:text-slate-400">
+              Verwijdert alle runs, entities, lineage en DQ-resultaten voor deze installatie.
+              De installatie-definitie, gebruikers en API-sleutel blijven intact. Onherstelbaar.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setShowClearConfirm(true); setClearResult(null); }}
+            className="shrink-0 rounded px-3 py-1.5 text-xs font-semibold text-white"
+            style={{ background: "var(--color-error, #dc2626)" }}
+          >
+            Clear data…
+          </button>
+        </div>
+
+        {clearResult && (
+          <p className="text-xs" style={{ color: clearResult.ok ? "var(--color-success, #059669)" : "var(--color-error, #dc2626)" }}>
+            {clearResult.message}
+          </p>
+        )}
+      </div>
+
+      {/* Clear data confirmation modal */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl p-6 shadow-xl space-y-4" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+            <div className="flex items-center gap-2">
+              <Trash2 className="h-4 w-4 shrink-0" style={{ color: "var(--color-error, #dc2626)" }} />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Clear installation data?</h3>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Dit verwijdert alle operationele data voor <strong>{installationId}</strong>. Runs, entities, lineage en DQ-resultaten worden permanent gewist. Dit kan niet ongedaan worden gemaakt.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Typ <code className="rounded bg-slate-100 px-1 py-0.5 dark:bg-slate-800">{installationId}</code> ter bevestiging
+              </label>
+              <input
+                type="text"
+                value={clearConfirmInput}
+                onChange={(e) => setClearConfirmInput(e.target.value)}
+                className="w-full rounded border border-slate-300 px-3 py-2 text-xs dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                placeholder={installationId}
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => { setShowClearConfirm(false); setClearConfirmInput(""); }}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium"
+                style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={doClearData}
+                disabled={clearConfirmInput !== installationId || isClearing}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+                style={{ background: "var(--color-error, #dc2626)" }}
+              >
+                {isClearing ? "Clearing…" : "Ja, verwijder alle data"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

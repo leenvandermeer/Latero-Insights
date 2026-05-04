@@ -214,6 +214,35 @@ Requirements:
 
 This requirement is the foundation for multi-tenant safe operation.
 
+### LINS-018 — Installatie data reset (admin) ✓ IMPLEMENTED
+
+Een admin MOET via de admin-module de operationele data van een specifieke installatie
+kunnen wissen zonder de installatie-definitie te verwijderen.
+
+Scope van "wissen":
+- `meta.quality_results`, `meta.run_io`, `meta.lineage_columns`, `meta.lineage_edges`
+- `meta.runs`, `meta.jobs`, `meta.datasets`, `meta.entities`, `meta.data_products`
+
+Scope van "bewaren":
+- `insights_installations` rij, gebruikers, SSO-config, settings (`.cache/`)
+
+Gedragsregels:
+1. Alleen uitvoerbaar door een `is_admin = true` sessie
+2. Vereist expliciete bevestiging via `installation_id`-invoer in UI
+3. Volledig geauditeerd in `admin_audit_log` (actor, target, deleted counts, timestamp)
+4. API-route: `DELETE /api/v1/admin/installations/[installation_id]/data`
+5. Response bevat deleted counts per tabel en totaal
+6. Niet reversibel
+
+### LINS-019 — Sync-uitkomst feedback in de UI ✓ IMPLEMENTED
+
+Na elke sync-actie MOET de gebruiker een zichtbare statusmelding zien:
+- `synced > 0`: *"Synced N records in Xs"* (groen)
+- `synced = 0`: *"Sync voltooid — geen nieuwe records gevonden. Bestaande data ongewijzigd."* (amber)
+- Fout: foutbericht (rood)
+
+Implementatie: inline feedback onder de sync-knop in de Settings-pagina.
+
 ## Implemented (was Deferred Backlog)
 
 ### B-001 — Full Session Auth ✓ IMPLEMENTED

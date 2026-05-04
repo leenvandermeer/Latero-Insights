@@ -613,10 +613,11 @@ interface GraphViewProps {
   entities: LineageEntity[];
   attributes: LineageAttribute[];
   refreshedAt?: string;
+  initialFocus?: string;
   onOpenColumns?: (query?: string) => void;
 }
 
-export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: GraphViewProps) {
+export function GraphView({ entities, attributes, refreshedAt, initialFocus, onOpenColumns }: GraphViewProps) {
   const [search, setSearch] = useState("");
   const [layerFilter, setLayerFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -626,6 +627,19 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
   const [flow, setFlow] = useState<ReactFlowInstance | null>(null);
 
   const normalizedEntities = useMemo(() => normalizeLineageEntities(entities), [entities]);
+
+  // Resolve initialFocus (entity_fqn from URL) to a datasetKey once entities are loaded
+  useEffect(() => {
+    if (!initialFocus || normalizedEntities.length === 0 || datasetFocus) return;
+    // Find the entity whose name or datasetKey contains/matches the initialFocus
+    const fqnLower = initialFocus.toLowerCase();
+    const match = normalizedEntities.find(
+      (e) => e.name.toLowerCase().includes(fqnLower) || datasetKey(e).toLowerCase() === fqnLower
+    );
+    if (match) setDatasetFocus(datasetKey(match));
+  // Only run when entities first load or initialFocus changes; datasetFocus intentionally excluded
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFocus, normalizedEntities]);
 
   const datasetOptions = useMemo(() => {
     const keys = new Set(

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLineageEntities, useLineageAttributes } from "@/hooks";
 import { SourceIndicator, ErrorMessage, PageHeader } from "@/components/ui";
 import { Skeleton } from "@/components/ui/loading-skeleton";
@@ -9,7 +10,8 @@ import { GraphView } from "./graph-view";
 import { ChainsView } from "./chains-view";
 import { ColumnsView } from "./columns-view";
 import { LineageOverview } from "./overview-view";
-import { GitFork, Link2, Columns3, LayoutDashboard, RefreshCw, Loader2, GitBranch, Settings } from "lucide-react";
+import type { LineageEntity } from "@/lib/adapters/types";
+import { GitFork, Link2, Columns3, LayoutDashboard, RefreshCw, Loader2, GitBranch, Download, Settings } from "lucide-react";
 
 type Tab = "overview" | "graph" | "chains" | "columns";
 
@@ -20,10 +22,28 @@ const TABS: { id: Tab; label: string; Icon: React.ComponentType<{ className?: st
   { id: "columns", label: "Columns", Icon: Columns3 },
 ];
 
+function downloadEntitiesAsJSON(entities: LineageEntity[]) {
+  const payload = { generated_at: new Date().toISOString(), format: "latero-lineage-v2", entities };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `lineage-export-${new Date().toISOString().split("T")[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function LineageDashboard() {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const searchParams = useSearchParams();
+  const initialEntityFqn = searchParams.get("entity_fqn") ?? undefined;
+
+  const [activeTab, setActiveTab] = useState<Tab>(initialEntityFqn ? "graph" : "overview");
   const [columnsSearch, setColumnsSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (initialEntityFqn) setActiveTab("graph");
+  }, [initialEntityFqn]);
 
   const {
     data: entitiesRes,
@@ -129,6 +149,16 @@ export function LineageDashboard() {
             <div className="flex items-center gap-1.5">
               {entitiesRes && <SourceIndicator source={entitiesRes.source} cachedAt={entitiesRes.cachedAt} />}
               <button
+                onClick={() => downloadEntitiesAsJSON(entities)}
+                disabled={entities.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 disabled:opacity-40"
+                style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "var(--color-surface)" }}
+                title="Download lineage data as JSON"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export
+              </button>
+              <button
                 onClick={handleRefresh}
                 disabled={refreshing || entitiesLoading}
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 disabled:opacity-40"
@@ -179,6 +209,7 @@ export function LineageDashboard() {
             entities={entities}
             attributes={attributes}
             refreshedAt={refreshedAt}
+            initialFocus={initialEntityFqn}
             onOpenColumns={(query) => {
               setColumnsSearch(query ?? "");
               setActiveTab("columns");

@@ -81,6 +81,10 @@ export function fetchDataQualityChecks(range: DateRangeParams): Promise<ApiRespo
   return request(`/quality${dateParams(range)}`);
 }
 
+export function fetchEntityQuality(fqn: string, from: string, to: string): Promise<ApiResponse<DataQualityCheck[]>> {
+  return request(`/quality?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&entity_fqn=${encodeURIComponent(fqn)}`);
+}
+
 export function fetchLineageHops(range: DateRangeParams): Promise<ApiResponse<LineageHop[]>> {
   return request(`/lineage${dateParams(range)}`);
 }

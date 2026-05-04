@@ -30,6 +30,7 @@ import { useBreakpoint } from "@/hooks";
 
 // WP-V2-008: V2 navigation — OBSERVE / EXPLORE / CUSTOMIZE
 const OBSERVE_NAV = [
+  { label: "Overview",     href: "/overview",      icon: LayoutDashboard },
   { label: "Runs",         href: "/runs",          icon: Activity },
   { label: "Data Quality", href: "/quality",        icon: ShieldCheck },
 ];
@@ -119,7 +120,7 @@ export function Sidebar() {
     deleteDash(id);
     setDeleteConfirm(null);
     if (pathname === `/dashboard/${id}`) {
-      router.push("/pipelines");
+      router.push("/runs");
     }
   };
 

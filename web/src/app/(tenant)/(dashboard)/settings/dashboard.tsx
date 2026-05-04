@@ -17,7 +17,7 @@ export function SettingsDashboard() {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ ok: boolean; empty?: boolean; message: string } | null>(null);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [diagnoseResult, setDiagnoseResult] = useState<Record<string, unknown> | null>(null);
   const [form, setForm] = useState({
@@ -125,7 +125,15 @@ export function SettingsDashboard() {
       } else {
         const counts = data.synced ?? {};
         const total = Object.values(counts).reduce((s, n) => s + n, 0);
-        setSyncResult({ ok: true, message: `Synced ${total} records in ${Math.round((data.duration_ms ?? 0) / 1000)}s` });
+        if (total === 0) {
+          setSyncResult({
+            ok: true,
+            empty: true,
+            message: `Sync voltooid — geen nieuwe records gevonden. Bestaande data ongewijzigd. (${Math.round((data.duration_ms ?? 0) / 1000)}s)`,
+          });
+        } else {
+          setSyncResult({ ok: true, message: `Synced ${total} records in ${Math.round((data.duration_ms ?? 0) / 1000)}s` });
+        }
 
         // Warm the read-API cache so the snapshot counter reflects the synced data.
         if (data.range?.from && data.range?.to) {
@@ -307,7 +315,7 @@ export function SettingsDashboard() {
             </p>
           )}
           {syncResult && (
-            <p style={{ color: syncResult.ok ? "var(--color-success, #059669)" : "var(--color-error, #dc2626)" }}>
+            <p style={{ color: syncResult.ok && !syncResult.empty ? "var(--color-success, #059669)" : syncResult.empty ? "var(--color-warning-text, #92400e)" : "var(--color-error, #dc2626)" }}>
               {syncResult.message}
             </p>
           )}

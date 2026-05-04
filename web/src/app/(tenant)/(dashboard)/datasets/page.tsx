@@ -1,5 +1,5 @@
-import { DatasetsDashboard } from "./dashboard";
+import { redirect } from "next/navigation";
 
 export default function DatasetsPage() {
-  return <DatasetsDashboard />;
+  redirect("/entities");
 }

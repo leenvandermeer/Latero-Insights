@@ -1,6 +1,7 @@
 export {
   fetchPipelineRuns,
   fetchDataQualityChecks,
+  fetchEntityQuality,
   fetchLineageHops,
   fetchLineageEntities,
   fetchLineageAttributes,
