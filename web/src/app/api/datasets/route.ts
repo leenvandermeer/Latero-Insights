@@ -77,10 +77,12 @@ export async function GET(request: NextRequest) {
          ) AS latest_run_at
        FROM meta.datasets d
        WHERE d.installation_id = $1
+         -- Only show properly layered medallion datasets (exclude legacy/unlayered rows)
+         AND d.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
          -- Exclude framework context nodes (e.g. 'latero' where fqn = source_system)
          AND (d.source_system IS NULL OR d.fqn != d.source_system)
          ${filters}
-       ORDER BY d.layer NULLS LAST, d.object_name`,
+       ORDER BY d.layer, d.object_name`,
       values
     );
 
