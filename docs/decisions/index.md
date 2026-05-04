@@ -48,3 +48,7 @@ Naming note:
 | [LADR-040](20260504-meta-schema-datamodel.md) | 2026-05-04 | meta.* schema: gestructureerd operationeel datamodel (OpenLineage-gebaseerd) | ACCEPTED |
 | [LADR-041](20260504-drop-public-event-tables.md) | 2026-05-04 | Drop public.* event-tabellen na volledige migratie naar meta.* | ACCEPTED |
 | [LADR-058](20260504-lineage-layer-scoped-entity-model.md) | 2026-05-04 | Lineage layer-scoped entity model: dataset_id als {entity}::{layer} compound key | ACCEPTED |
+| [LADR-059](LADR-059-20260504-v2-run-centric-observability.md) | 2026-05-04 | V2: Run als primaire observability-anchor (run detail, I/O, DQ context) | PROPOSED |
+| [LADR-060](LADR-060-20260504-v2-data-product-hierarchy.md) | 2026-05-04 | V2: Data Product / Entity / Dataset hiërarchie — drietal voor status-aggregatie | PROPOSED |
+| [LADR-061](LADR-061-20260504-v2-navigation-and-routing.md) | 2026-05-04 | V2: Navigation en routing herstructurering — drill-down model en nieuwe routes | PROPOSED |
+| [LADR-062](LADR-062-20260504-v2-openlineage-compliance.md) | 2026-05-04 | V2: OpenLineage Event Model als primair ingest-formaat (facets, Marquez compat) | PROPOSED |

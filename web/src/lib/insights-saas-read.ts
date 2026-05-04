@@ -1,7 +1,7 @@
 import type { DataQualityCheck, LineageAttribute, LineageEntity, LineageHop, PipelineRun } from "@/lib/adapters/types";
 import { getPgPool } from "@/lib/insights-saas-db";
 
-type DateRange = { from: string; to: string; installationId?: string | null };
+type DateRange = { from: string; to: string; installationId?: string | null; runId?: string | null; entityFqn?: string | null };
 type PipelineRunRow = PipelineRun & { duration_ms: number | string | null };
 
 function normalizeDate(date: string): string {
@@ -66,11 +66,20 @@ async function getDataQualityChecksFromMetaStore(range: DateRange): Promise<Data
   const pool = getPgPool();
 
   const values: Array<string> = [from, to];
-  let installationFilter = "";
+  const extraFilters: string[] = [];
   if (range.installationId) {
     values.push(range.installationId);
-    installationFilter = ` AND qr.installation_id = $${values.length}`;
+    extraFilters.push(`qr.installation_id = $${values.length}`);
   }
+  if (range.runId) {
+    values.push(range.runId);
+    extraFilters.push(`qr.run_id = $${values.length}::uuid`);
+  }
+  if (range.entityFqn) {
+    values.push(range.entityFqn);
+    extraFilters.push(`qru.dataset_id = $${values.length}`);
+  }
+  const extraWhere = extraFilters.length > 0 ? " AND " + extraFilters.join(" AND ") : "";
 
   const result = await pool.query(
     `
@@ -94,7 +103,7 @@ async function getDataQualityChecksFromMetaStore(range: DateRange): Promise<Data
         ON qru.installation_id = qr.installation_id
        AND qru.check_id        = qr.check_id
       LEFT JOIN meta.runs r ON r.run_id = qr.run_id
-      WHERE qr.result_date BETWEEN $1 AND $2${installationFilter}
+      WHERE qr.result_date BETWEEN $1 AND $2${extraWhere}
       ORDER BY qr.executed_at DESC
     `,
     values,

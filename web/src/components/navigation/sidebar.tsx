@@ -8,13 +8,13 @@ import {
   LayoutDashboard,
   ShieldCheck,
   GitBranch,
-  Network,
+  Package,
+  Boxes,
   Settings,
   Sun,
   Moon,
   ChevronLeft,
   ChevronRight,
-  Database,
   Plus,
   ChevronDown,
   Trash2,
@@ -28,15 +28,16 @@ import { useInstallation } from "@/contexts/installation-context";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
 import { useBreakpoint } from "@/hooks";
 
-const SYSTEM_NAV = [
-  { label: "Pipelines",    href: "/pipelines",    icon: Activity },
-  { label: "Data Quality", href: "/quality",       icon: ShieldCheck },
-  { label: "Datasets",     href: "/datasets",      icon: Database },
+// WP-V2-008: V2 navigation — OBSERVE / EXPLORE / CUSTOMIZE
+const OBSERVE_NAV = [
+  { label: "Runs",         href: "/runs",          icon: Activity },
+  { label: "Data Quality", href: "/quality",        icon: ShieldCheck },
 ];
 
-const LINEAGE_NAV = [
-  { label: "Lineage",      href: "/lineage",      icon: GitBranch },
-  { label: "OpenLineage",  href: "/openlineage",  icon: Network },
+const EXPLORE_NAV = [
+  { label: "Entities",     href: "/entities",      icon: Boxes },
+  { label: "Catalog",      href: "/catalog",       icon: Package },
+  { label: "Lineage",      href: "/lineage",       icon: GitBranch },
 ];
 
 export function Sidebar() {
@@ -170,41 +171,15 @@ export function Sidebar() {
 
         {/* Nav */}
         <nav className="flex-1 py-3 px-2 overflow-y-auto space-y-0.5">
-          {/* System section label */}
-          {!collapsed && (
-            <p className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-sidebar-muted)" }}>
-              System Dashboards
-            </p>
-          )}
-
-          {SYSTEM_NAV.map((item) => {
+          {/* OBSERVE — collapsed: icon-only */}
+          {collapsed && [...OBSERVE_NAV, ...EXPLORE_NAV].map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href;
+            const active = pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors", collapsed && "justify-center px-2")}
-                style={active ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
-                onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
-                onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
-                title={collapsed ? item.label : undefined}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
-
-          {/* Lineage — collapsed: icon-only */}
-          {collapsed && LINEAGE_NAV.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors justify-center px-2")}
+                className="flex items-center justify-center rounded-lg px-2 py-3 text-sm font-medium transition-colors"
                 style={active ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
                 onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
                 onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
@@ -215,40 +190,62 @@ export function Sidebar() {
             );
           })}
 
-          {/* Lineage section — expanded */}
+          {/* OBSERVE section — expanded */}
           {!collapsed && (
-            <div className="pt-3">
-              <button
-                onClick={() => setLineageOpen((v) => !v)}
-                className="w-full flex items-center justify-between px-3 pb-1 pt-1"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-sidebar-muted)" }}>
-                  Lineage
-                </p>
-                <ChevronDown className={cn("h-3 w-3 transition-transform", !lineageOpen && "-rotate-90")} style={{ color: "var(--color-sidebar-muted)" }} />
-              </button>
-              {lineageOpen && (
-                <div className="space-y-0.5">
-                  {LINEAGE_NAV.map((item) => {
-                    const Icon = item.icon;
-                    const active = pathname === item.href;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors")}
-                        style={active ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
-                        onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
-                        onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                        <span>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <>
+              <p className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-sidebar-muted)" }}>
+                Observe
+              </p>
+              {OBSERVE_NAV.map((item) => {
+                const Icon = item.icon;
+                const active = pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors")}
+                    style={active ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
+                    onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
+                    onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+              <div className="pt-3">
+                <button
+                  onClick={() => setLineageOpen((v) => !v)}
+                  className="w-full flex items-center justify-between px-3 pb-1 pt-1"
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-sidebar-muted)" }}>
+                    Explore
+                  </p>
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", !lineageOpen && "-rotate-90")} style={{ color: "var(--color-sidebar-muted)" }} />
+                </button>
+                {lineageOpen && (
+                  <div className="space-y-0.5">
+                    {EXPLORE_NAV.map((item) => {
+                      const Icon = item.icon;
+                      const active = pathname.startsWith(item.href);
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors"
+                          style={active ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
+                          onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
+                          onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {/* My Dashboards */}

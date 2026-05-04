@@ -189,5 +189,51 @@
       ]
     },
     "updatedAt": "2026-04-25T19:10:07.528Z"
+  },
+  "system:quality": {
+    "id": "system:quality",
+    "widgets": [
+      {
+        "instanceId": "custom-f6624459-fb32-482f-b8ff-54505ff8f3a0",
+        "type": "custom",
+        "customWidgetId": "aa75c5a2-d29b-48a7-bcf5-06293edd47e3"
+      }
+    ],
+    "layout": {
+      "lg": [
+        {
+          "i": "custom-f6624459-fb32-482f-b8ff-54505ff8f3a0",
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 4,
+          "minW": 2,
+          "minH": 2
+        }
+      ],
+      "md": [
+        {
+          "i": "custom-f6624459-fb32-482f-b8ff-54505ff8f3a0",
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 4,
+          "minW": 2,
+          "minH": 2
+        }
+      ],
+      "sm": [
+        {
+          "i": "custom-f6624459-fb32-482f-b8ff-54505ff8f3a0",
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 4,
+          "minW": 2,
+          "minH": 2
+        }
+      ]
+    },
+    "updatedAt": "2026-05-04T15:43:37.075Z"
   }
 }

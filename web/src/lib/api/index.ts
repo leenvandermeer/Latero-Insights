@@ -12,6 +12,14 @@ export {
   fetchSettings,
   updateSettings,
   seedDemoData,
+  // V2
+  fetchRuns,
+  fetchRunDetail,
+  fetchEntities,
+  fetchEntityDetail,
+  fetchEntityRuns,
+  fetchDataProducts,
+  fetchEstateHealth,
   ApiClientError,
 } from "./client";
 

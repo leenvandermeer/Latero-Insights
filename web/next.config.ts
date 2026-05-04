@@ -2,6 +2,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  async redirects() {
+    return [
+      { source: "/pipelines", destination: "/runs", permanent: true },
+      { source: "/datasets",  destination: "/entities", permanent: true },
+      { source: "/openlineage", destination: "/lineage", permanent: true },
+      { source: "/dashboard", destination: "/runs", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

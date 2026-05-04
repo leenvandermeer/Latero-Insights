@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const from = params.get("from");
   const to = params.get("to");
+  const runId = params.get("run_id");
+  const entityFqn = params.get("entity_fqn");
   let installationId = params.get("installation_id");
 
   try {
@@ -35,6 +37,8 @@ export async function GET(request: NextRequest) {
     from,
     to,
     installation_id: installationId ?? "unknown",
+    run_id: runId ?? "",
+    entity_fqn: entityFqn ?? "",
   };
   triggerAutoSyncIfDue("/api/quality");
 
@@ -55,7 +59,7 @@ export async function GET(request: NextRequest) {
 
   // Live mode: read from Insights SaaS store and keep a fresh snapshot for fallback.
   try {
-    const checks = await getDataQualityChecksFromSaaS({ from, to, installationId });
+    const checks = await getDataQualityChecksFromSaaS({ from: from!, to: to!, installationId, runId, entityFqn });
     writeToCache("quality", cacheParams, checks);
     const response = NextResponse.json({ data: checks, source: "insights-saas" });
     response.headers.set("X-RateLimit-Remaining", String(remaining));

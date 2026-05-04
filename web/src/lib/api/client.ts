@@ -139,3 +139,54 @@ export function updateSettings(settings: SettingsUpdateRequest): Promise<Setting
 export function seedDemoData(): Promise<{ seeded: { pipelines: number; quality: number; lineage: number } }> {
   return request("/cache/seed", { method: "POST" });
 }
+
+// ── V2 endpoints ────────────────────────────────────────────────
+
+export function fetchRuns(params: {
+  from?: string; to?: string; status?: string; step?: string;
+  product_id?: string; entity?: string; cursor?: string; limit?: number;
+}): Promise<{ data: unknown[]; source: string; next_cursor?: string }> {
+  const p = new URLSearchParams();
+  if (params.from) p.set("from", params.from);
+  if (params.to) p.set("to", params.to);
+  if (params.status) p.set("status", params.status);
+  if (params.step) p.set("step", params.step);
+  if (params.product_id) p.set("product_id", params.product_id);
+  if (params.entity) p.set("entity", params.entity);
+  if (params.cursor) p.set("cursor", params.cursor);
+  if (params.limit) p.set("limit", String(params.limit));
+  return request(`/runs?${p}`);
+}
+
+export function fetchRunDetail(runId: string): Promise<{ data: unknown; source: string }> {
+  return request(`/runs/${encodeURIComponent(runId)}`);
+}
+
+export function fetchEntities(params?: {
+  product_id?: string; status?: string; q?: string;
+}): Promise<{ data: unknown[]; source: string }> {
+  const p = new URLSearchParams();
+  if (params?.product_id) p.set("product_id", params.product_id);
+  if (params?.status) p.set("status", params.status);
+  if (params?.q) p.set("q", params.q);
+  const qs = p.toString();
+  return request(`/entities${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchEntityDetail(fqn: string): Promise<{ data: unknown; source: string }> {
+  return request(`/entities/${encodeURIComponent(fqn)}`);
+}
+
+export function fetchEntityRuns(fqn: string, limit?: number): Promise<{ data: unknown[]; source: string }> {
+  const p = limit ? `?limit=${limit}` : "";
+  return request(`/entities/${encodeURIComponent(fqn)}/runs${p}`);
+}
+
+export function fetchDataProducts(): Promise<{ data: unknown[]; source: string }> {
+  return request("/data-products");
+}
+
+export function fetchEstateHealth(): Promise<{ data: unknown; source: string }> {
+  return request("/health/estate");
+}
+
