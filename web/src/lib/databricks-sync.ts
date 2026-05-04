@@ -18,6 +18,30 @@ function assertDate(value: string): string {
   return value;
 }
 
+/**
+ * Normaliseert MDCF DQ-statuswaarden (PASS/FAIL/WARN/ERROR/SKIPPED)
+ * naar het meta.quality_results vocabulaire (SUCCESS/FAILED/WARNING).
+ * SKIPPED wordt behandeld als WARNING (observatie zonder harde fout).
+ */
+function normalizeMdcfDqStatus(raw: string): string {
+  switch (raw.trim().toUpperCase()) {
+    case "PASS":    return "SUCCESS";
+    case "PASSED":  return "SUCCESS";
+    case "FAIL":    return "FAILED";
+    case "FAILED":  return "FAILED";
+    case "ERROR":   return "FAILED";
+    case "WARN":    return "WARNING";
+    case "WARNING": return "WARNING";
+    case "SKIPPED": return "WARNING";
+    default:        return "FAILED";
+  }
+}
+
+function normalizeSeverity(raw: string | null | undefined): string {
+  const v = (raw ?? "").trim().toLowerCase();
+  return ["high", "medium", "low"].includes(v) ? v : "medium";
+}
+
 export async function syncFromDatabricks(range: { from: string; to: string }, installationId?: string): Promise<SyncResult> {
   const from = assertDate(range.from);
   const to = assertDate(range.to);
@@ -52,8 +76,8 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       datasetId: check.dataset_id,
       checkId: check.check_id,
       checkName: check.check_id,
-      checkStatus: check.check_status,
-      severity: "medium",
+      checkStatus: normalizeMdcfDqStatus(check.check_status),
+      severity: normalizeSeverity(check.severity),
       checkCategory: check.check_category ?? null,
       policyVersion: check.policy_version ?? null,
       message: null,

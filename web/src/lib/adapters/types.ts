@@ -21,9 +21,10 @@ export interface DataQualityCheck {
   step: string;
   run_id: string;
   check_id: string;
-  check_status: string;
+  check_status: string; // MDCF: PASS|FAIL|WARN|ERROR — normalize before writing to meta.*
   check_category: string | null;
   policy_version: string | null;
+  severity?: string | null;
   environment?: string | null;
   check_mode?: string | null;
   check_result?: string | null;
