@@ -318,17 +318,17 @@ export class DatabricksAdapter implements DataAdapter {
     const lineageGroupColumn = preferredColumn(columns, "lineage_group_id", "latest_lineage_group_id");
     const lastCompletedColumn = preferredColumn(columns, "last_completed_layer");
     const datasetColumn = preferredColumn(columns, "dataset_id");
-    const sql = `SELECT ${datasetColumn ? `${datasetColumn} AS dataset_id, ` : "CAST(NULL AS STRING) AS dataset_id, "}entity_fqn, layer, latest_status, end_to_end_status, latest_success_at, upstream_entity_fqns, downstream_entity_fqns${lineageGroupColumn ? `, ${lineageGroupColumn} AS lineage_group_id` : ", CAST(NULL AS STRING) AS lineage_group_id"}${lastCompletedColumn ? `, ${lastCompletedColumn} AS last_completed_layer` : ", CAST(NULL AS STRING) AS last_completed_layer"} FROM ${fqTable("lineage_entities_current", id)}${await scopedWhereClause("lineage_entities_current", columns, [], id)}`;
+    const sql = `SELECT ${datasetColumn ? `${datasetColumn} AS dataset_id, ` : "CAST(NULL AS STRING) AS dataset_id, "}entity_fqn AS name, layer, latest_status, end_to_end_status, latest_success_at, upstream_entity_fqns AS upstream_keys, downstream_entity_fqns AS downstream_keys${lineageGroupColumn ? `, ${lineageGroupColumn} AS lineage_group_id` : ", CAST(NULL AS STRING) AS lineage_group_id"}${lastCompletedColumn ? `, ${lastCompletedColumn} AS last_completed_layer` : ", CAST(NULL AS STRING) AS last_completed_layer"} FROM ${fqTable("lineage_entities_current", id)}${await scopedWhereClause("lineage_entities_current", columns, [], id)}`;
     const resp = await executeStatement(sql, undefined, id);
     return mapRows(resp, (row, cols) => ({
       dataset_id: col(row, cols, "dataset_id"),
-      entity_fqn: col(row, cols, "entity_fqn") ?? "",
+      name: col(row, cols, "name") ?? "",
       layer: col(row, cols, "layer") ?? "",
       latest_status: (col(row, cols, "latest_status") ?? "UNKNOWN").toUpperCase(),
       end_to_end_status: (col(row, cols, "end_to_end_status") ?? "UNKNOWN").toUpperCase(),
       latest_success_at: col(row, cols, "latest_success_at"),
-      upstream_entity_fqns: parseJsonArray(col(row, cols, "upstream_entity_fqns")),
-      downstream_entity_fqns: parseJsonArray(col(row, cols, "downstream_entity_fqns")),
+      upstream_keys: parseJsonArray(col(row, cols, "upstream_keys")),
+      downstream_keys: parseJsonArray(col(row, cols, "downstream_keys")),
       lineage_group_id: col(row, cols, "lineage_group_id"),
       last_completed_layer: col(row, cols, "last_completed_layer"),
     }));
@@ -351,13 +351,13 @@ export class DatabricksAdapter implements DataAdapter {
     const transformationModeExpr = hasTransformationMode
       ? ", transformation_mode AS transformation_subtype"
       : ", CAST(NULL AS STRING) AS transformation_subtype";
-    const sql = `SELECT ${datasetColumn ? `${datasetColumn} AS dataset_id, ` : "CAST(NULL AS STRING) AS dataset_id, "}source_entity_fqn, source_attribute, target_entity_fqn, target_attribute${sourceLayerColumn ? `, ${sourceLayerColumn} AS source_layer` : ", CAST(NULL AS STRING) AS source_layer"}${targetLayerColumn ? `, ${targetLayerColumn} AS target_layer` : ", CAST(NULL AS STRING) AS target_layer"}${hasIsCurrent ? ", is_current" : ", true AS is_current"}${isDirectExpr}${transformationModeExpr} FROM ${fqTable("lineage_attributes_current", id)}${await scopedWhereClause("lineage_attributes_current", columns, hasIsCurrent ? ["is_current = true"] : [], id)}`;
+    const sql = `SELECT ${datasetColumn ? `${datasetColumn} AS dataset_id, ` : "CAST(NULL AS STRING) AS dataset_id, "}source_entity_fqn AS source_name, source_attribute, target_entity_fqn AS target_name, target_attribute${sourceLayerColumn ? `, ${sourceLayerColumn} AS source_layer` : ", CAST(NULL AS STRING) AS source_layer"}${targetLayerColumn ? `, ${targetLayerColumn} AS target_layer` : ", CAST(NULL AS STRING) AS target_layer"}${hasIsCurrent ? ", is_current" : ", true AS is_current"}${isDirectExpr}${transformationModeExpr} FROM ${fqTable("lineage_attributes_current", id)}${await scopedWhereClause("lineage_attributes_current", columns, hasIsCurrent ? ["is_current = true"] : [], id)}`;
     const resp = await executeStatement(sql, undefined, id);
     return mapRows(resp, (row, cols) => ({
       dataset_id: col(row, cols, "dataset_id"),
-      source_entity_fqn: col(row, cols, "source_entity_fqn") ?? "",
+      source_name: col(row, cols, "source_name") ?? "",
       source_attribute: col(row, cols, "source_attribute") ?? "",
-      target_entity_fqn: col(row, cols, "target_entity_fqn") ?? "",
+      target_name: col(row, cols, "target_name") ?? "",
       target_attribute: col(row, cols, "target_attribute") ?? "",
       source_layer: col(row, cols, "source_layer"),
       target_layer: col(row, cols, "target_layer"),

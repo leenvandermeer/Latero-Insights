@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, AlertTriangle, XCircle, Clock, ChevronDown, ChevronUp, Search, ArrowRight } from "lucide-react";
 import type { LineageEntity } from "@/lib/adapters/types";
-import { lineageDatasetKey, lineageDatasetLabel, lineageEntityKey, lineageRefLabel } from "./lineage-utils";
+import { lineageNodeName, lineageNodeLabel, lineageNodeKey, lineageKeyLabel } from "./lineage-utils";
 
 // ── Types & constants ─────────────────────────────────────────────────────────
 
@@ -38,15 +38,15 @@ function statusRank(status: string) {
 
 function readableChainName(entities: LineageEntity[], fallback: string) {
   const terminal = entities
-    .filter((entity) => entity.downstream_entity_fqns.length === 0)
+    .filter((entity) => entity.downstream_keys.length === 0)
     .sort((a, b) => statusRank(b.end_to_end_status) - statusRank(a.end_to_end_status))[0];
   const preferred = terminal ?? [...entities].sort((a, b) => {
     const aLayer = LAYER_ORDER.indexOf(a.layer.toLowerCase());
     const bLayer = LAYER_ORDER.indexOf(b.layer.toLowerCase());
-    return bLayer - aLayer || a.entity_fqn.localeCompare(b.entity_fqn);
+    return bLayer - aLayer || a.name.localeCompare(b.name);
   })[0];
 
-  return preferred ? lineageDatasetLabel(preferred) : fallback;
+  return preferred ? lineageNodeLabel(preferred) : fallback;
 }
 
 // ── Layer progress bar ────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ interface ChainGroup {
 }
 
 function datasetKeyFromEntity(entity: LineageEntity): string {
-  return lineageDatasetKey(entity);
+  return lineageNodeName(entity);
 }
 
 function deriveChainLabel(entities: LineageEntity[], fallback: string): string {
@@ -120,16 +120,16 @@ function deriveChainLabel(entities: LineageEntity[], fallback: string): string {
 }
 
 function buildConnectedChains(entities: LineageEntity[]): Array<{ groupId: string; entities: LineageEntity[] }> {
-  const byKey = new Map(entities.map((entity) => [lineageEntityKey(entity), entity]));
+  const byKey = new Map(entities.map((entity) => [lineageNodeKey(entity), entity]));
   const keysByFqn = new Map<string, string[]>();
   const adjacency = new Map<string, Set<string>>();
 
   for (const entity of entities) {
-    const key = lineageEntityKey(entity);
+    const key = lineageNodeKey(entity);
     adjacency.set(key, new Set());
-    const fqnKeys = keysByFqn.get(entity.entity_fqn) ?? [];
+    const fqnKeys = keysByFqn.get(entity.name) ?? [];
     fqnKeys.push(key);
-    keysByFqn.set(entity.entity_fqn, fqnKeys);
+    keysByFqn.set(entity.name, fqnKeys);
   }
 
   function connect(a: string, b: string) {
@@ -147,18 +147,18 @@ function buildConnectedChains(entities: LineageEntity[]): Array<{ groupId: strin
   // Ze verbinden anders alle data-product chains tot één giant component.
   const sourceOnlyKeys = new Set(
     entities
-      .filter((e) => e.upstream_entity_fqns.length === 0 && e.downstream_entity_fqns.length > 1)
-      .map((e) => lineageEntityKey(e))
+      .filter((e) => e.upstream_keys.length === 0 && e.downstream_keys.length > 1)
+      .map((e) => lineageNodeKey(e))
   );
 
   for (const entity of entities) {
-    const key = lineageEntityKey(entity);
-    for (const ref of [...entity.upstream_entity_fqns, ...entity.downstream_entity_fqns]) {
+    const key = lineageNodeKey(entity);
+    for (const ref of [...entity.upstream_keys, ...entity.downstream_keys]) {
       if (sourceOnlyKeys.has(key)) continue;
       // LADR-058: refs zijn exacte layer::fqn keys — directe key lookup via byKey index.
       const resolved = byKey.get(ref);
       if (!resolved) continue;
-      const resolvedKey = lineageEntityKey(resolved);
+      const resolvedKey = lineageNodeKey(resolved);
       if (sourceOnlyKeys.has(resolvedKey)) continue;
       connect(key, resolvedKey);
     }
@@ -268,17 +268,14 @@ function ChainCard({ chain }: { chain: ChainGroup }) {
                         : "No successful run";
                       return (
                         <div
-                          key={e.entity_fqn}
+                          key={e.name}
                           className="rounded-lg px-3 py-2"
                           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-xs font-semibold truncate" style={{ color: "var(--color-text)" }} title={e.entity_fqn}>
-                                {lineageDatasetLabel(e)}
-                              </p>
-                              <p className="text-[10px] font-mono truncate mt-0.5" style={{ color: "var(--color-text-muted)" }} title={e.entity_fqn}>
-                                {e.entity_fqn}
+                              <p className="text-xs font-semibold truncate" style={{ color: "var(--color-text)" }}>
+                                {lineageNodeLabel(e)}
                               </p>
                             </div>
                             <div className="flex flex-wrap justify-end gap-1.5 shrink-0">
@@ -296,36 +293,36 @@ function ChainCard({ chain }: { chain: ChainGroup }) {
                             </div>
                             <div>
                               <span className="font-semibold" style={{ color: "var(--color-text)" }}>Upstream</span>
-                              <p>{e.upstream_entity_fqns.length} source{e.upstream_entity_fqns.length === 1 ? "" : "s"}</p>
+                              <p>{e.upstream_keys.length} source{e.upstream_keys.length === 1 ? "" : "s"}</p>
                             </div>
                             <div>
                               <span className="font-semibold" style={{ color: "var(--color-text)" }}>Downstream</span>
-                              <p>{e.downstream_entity_fqns.length} target{e.downstream_entity_fqns.length === 1 ? "" : "s"}</p>
+                              <p>{e.downstream_keys.length} target{e.downstream_keys.length === 1 ? "" : "s"}</p>
                             </div>
                           </div>
 
-                          {(e.upstream_entity_fqns.length > 0 || e.downstream_entity_fqns.length > 0) && (
+                          {(e.upstream_keys.length > 0 || e.downstream_keys.length > 0) && (
                             <div className="mt-2 grid gap-2 md:grid-cols-2">
-                              {e.upstream_entity_fqns.length > 0 && (
+                              {e.upstream_keys.length > 0 && (
                                 <div>
                                   <p className="mb-1 text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Incoming from</p>
                                   <div className="space-y-1">
-                                    {e.upstream_entity_fqns.map((fqn) => (
+                                    {e.upstream_keys.map((fqn) => (
                                       <p key={fqn} className="truncate text-[10px] font-mono" style={{ color: "var(--color-text-muted)" }} title={fqn}>
-                                        {lineageRefLabel(fqn)}
+                                        {lineageKeyLabel(fqn)}
                                       </p>
                                     ))}
                                   </div>
                                 </div>
                               )}
-                              {e.downstream_entity_fqns.length > 0 && (
+                              {e.downstream_keys.length > 0 && (
                                 <div>
                                   <p className="mb-1 text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Flows to</p>
                                   <div className="space-y-1">
-                                    {e.downstream_entity_fqns.map((fqn) => (
+                                    {e.downstream_keys.map((fqn) => (
                                       <p key={fqn} className="flex min-w-0 items-center gap-1 truncate text-[10px] font-mono" style={{ color: "var(--color-text-muted)" }} title={fqn}>
                                         <ArrowRight className="h-3 w-3 shrink-0" />
-                                        <span className="truncate">{lineageRefLabel(fqn)}</span>
+                                        <span className="truncate">{lineageKeyLabel(fqn)}</span>
                                       </p>
                                     ))}
                                   </div>
@@ -362,10 +359,10 @@ export function ChainsView({ entities }: ChainsViewProps) {
       // Use terminal entities (those with no downstream refs pointing to another entity in this chain)
       // to determine end-to-end status. Non-terminal entities may show e2e=IN_PROGRESS even after
       // downstream entities succeeded, which would poison the whole chain's displayed status.
+      // downstream_entity_fqns zijn in layer::fqn formaat — vergelijk met lineageEntityKey
+      const chainKeys = new Set(groupEntities.map((ge) => lineageNodeKey(ge)));
       const terminalEntities = groupEntities.filter((e) =>
-        !e.downstream_entity_fqns.some((fqn) =>
-          groupEntities.some((ge) => ge.entity_fqn === fqn || fqn.endsWith(`.${ge.entity_fqn.split(".").at(-1)}`))
-        )
+        !e.downstream_keys.some((fqn) => chainKeys.has(fqn))
       );
       const statusSource = terminalEntities.length > 0 ? terminalEntities : groupEntities;
       const statuses = statusSource.map((e) => e.latest_status);
@@ -398,7 +395,7 @@ export function ChainsView({ entities }: ChainsViewProps) {
     const q = search.toLowerCase().trim();
     return chains.filter((c) => {
       const matchSearch = !q || c.groupId.toLowerCase().includes(q)
-        || c.entities.some((e) => e.entity_fqn.toLowerCase().includes(q));
+        || c.entities.some((e) => e.name.toLowerCase().includes(q));
       const matchStatus = statusFilter === "all" || c.endToEndStatus === statusFilter.toUpperCase();
       return matchSearch && matchStatus;
     });

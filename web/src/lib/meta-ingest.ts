@@ -504,9 +504,9 @@ export async function writeMetaLineage(
 
 export interface MetaColumnLineageParams {
   installationId: string;
-  sourceEntityFqn: string;   // Databricks FQN, bijv. "dev-free.cbsenergie.cbsenergie"
+  sourceName: string;   // Databricks FQN, bijv. "dev-free.cbsenergie.cbsenergie"
   sourceColumn: string;
-  targetEntityFqn: string;   // Databricks FQN, bijv. "dev-free.cbsenergie.silver_energielabel"
+  targetName: string;   // Databricks FQN, bijv. "dev-free.cbsenergie.silver_energielabel"
   targetColumn: string;
   sourceLayer: string | null;
   targetLayer: string | null;
@@ -522,8 +522,8 @@ export async function writeMetaColumnLineage(
   if (!params.sourceColumn || !params.targetColumn) return;
 
   // Extraheer korte entiteitnaam uit Databricks FQN (laatste segment)
-  const sourceEntityName = extractObjectName(params.sourceEntityFqn);
-  const targetEntityName = extractObjectName(params.targetEntityFqn);
+  const sourceEntityName = extractObjectName(params.sourceName);
+  const targetEntityName = extractObjectName(params.targetName);
   const sourceScopedId = layerScopedId(sourceEntityName, params.sourceLayer);
   const targetScopedId = layerScopedId(targetEntityName, params.targetLayer);
 

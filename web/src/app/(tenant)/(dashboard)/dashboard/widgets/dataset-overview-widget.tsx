@@ -102,7 +102,7 @@ export function DatasetOverviewWidget({ from, to, titleOverride }: WidgetProps) 
 
       const datasetEntities = entities.filter((entity) => entity.dataset_id === id);
       const lineageNodes = new Set([
-        ...datasetEntities.map((entity) => `${entity.layer.toLowerCase()}::${entity.entity_fqn}`),
+        ...datasetEntities.map((entity) => `${entity.layer.toLowerCase()}::${entity.name}`),
       ]);
 
       let health: HealthStatus = "unknown";

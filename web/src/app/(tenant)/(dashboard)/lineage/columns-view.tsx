@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, ArrowRight, AlertCircle } from "lucide-react";
 import type { LineageAttribute, LineageEntity } from "@/lib/adapters/types";
-import { lineageRefLabel } from "./lineage-utils";
+import { lineageKeyLabel } from "./lineage-utils";
 
 interface ColumnsViewProps {
   attributes: LineageAttribute[];
@@ -24,28 +24,28 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "" }: C
   const current = useMemo(() => attributes.filter((a) => a.is_current), [attributes]);
 
   // Entities that have column lineage
-  const coveredFqns = useMemo(() => new Set(current.map((a) => a.source_entity_fqn)), [current]);
+  const coveredFqns = useMemo(() => new Set(current.map((a) => a.source_name)), [current]);
 
   // All unique source entities: those from column data + all lineage entities that could be sources
   const allSourceEntities = useMemo(() => {
-    const fromAttrs = current.map((a) => a.source_entity_fqn);
+    const fromAttrs = current.map((a) => a.source_name);
     // Add all lineage entities that are not pure sinks (have downstream connections)
     // to surface coverage gaps
     const fromGraph = entities
-      .filter((e) => e.downstream_entity_fqns.length > 0)
-      .map((e) => e.entity_fqn);
+      .filter((e) => e.downstream_keys.length > 0)
+      .map((e) => e.name);
     return [...new Set([...fromAttrs, ...fromGraph])].sort();
   }, [current, entities]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return current.filter((a) => {
-      const matchEntity = entityFilter === "all" || a.source_entity_fqn === entityFilter;
+      const matchEntity = entityFilter === "all" || a.source_name === entityFilter;
       const matchSearch =
         !q ||
-        a.source_entity_fqn.toLowerCase().includes(q) ||
+        a.source_name.toLowerCase().includes(q) ||
         a.source_attribute.toLowerCase().includes(q) ||
-        a.target_entity_fqn.toLowerCase().includes(q) ||
+        a.target_name.toLowerCase().includes(q) ||
         a.target_attribute.toLowerCase().includes(q) ||
         (a.evidence ?? "").toLowerCase().includes(q);
       return matchEntity && matchSearch;
@@ -86,7 +86,7 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "" }: C
                 <option key={fqn} value={fqn} title={fqn}
                   style={{ color: hasCoverage ? "var(--color-text)" : "var(--color-text-muted)" }}
                 >
-                  {lineageRefLabel(fqn)}{hasCoverage ? "" : " (no coverage)"}
+                  {lineageKeyLabel(fqn)}{hasCoverage ? "" : " (no coverage)"}
                 </option>
               );
             })}
@@ -115,7 +115,7 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "" }: C
               <>
                 <AlertCircle className="h-8 w-8" style={{ color: "var(--color-text-muted)" }} />
                 <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                  No column lineage for {lineageRefLabel(entityFilter)}
+                  No column lineage for {lineageKeyLabel(entityFilter)}
                 </p>
                 <p className="text-xs text-center max-w-xs" style={{ color: "var(--color-text-muted)" }}>
                   This entity exists in the lineage graph but column-level mappings have not been synced yet.
@@ -166,9 +166,9 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "" }: C
                     <span
                       className="font-mono text-[11px] rounded px-1.5 py-0.5"
                       style={{ background: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)" }}
-                      title={a.source_entity_fqn}
+                      title={a.source_name}
                     >
-                      {lineageRefLabel(a.source_entity_fqn)}
+                      {lineageKeyLabel(a.source_name)}
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
@@ -183,9 +183,9 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "" }: C
                     <span
                       className="font-mono text-[11px] rounded px-1.5 py-0.5"
                       style={{ background: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)" }}
-                      title={a.target_entity_fqn}
+                      title={a.target_name}
                     >
-                      {lineageRefLabel(a.target_entity_fqn)}
+                      {lineageKeyLabel(a.target_name)}
                     </span>
                   </td>
                   <td className="px-3 py-2.5">

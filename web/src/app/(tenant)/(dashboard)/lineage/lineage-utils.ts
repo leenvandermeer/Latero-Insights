@@ -20,28 +20,34 @@ export function lineageLayerIndex(layerOrEntity: string | LineageEntity): number
   return (LINEAGE_LAYER_ORDER as readonly string[]).indexOf(layer.toLowerCase());
 }
 
-export function lineageDatasetKey(entity: LineageEntity): string {
+export function lineageNodeName(entity: LineageEntity): string {
   if (entity.dataset_id && entity.dataset_id.trim()) return entity.dataset_id.trim();
-  const parts = entity.entity_fqn.split(".").filter(Boolean);
+  const parts = entity.name.split(".").filter(Boolean);
   const second = parts.at(-2);
   if (second && !(LINEAGE_LAYER_ORDER as readonly string[]).includes(second.toLowerCase())) return second;
-  const last = parts.at(-1) ?? entity.entity_fqn;
+  const last = parts.at(-1) ?? entity.name;
   return stripKnownSuffixes(last) || last;
 }
 
-export function lineageDatasetLabel(entity: LineageEntity): string {
+export function lineageNodeLabel(entity: LineageEntity): string {
   const layer = entity.layer.toLowerCase();
   if (layer === "silver" || layer === "gold") {
-    const last = entity.entity_fqn.split(".").filter(Boolean).at(-1) ?? entity.entity_fqn;
+    const last = entity.name.split(".").filter(Boolean).at(-1) ?? entity.name;
     const stripped = stripKnownSuffixes(last);
     return stripped || last;
   }
-  return lineageDatasetKey(entity);
+  return lineageNodeName(entity);
 }
 
-export function lineageRefLabel(ref: string): string {
+export function lineageKeyLabel(ref: string): string {
   const trimmed = ref.trim();
   if (!trimmed) return ref;
+
+  // layer::name formaat (LADR-058) — toon alleen de naam
+  if (/^[a-z]+::[^/]+$/.test(trimmed)) {
+    const name = trimmed.split("::")[1] ?? trimmed;
+    return stripKnownSuffixes(stripFileExtension(name)) || name;
+  }
 
   if (trimmed.includes("/")) {
     const fileName = trimmed.split(/[?#]/)[0].split("/").filter(Boolean).at(-1) ?? trimmed;
@@ -60,6 +66,6 @@ export function areAdjacentLineageLayers(source: LineageEntity, target: LineageE
   return targetIdx >= sourceIdx;
 }
 
-export function lineageEntityKey(entity: LineageEntity): string {
-  return `${entity.layer.toLowerCase()}::${entity.entity_fqn}`;
+export function lineageNodeKey(entity: LineageEntity): string {
+  return `${entity.layer.toLowerCase()}::${entity.name}`;
 }

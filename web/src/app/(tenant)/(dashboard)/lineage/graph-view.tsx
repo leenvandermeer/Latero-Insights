@@ -23,8 +23,8 @@ import { EntityDetailPanel } from "./entity-detail-panel";
 import {
   LINEAGE_LAYER_ORDER,
   areAdjacentLineageLayers,
-  lineageDatasetLabel,
-  lineageEntityKey,
+  lineageNodeLabel,
+  lineageNodeKey,
   lineageLayerIndex,
 } from "./lineage-utils";
 
@@ -156,13 +156,13 @@ function normalizeLineageEntities(entities: LineageEntity[]) {
   const merged = new Map<string, LineageEntity>();
 
   for (const entity of entities) {
-    const key = lineageEntityKey(entity);
+    const key = lineageNodeKey(entity);
     const existing = merged.get(key);
     if (!existing) {
       merged.set(key, {
         ...entity,
-        upstream_entity_fqns: mergeUnique(entity.upstream_entity_fqns),
-        downstream_entity_fqns: mergeUnique(entity.downstream_entity_fqns),
+        upstream_keys: mergeUnique(entity.upstream_keys),
+        downstream_keys: mergeUnique(entity.downstream_keys),
       });
       continue;
     }
@@ -176,8 +176,8 @@ function normalizeLineageEntities(entities: LineageEntity[]) {
       latest_success_at: [existing.latest_success_at, entity.latest_success_at]
         .filter((value): value is string => Boolean(value))
         .sort((a, b) => b.localeCompare(a))[0] ?? null,
-      upstream_entity_fqns: mergeUnique([...existing.upstream_entity_fqns, ...entity.upstream_entity_fqns]),
-      downstream_entity_fqns: mergeUnique([...existing.downstream_entity_fqns, ...entity.downstream_entity_fqns]),
+      upstream_keys: mergeUnique([...existing.upstream_keys, ...entity.upstream_keys]),
+      downstream_keys: mergeUnique([...existing.downstream_keys, ...entity.downstream_keys]),
       lineage_group_id: existing.lineage_group_id ?? entity.lineage_group_id,
       last_completed_layer: existing.last_completed_layer ?? entity.last_completed_layer,
     });
@@ -200,7 +200,7 @@ function adjacentLayer(entity: LineageEntity, direction: "upstream" | "downstrea
 function neighborBySameFqn(entity: LineageEntity, entities: LineageEntity[], direction: "upstream" | "downstream") {
   const currentIdx = layerIndex(entity);
   const candidates = entities
-    .filter((candidate) => candidate.entity_fqn === entity.entity_fqn && candidate.layer.toLowerCase() !== entity.layer.toLowerCase())
+    .filter((candidate) => candidate.name === entity.name && candidate.layer.toLowerCase() !== entity.layer.toLowerCase())
     .sort((a, b) => layerIndex(a) - layerIndex(b));
 
   if (direction === "downstream") {
@@ -214,12 +214,12 @@ const LAYER_NAME_SET = new Set(LAYER_ORDER);
 
 function datasetKey(entity: LineageEntity): string {
   if (entity.dataset_id && entity.dataset_id.trim()) return entity.dataset_id.trim();
-  const parts = entity.entity_fqn.split(".").filter(Boolean);
+  const parts = entity.name.split(".").filter(Boolean);
   // Live FQN format: "catalog.schema.table" — schema is the stable group key (e.g. "cbs_arbeid")
   const second = parts.at(-2);
   if (second && !LAYER_NAME_SET.has(second.toLowerCase())) return second;
   // Demo FQN format: "catalog.layer.table" — at(-2) IS a layer name; strip layer suffix from table name
-  const last = parts.at(-1) ?? entity.entity_fqn;
+  const last = parts.at(-1) ?? entity.name;
   return last
     .replace(/^(raw|bronze|silver|gold)_/i, "")
     .replace(/_(raw|bronze|silver|gold)$/i, "") || last;
@@ -254,12 +254,12 @@ function isFileRef(ref: string) {
 
 function rowKey(entity: LineageEntity): string {
   const layer = entity.layer.toLowerCase();
-  if (layer === "silver" || layer === "gold") return lineageEntityKey(entity);
+  if (layer === "silver" || layer === "gold") return lineageNodeKey(entity);
   return datasetKey(entity);
 }
 
 function chainSortKey(entity: LineageEntity) {
-  return `${datasetKey(entity)}::${layerIndex(entity)}::${entity.entity_fqn}`;
+  return `${datasetKey(entity)}::${layerIndex(entity)}::${entity.name}`;
 }
 
 function sameDataset(entity: LineageEntity, other: LineageEntity) {
@@ -276,13 +276,13 @@ function resolveAttributeEntity(
   const src =
     (attribute.source_dataset_id ? entityIndex.get(attribute.source_dataset_id) : null) ??
     (attribute.source_layer
-      ? entityIndex.get(`${attribute.source_layer.toLowerCase()}::${attribute.source_entity_fqn}`)
+      ? entityIndex.get(`${attribute.source_layer.toLowerCase()}::${attribute.source_name}`)
       : null) ??
     null;
   const tgt =
     (attribute.target_dataset_id ? entityIndex.get(attribute.target_dataset_id) : null) ??
     (attribute.target_layer
-      ? entityIndex.get(`${attribute.target_layer.toLowerCase()}::${attribute.target_entity_fqn}`)
+      ? entityIndex.get(`${attribute.target_layer.toLowerCase()}::${attribute.target_name}`)
       : null) ??
     null;
   return { source: src, target: tgt };
@@ -291,8 +291,8 @@ function resolveAttributeEntity(
 function pushLayerEdge(edges: Edge[], edgeSet: Set<string>, sourceEntity: LineageEntity, targetEntity: LineageEntity) {
   if (!areAdjacentLineageLayers(sourceEntity, targetEntity)) return;
 
-  const source = lineageEntityKey(sourceEntity);
-  const target = lineageEntityKey(targetEntity);
+  const source = lineageNodeKey(sourceEntity);
+  const target = lineageNodeKey(targetEntity);
   if (source === target) return;
 
   const id = `${source}->${target}`;
@@ -335,7 +335,7 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
     const base = datasetKey(e);
     const layer = e.layer.toLowerCase();
     return (layer === "silver" || layer === "gold")
-      ? `${base}::${String(layerIndex(e)).padStart(2, "0")}::${e.entity_fqn}`
+      ? `${base}::${String(layerIndex(e)).padStart(2, "0")}::${e.name}`
       : base;
   };
   const seenRowKeys = new Map<string, string>(); // rowKey → sortKey (first seen wins)
@@ -371,23 +371,23 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
     const layerEntities = [...(byLayer.get(col) ?? [])].sort((a, b) => chainSortKey(a).localeCompare(chainSortKey(b)));
     const x = cols.indexOf(col) * X_SPACING;
     layerEntities.forEach((e, i) => {
-      const nodeId = lineageEntityKey(e);
+      const nodeId = lineageNodeKey(e);
       const row = rowByDataset.get(rowKey(e)) ?? i;
       const data: GraphNodeData = {
-        label: lineageDatasetLabel(e),
+        label: lineageNodeLabel(e),
         nodeId,
-        fullFqn: e.entity_fqn,
+        fullFqn: e.name,
         type: "table",
-        ref: e.entity_fqn,
+        ref: e.name,
         attributes: [],
-        hopCount: e.upstream_entity_fqns.length + e.downstream_entity_fqns.length,
+        hopCount: e.upstream_keys.length + e.downstream_keys.length,
         health: statusToHealth(e.latest_status),
         layer: e.layer,
         latest_status: e.latest_status,
         end_to_end_status: e.end_to_end_status,
         latest_success_at: e.latest_success_at,
-        upstream_entity_fqns: e.upstream_entity_fqns,
-        downstream_entity_fqns: e.downstream_entity_fqns,
+        upstream_entity_fqns: e.upstream_keys,
+        downstream_entity_fqns: e.downstream_keys,
         lineage_group_id: e.lineage_group_id,
       };
       nodes.push({
@@ -403,7 +403,7 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
         );
         if (!hasRawEntity) {
           const groupedRefs = new Map<string, string[]>();
-          e.upstream_entity_fqns.filter(isFileRef).forEach((ref) => {
+          e.upstream_keys.filter(isFileRef).forEach((ref) => {
             const key = sourceGroupKey(ref);
             groupedRefs.set(key, [...(groupedRefs.get(key) ?? []), ref]);
           });
@@ -438,7 +438,7 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
       end_to_end_status: file.targetEntity.end_to_end_status,
       latest_success_at: file.targetEntity.latest_success_at,
       upstream_entity_fqns: [],
-      downstream_entity_fqns: [file.targetEntity.entity_fqn],
+      downstream_entity_fqns: [file.targetEntity.name],
       lineage_group_id: file.targetEntity.lineage_group_id,
     };
 
@@ -474,7 +474,7 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
   const attributeEdgeEntityIds = new Set<string>();
 
   // LADR-058: bouw een key-index voor O(1) entity lookup.
-  const entityIndex = new Map(entities.map((e) => [lineageEntityKey(e), e]));
+  const entityIndex = new Map(entities.map((e) => [lineageNodeKey(e), e]));
 
   for (const attribute of attributes) {
     if (!attribute.is_current) continue;
@@ -483,32 +483,32 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
     if (!areAdjacentLineageLayers(sourceEntity, targetEntity)) continue;
 
     pushLayerEdge(edges, edgeSet, sourceEntity, targetEntity);
-    attributeEdgeEntityIds.add(lineageEntityKey(sourceEntity));
-    attributeEdgeEntityIds.add(lineageEntityKey(targetEntity));
+    attributeEdgeEntityIds.add(lineageNodeKey(sourceEntity));
+    attributeEdgeEntityIds.add(lineageNodeKey(targetEntity));
   }
 
   for (const e of entities) {
     const sameFqnDownstream = neighborBySameFqn(e, entities.filter((candidate) => sameDataset(e, candidate)), "downstream");
     if (sameFqnDownstream) {
-      const coveredByAttributes = attributeEdgeEntityIds.has(lineageEntityKey(e)) && attributeEdgeEntityIds.has(lineageEntityKey(sameFqnDownstream));
+      const coveredByAttributes = attributeEdgeEntityIds.has(lineageNodeKey(e)) && attributeEdgeEntityIds.has(lineageNodeKey(sameFqnDownstream));
       if (!coveredByAttributes) {
         pushLayerEdge(edges, edgeSet, e, sameFqnDownstream);
       }
     }
 
     // LADR-058: downstream_entity_fqns zijn exacte layer::fqn keys — directe key lookup.
-    for (const ds of e.downstream_entity_fqns) {
+    for (const ds of e.downstream_keys) {
       const resolved = entityIndex.get(ds);
       if (!resolved) continue;
-      if (attributeEdgeEntityIds.has(lineageEntityKey(e)) && attributeEdgeEntityIds.has(ds)) continue;
+      if (attributeEdgeEntityIds.has(lineageNodeKey(e)) && attributeEdgeEntityIds.has(ds)) continue;
       pushLayerEdge(edges, edgeSet, e, resolved);
     }
 
     // LADR-058: upstream_entity_fqns zijn exacte layer::fqn keys — directe key lookup.
-    for (const up of e.upstream_entity_fqns) {
+    for (const up of e.upstream_keys) {
       const resolved = entityIndex.get(up);
       if (!resolved) continue;
-      if (attributeEdgeEntityIds.has(up) && attributeEdgeEntityIds.has(lineageEntityKey(e))) continue;
+      if (attributeEdgeEntityIds.has(up) && attributeEdgeEntityIds.has(lineageNodeKey(e))) continue;
       pushLayerEdge(edges, edgeSet, resolved, e);
     }
   }
@@ -543,13 +543,13 @@ function extractChain(anchor: string, allEntities: LineageEntity[]): LineageEnti
   const seeds = allEntities.filter((e) => datasetKey(e) === anchor);
   const groupIds = new Set(seeds.map((e) => e.lineage_group_id).filter(Boolean) as string[]);
   // LADR-058: upstream/downstream refs zijn layer::fqn keys — index op beide formaten
-  const fqnIndex = new Map(allEntities.map((e) => [e.entity_fqn, e]));
-  const keyIndex = new Map(allEntities.map((e) => [lineageEntityKey(e), e]));
+  const fqnIndex = new Map(allEntities.map((e) => [e.name, e]));
+  const keyIndex = new Map(allEntities.map((e) => [lineageNodeKey(e), e]));
 
   const result = new Map<string, LineageEntity>();
   for (const e of allEntities) {
     if (datasetKey(e) === anchor || (e.lineage_group_id && groupIds.has(e.lineage_group_id))) {
-      result.set(lineageEntityKey(e), e);
+      result.set(lineageNodeKey(e), e);
     }
   }
 
@@ -557,16 +557,16 @@ function extractChain(anchor: string, allEntities: LineageEntity[]): LineageEnti
   while (changed) {
     changed = false;
     for (const e of allEntities) {
-      const key = lineageEntityKey(e);
+      const key = lineageNodeKey(e);
       if (result.has(key)) continue;
       const entityKey = key;
-      const reachableViaUpstream = e.upstream_entity_fqns.some((ref) => {
+      const reachableViaUpstream = e.upstream_keys.some((ref) => {
         const up = keyIndex.get(ref) ?? fqnIndex.get(ref);
-        return up && result.has(lineageEntityKey(up));
+        return up && result.has(lineageNodeKey(up));
       });
       if (reachableViaUpstream) { result.set(key, e); changed = true; continue; }
       const reachableViaDownstream = [...result.values()].some((re) =>
-        re.downstream_entity_fqns.includes(entityKey) || re.downstream_entity_fqns.includes(e.entity_fqn)
+        re.downstream_keys.includes(entityKey) || re.downstream_keys.includes(e.name)
       );
       if (reachableViaDownstream) { result.set(key, e); changed = true; }
     }
@@ -585,7 +585,7 @@ function computeUpstreamKeys(anchorKey: string, entityIndex: Map<string, Lineage
     const key = queue.shift()!;
     const entity = entityIndex.get(key);
     if (!entity) continue;
-    for (const up of entity.upstream_entity_fqns) {
+    for (const up of entity.upstream_keys) {
       if (!result.has(up)) { result.add(up); queue.push(up); }
     }
   }
@@ -600,7 +600,7 @@ function computeDownstreamKeys(anchorKey: string, entityIndex: Map<string, Linea
     const key = queue.shift()!;
     const entity = entityIndex.get(key);
     if (!entity) continue;
-    for (const ds of entity.downstream_entity_fqns) {
+    for (const ds of entity.downstream_keys) {
       if (!result.has(ds)) { result.add(ds); queue.push(ds); }
     }
   }
@@ -729,7 +729,7 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
   // Viewpoint trace: full upstream or downstream path from selected node
   const viewpointNodeIds = useMemo(() => {
     if (viewMode === "all" || !selectedNodeId) return null;
-    const entityIndex = new Map(focusedEntities.map((e) => [lineageEntityKey(e), e]));
+    const entityIndex = new Map(focusedEntities.map((e) => [lineageNodeKey(e), e]));
     if (viewMode === "upstream") return computeUpstreamKeys(selectedNodeId, entityIndex);
     return computeDownstreamKeys(selectedNodeId, entityIndex);
   }, [viewMode, selectedNodeId, focusedEntities]);
@@ -777,7 +777,7 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
 
   const selectedEntity = useMemo(
     () => {
-      const matchedEntity = focusedEntities.find((e) => lineageEntityKey(e) === selectedNodeId);
+      const matchedEntity = focusedEntities.find((e) => lineageNodeKey(e) === selectedNodeId);
       if (matchedEntity) return matchedEntity;
 
       const selectedNode = nodes.find((node) => node.id === selectedNodeId && node.type !== "layerHeader");
@@ -785,13 +785,13 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
 
       const data = selectedNode.data as unknown as GraphNodeData;
       return {
-        entity_fqn: data.fullFqn,
+        name: data.fullFqn,
         layer: data.layer,
         latest_status: data.latest_status,
         end_to_end_status: data.end_to_end_status,
         latest_success_at: data.latest_success_at,
-        upstream_entity_fqns: data.upstream_entity_fqns,
-        downstream_entity_fqns: data.downstream_entity_fqns,
+        upstream_keys: data.upstream_entity_fqns,
+        downstream_keys: data.downstream_entity_fqns,
         lineage_group_id: data.lineage_group_id,
         last_completed_layer: null,
         dataset_id: null,
@@ -804,11 +804,11 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
   // upstream_entity_fqns/downstream_entity_fqns zijn na LADR-058 exacte layer::fqn keys.
   const handleNavigateTo = useCallback((fqn: string, direction: "upstream" | "downstream") => {
     // Probeer directe key lookup (primary path: fqn IS een layer::fqn key)
-    const byKey = focusedEntities.find((e) => lineageEntityKey(e) === fqn);
-    if (byKey) { setSelectedNodeId(lineageEntityKey(byKey)); return; }
+    const byKey = focusedEntities.find((e) => lineageNodeKey(e) === fqn);
+    if (byKey) { setSelectedNodeId(lineageNodeKey(byKey)); return; }
     // Fallback: fqn is een bare entity_fqn (bijv. vanuit detail panel legacy data)
-    const byFqn = focusedEntities.find((e) => e.entity_fqn === fqn);
-    if (byFqn) { setSelectedNodeId(lineageEntityKey(byFqn)); return; }
+    const byFqn = focusedEntities.find((e) => e.name === fqn);
+    if (byFqn) { setSelectedNodeId(lineageNodeKey(byFqn)); return; }
     setSelectedNodeId(null);
   }, [focusedEntities]);
 

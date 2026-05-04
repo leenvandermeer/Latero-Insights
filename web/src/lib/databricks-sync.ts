@@ -125,9 +125,9 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
     if (!attr.source_attribute || !attr.target_attribute) continue;
     await writeMetaColumnLineage(pool, {
       installationId: effectiveInstallationId,
-      sourceEntityFqn: attr.source_entity_fqn,
+      sourceName: attr.source_name,
       sourceColumn: attr.source_attribute,
-      targetEntityFqn: attr.target_entity_fqn,
+      targetName: attr.target_name,
       targetColumn: attr.target_attribute,
       sourceLayer: attr.source_layer ?? null,
       targetLayer: attr.target_layer ?? null,

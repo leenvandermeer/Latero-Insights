@@ -82,7 +82,7 @@ export function DatasetsDashboard() {
       // Lineage depth = unique entities connected to this dataset
       const datasetEntities = lineageEntities.filter((entity) => entity.dataset_id === id);
       const entities = new Set([
-        ...datasetEntities.map((entity) => `${entity.layer.toLowerCase()}::${entity.entity_fqn}`),
+        ...datasetEntities.map((entity) => `${entity.layer.toLowerCase()}::${entity.name}`),
       ]);
 
       // Health

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRuns } from "@/hooks/use-runs";
+import { useDateRange } from "@/hooks/use-date-range";
+import { DateRangePicker } from "@/components/ui";
 import { Activity, CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -21,7 +23,8 @@ const statusIcon = (status: string) => {
 export function RunsExplorer() {
   const [status, setStatus] = useState("");
   const [step, setStep] = useState("");
-  const { data, isLoading, isError } = useRuns({ status: status || undefined, step: step || undefined });
+  const { from, to, setRange } = useDateRange();
+  const { data, isLoading, isError } = useRuns({ from, to, status: status || undefined, step: step || undefined });
 
   const runs = (data?.data ?? []) as Array<Record<string, string>>;
 
@@ -58,6 +61,7 @@ export function RunsExplorer() {
             className="text-sm rounded-md border px-2 py-1.5 w-44"
             style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
           />
+          <DateRangePicker from={from} to={to} onChange={setRange} />
         </div>
       </div>
 

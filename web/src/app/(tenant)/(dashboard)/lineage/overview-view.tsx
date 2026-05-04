@@ -14,7 +14,7 @@ import {
   Table2,
 } from "lucide-react";
 import type { LineageAttribute, LineageEntity } from "@/lib/adapters/types";
-import { lineageDatasetKey, lineageDatasetLabel } from "./lineage-utils";
+import { lineageNodeName, lineageNodeLabel } from "./lineage-utils";
 
 const LAYER_ORDER = ["landing", "raw", "bronze", "silver", "gold"];
 
@@ -74,7 +74,7 @@ function worstEntityStatus(entity: LineageEntity) {
 function uniqueEntities(entities: LineageEntity[]) {
   const byKey = new Map<string, LineageEntity>();
   for (const entity of entities) {
-    const key = `${entity.layer.toLowerCase()}::${entity.entity_fqn}`;
+    const key = `${entity.layer.toLowerCase()}::${entity.name}`;
     const existing = byKey.get(key);
     if (!existing || statusRank(entity.end_to_end_status) > statusRank(existing.end_to_end_status)) {
       byKey.set(key, entity);
@@ -84,27 +84,27 @@ function uniqueEntities(entities: LineageEntity[]) {
 }
 
 function datasetGroupKey(entity: LineageEntity) {
-  return lineageDatasetKey(entity);
+  return lineageNodeName(entity);
 }
 
 function readableChainName(chainEntities: LineageEntity[], fallback: string) {
   const terminalEntities = chainEntities
-    .filter((entity) => entity.downstream_entity_fqns.length === 0)
+    .filter((entity) => entity.downstream_keys.length === 0)
     .sort((a, b) => statusRank(b.end_to_end_status) - statusRank(a.end_to_end_status));
 
   const preferred = terminalEntities[0] ?? [...chainEntities].sort((a, b) => {
     const aLayer = LAYER_ORDER.indexOf(a.layer.toLowerCase());
     const bLayer = LAYER_ORDER.indexOf(b.layer.toLowerCase());
-    return bLayer - aLayer || a.entity_fqn.localeCompare(b.entity_fqn);
+    return bLayer - aLayer || a.name.localeCompare(b.name);
   })[0];
 
-  return preferred ? lineageDatasetLabel(preferred) : fallback;
+  return preferred ? lineageNodeLabel(preferred) : fallback;
 }
 
 function resolveDatasetChainStatus(chainEntities: LineageEntity[]) {
   const terminalEntities = chainEntities.filter((entity) =>
-    !entity.downstream_entity_fqns.some((ref) =>
-      chainEntities.some((candidate) => candidate.entity_fqn === ref)
+    !entity.downstream_keys.some((ref) =>
+      chainEntities.some((candidate) => candidate.name === ref)
     )
   );
   const statusSource = terminalEntities.length > 0 ? terminalEntities : chainEntities;
@@ -314,7 +314,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
     const inProgress = currentEntities.filter((entity) => worstEntityStatus(entity) === "IN_PROGRESS").length;
     const success = currentEntities.filter((entity) => worstEntityStatus(entity) === "SUCCESS").length;
     const unknown = Math.max(0, total - failed - warning - inProgress - success);
-    const withLineage = currentEntities.filter((entity) => entity.upstream_entity_fqns.length > 0 || entity.downstream_entity_fqns.length > 0).length;
+    const withLineage = currentEntities.filter((entity) => entity.upstream_keys.length > 0 || entity.downstream_keys.length > 0).length;
 
     const chains = new Map<string, LineageEntity[]>();
     for (const entity of currentEntities) {
@@ -358,17 +358,17 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
     const riskiestEntities = [...currentEntities]
       .filter((entity) => entity.latest_status !== "SUCCESS" || entity.end_to_end_status !== "SUCCESS")
       .sort((a, b) => {
-        const aDegree = a.upstream_entity_fqns.length + a.downstream_entity_fqns.length;
-        const bDegree = b.upstream_entity_fqns.length + b.downstream_entity_fqns.length;
+        const aDegree = a.upstream_keys.length + a.downstream_keys.length;
+        const bDegree = b.upstream_keys.length + b.downstream_keys.length;
         return statusRank(b.end_to_end_status) - statusRank(a.end_to_end_status) || bDegree - aDegree;
       })
       .slice(0, 6);
 
     const topConnected = [...currentEntities]
       .sort((a, b) => {
-        const aDegree = a.upstream_entity_fqns.length + a.downstream_entity_fqns.length;
-        const bDegree = b.upstream_entity_fqns.length + b.downstream_entity_fqns.length;
-        return bDegree - aDegree || a.entity_fqn.localeCompare(b.entity_fqn);
+        const aDegree = a.upstream_keys.length + a.downstream_keys.length;
+        const bDegree = b.upstream_keys.length + b.downstream_keys.length;
+        return bDegree - aDegree || a.name.localeCompare(b.name);
       })
       .slice(0, 5);
 
@@ -386,8 +386,8 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
       riskiestEntities,
       topConnected,
       currentAttributes,
-      uniqueSourceColumns: new Set(currentAttributes.map((attribute) => `${attribute.source_entity_fqn}.${attribute.source_attribute}`)).size,
-      uniqueTargetColumns: new Set(currentAttributes.map((attribute) => `${attribute.target_entity_fqn}.${attribute.target_attribute}`)).size,
+      uniqueSourceColumns: new Set(currentAttributes.map((attribute) => `${attribute.source_name}.${attribute.source_attribute}`)).size,
+      uniqueTargetColumns: new Set(currentAttributes.map((attribute) => `${attribute.target_name}.${attribute.target_attribute}`)).size,
     };
   }, [attributes, entities]);
 
@@ -519,17 +519,17 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
                   <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No failed, warning, or partial entities found.</p>
                 </div>
               ) : model.riskiestEntities.map((entity) => (
-                <div key={`${entity.layer}:${entity.entity_fqn}`} className="flex items-start gap-3 px-4 py-3">
+                <div key={`${entity.layer}:${entity.name}`} className="flex items-start gap-3 px-4 py-3">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: statusMeta(entity.end_to_end_status).color }} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.entity_fqn}>
-                        {lineageDatasetLabel(entity)}
+                      <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.name}>
+                        {lineageNodeLabel(entity)}
                       </p>
                       <StatusPill status={entity.end_to_end_status} />
                     </div>
                     <p className="mt-1 truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
-                      {formatLayer(entity.layer)} · {entity.upstream_entity_fqns.length} upstream · {entity.downstream_entity_fqns.length} downstream
+                      {formatLayer(entity.layer)} · {entity.upstream_keys.length} upstream · {entity.downstream_keys.length} downstream
                     </p>
                   </div>
                 </div>
@@ -550,20 +550,20 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
           <Panel title="Most connected entities" action={<TabAction onClick={() => onOpenTab("graph")}>View relationships</TabAction>}>
             <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
               {model.topConnected.map((entity) => {
-                const degree = entity.upstream_entity_fqns.length + entity.downstream_entity_fqns.length;
+                const degree = entity.upstream_keys.length + entity.downstream_keys.length;
                 return (
-                  <div key={`${entity.layer}:${entity.entity_fqn}`} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_120px_90px] md:items-center">
+                  <div key={`${entity.layer}:${entity.name}`} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_120px_90px] md:items-center">
                     <div className="flex min-w-0 items-start gap-3">
                       <span className="grid h-8 w-8 place-items-center rounded-lg shrink-0" style={{ background: "var(--color-surface)", color: "var(--color-brand)" }}>
                         {entity.layer.toLowerCase() === "gold" ? <Table2 className="h-4 w-4" /> : <Database className="h-4 w-4" />}
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.entity_fqn}>{lineageDatasetLabel(entity)}</p>
+                        <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.name}>{lineageNodeLabel(entity)}</p>
                         <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>{formatLayer(entity.layer)}</p>
                       </div>
                     </div>
                     <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                      {entity.upstream_entity_fqns.length} up · {entity.downstream_entity_fqns.length} down
+                      {entity.upstream_keys.length} up · {entity.downstream_keys.length} down
                     </p>
                     <p className="text-right text-sm font-semibold" style={{ color: "var(--color-text)" }}>{degree}</p>
                   </div>

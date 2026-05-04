@@ -63,13 +63,13 @@ export interface LineageHop {
 
 export interface LineageEntity {
   dataset_id?: string | null;
-  entity_fqn: string;
+  name: string;
   layer: string;
   latest_status: string;          // "SUCCESS" | "FAILED" | "WARNING" | "UNKNOWN"
   end_to_end_status: string;      // "SUCCESS" | "PARTIAL" | "FAILED" | "UNKNOWN"
   latest_success_at: string | null;
-  upstream_entity_fqns: string[];
-  downstream_entity_fqns: string[];
+  upstream_keys: string[];
+  downstream_keys: string[];
   lineage_group_id: string | null;
   last_completed_layer: string | null;
 }
@@ -80,9 +80,9 @@ export interface LineageAttribute {
   // Aanwezig wanneer data uit meta.lineage_columns komt; null voor legacy/cache payloads.
   source_dataset_id?: string | null;
   target_dataset_id?: string | null;
-  source_entity_fqn: string;
+  source_name: string;
   source_attribute: string;
-  target_entity_fqn: string;
+  target_name: string;
   target_attribute: string;
   source_layer?: string | null;
   target_layer?: string | null;

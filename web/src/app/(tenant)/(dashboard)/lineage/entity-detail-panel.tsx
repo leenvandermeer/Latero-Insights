@@ -2,7 +2,7 @@
 
 import { X, Table2, ArrowRight, CheckCircle2, AlertTriangle, XCircle, Clock, Columns3 } from "lucide-react";
 import type { LineageEntity, LineageAttribute } from "@/lib/adapters/types";
-import { lineageDatasetLabel, lineageRefLabel } from "./lineage-utils";
+import { lineageNodeLabel, lineageKeyLabel } from "./lineage-utils";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; Icon: React.ComponentType<{ className?: string }> }> = {
   SUCCESS: { label: "Success", color: "#10B981", Icon: CheckCircle2 },
@@ -33,11 +33,11 @@ interface EntityDetailPanelProps {
 }
 
 export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, onOpenColumns }: EntityDetailPanelProps) {
-  const datasetLabel = lineageDatasetLabel(entity);
+  const datasetLabel = lineageNodeLabel(entity);
 
   function refMatchesEntity(ref: string): boolean {
     const refLower = ref.toLowerCase();
-    const entityLower = entity.entity_fqn.toLowerCase();
+    const entityLower = entity.name.toLowerCase();
     if (refLower === entityLower || refLower.endsWith(`.${entityLower}`)) return true;
 
     const refParts = refLower.split(/[/.]/).filter(Boolean);
@@ -48,8 +48,8 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
     return Boolean(refLast && (refLast === entityLast || refLast === entityDataset || refParts.includes(entityLast ?? "")));
   }
 
-  const outgoing = attributes.filter((a) => a.is_current && refMatchesEntity(a.source_entity_fqn));
-  const incoming = attributes.filter((a) => a.is_current && refMatchesEntity(a.target_entity_fqn));
+  const outgoing = attributes.filter((a) => a.is_current && refMatchesEntity(a.source_name));
+  const incoming = attributes.filter((a) => a.is_current && refMatchesEntity(a.target_name));
   const attributePreviewLimit = 14;
   const hasManyAttributes = outgoing.length + incoming.length > attributePreviewLimit;
   const outgoingPreview = hasManyAttributes ? outgoing.slice(0, Math.ceil(attributePreviewLimit / 2)) : outgoing;
@@ -80,11 +80,11 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
         <div className="flex items-start gap-2 min-w-0">
           <Table2 className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "var(--color-primary)" }} />
           <div className="min-w-0">
-            <p className="text-sm font-semibold leading-tight truncate" style={{ color: "var(--color-text)" }} title={entity.entity_fqn}>
+            <p className="text-sm font-semibold leading-tight truncate" style={{ color: "var(--color-text)" }} title={entity.name}>
               {datasetLabel}
             </p>
-            <p className="text-[10px] font-mono truncate mt-0.5" style={{ color: "var(--color-text-muted)" }} title={entity.entity_fqn}>
-              {entity.entity_fqn}
+            <p className="text-[10px] font-mono truncate mt-0.5" style={{ color: "var(--color-text-muted)" }} title={entity.name}>
+              {entity.name}
             </p>
           </div>
         </div>
@@ -138,13 +138,13 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
         )}
 
         {/* Upstream */}
-        {entity.upstream_entity_fqns.length > 0 && (
+        {entity.upstream_keys.length > 0 && (
           <div>
             <dt className="text-[10px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: "var(--color-text-muted)" }}>
-              Upstream ({entity.upstream_entity_fqns.length})
+              Upstream ({entity.upstream_keys.length})
             </dt>
             <dd className="space-y-1">
-              {entity.upstream_entity_fqns.map((fqn) => (
+              {entity.upstream_keys.map((fqn) => (
                 <button
                   key={fqn}
                   onClick={() => onNavigateTo?.(fqn, "upstream")}
@@ -152,7 +152,7 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
                   style={{ color: "var(--color-primary)", border: "1px solid var(--color-border)" }}
                   title={fqn}
                 >
-                  {lineageRefLabel(fqn)}
+                  {lineageKeyLabel(fqn)}
                 </button>
               ))}
             </dd>
@@ -160,13 +160,13 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
         )}
 
         {/* Downstream */}
-        {entity.downstream_entity_fqns.length > 0 && (
+        {entity.downstream_keys.length > 0 && (
           <div>
             <dt className="text-[10px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: "var(--color-text-muted)" }}>
-              Downstream ({entity.downstream_entity_fqns.length})
+              Downstream ({entity.downstream_keys.length})
             </dt>
             <dd className="space-y-1">
-              {entity.downstream_entity_fqns.map((fqn) => (
+              {entity.downstream_keys.map((fqn) => (
                 <button
                   key={fqn}
                   onClick={() => onNavigateTo?.(fqn, "downstream")}
@@ -174,7 +174,7 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
                   style={{ color: "var(--color-accent)", border: "1px solid var(--color-border)" }}
                   title={fqn}
                 >
-                  {lineageRefLabel(fqn)}
+                  {lineageKeyLabel(fqn)}
                 </button>
               ))}
             </dd>
@@ -199,9 +199,9 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
                     className="grid grid-cols-[minmax(0,1fr)_14px_minmax(0,1fr)_auto] items-center gap-1.5 text-[10px] rounded-md px-2 py-1"
                     style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
                   >
-                    <span className="font-mono font-medium truncate" style={{ color: "var(--color-accent)" }} title={`${a.source_entity_fqn}.${a.source_attribute}`}>{a.source_attribute}</span>
+                    <span className="font-mono font-medium truncate" style={{ color: "var(--color-accent)" }} title={`${a.source_name}.${a.source_attribute}`}>{a.source_attribute}</span>
                     <ArrowRight className="h-3 w-3 shrink-0" style={{ color: "var(--color-text-muted)" }} />
-                    <span className="font-mono truncate" style={{ color: "var(--color-text)" }} title={`${a.target_entity_fqn}.${a.target_attribute}`}>{a.target_attribute}</span>
+                    <span className="font-mono truncate" style={{ color: "var(--color-text)" }} title={`${a.target_name}.${a.target_attribute}`}>{a.target_attribute}</span>
                     <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: "rgba(16,185,129,0.12)", color: "#047857" }} title={a.evidence ?? ""}>
                       Current
                     </span>
@@ -218,9 +218,9 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
                     className="grid grid-cols-[minmax(0,1fr)_14px_minmax(0,1fr)_auto] items-center gap-1.5 text-[10px] rounded-md px-2 py-1"
                     style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
                   >
-                    <span className="font-mono truncate" style={{ color: "var(--color-text-muted)" }} title={`${a.source_entity_fqn}.${a.source_attribute}`}>{a.source_attribute}</span>
+                    <span className="font-mono truncate" style={{ color: "var(--color-text-muted)" }} title={`${a.source_name}.${a.source_attribute}`}>{a.source_attribute}</span>
                     <ArrowRight className="h-3 w-3 shrink-0" style={{ color: "var(--color-text-muted)" }} />
-                    <span className="font-mono font-medium truncate" style={{ color: "var(--color-accent)" }} title={`${a.target_entity_fqn}.${a.target_attribute}`}>{a.target_attribute}</span>
+                    <span className="font-mono font-medium truncate" style={{ color: "var(--color-accent)" }} title={`${a.target_name}.${a.target_attribute}`}>{a.target_attribute}</span>
                     <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: "rgba(16,185,129,0.12)", color: "#047857" }} title={a.evidence ?? ""}>
                       Current
                     </span>

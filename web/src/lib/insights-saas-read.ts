@@ -174,9 +174,9 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
       WITH upstream AS (
         SELECT
           e.target_dataset_id                                                     AS dataset_id,
-          -- LADR-058: sla layer::fqn keys op zodat graph-view exact kan matchen via lineageEntityKey()
+          -- layer::name composite keys voor upstream connectie
           ARRAY_AGG(DISTINCT src.layer || '::' || src.fqn
-                    ORDER BY src.layer || '::' || src.fqn)                        AS upstream_entity_fqns
+                    ORDER BY src.layer || '::' || src.fqn)                        AS upstream_keys
         FROM meta.lineage_edges e
         JOIN meta.datasets src
           ON src.dataset_id      = e.source_dataset_id
@@ -187,9 +187,9 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
       downstream AS (
         SELECT
           e.source_dataset_id                                                     AS dataset_id,
-          -- LADR-058: idem — exacte layer-scoped keys voor downstream
+          -- layer::name composite keys voor downstream connectie
           ARRAY_AGG(DISTINCT tgt.layer || '::' || tgt.fqn
-                    ORDER BY tgt.layer || '::' || tgt.fqn)                        AS downstream_entity_fqns
+                    ORDER BY tgt.layer || '::' || tgt.fqn)                        AS downstream_keys
         FROM meta.lineage_edges e
         JOIN meta.datasets tgt
           ON tgt.dataset_id      = e.target_dataset_id
@@ -256,11 +256,9 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
         SELECT DISTINCT target_dataset_id AS dataset_id FROM meta.lineage_edges WHERE installation_id = $1
       )
       SELECT
-        -- LADR-058: dataset_id = fqn (bare entity name = group key).
-        -- De interne layer-scoped dataset_id is een implementatiedetail van meta.datasets;
-        -- de UI gebruikt de bare naam als group key voor graph-layout en chain-grouping.
+
         d.fqn                                                         AS dataset_id,
-        d.fqn                                                         AS entity_fqn,
+        d.fqn                                                         AS name,
         -- Laag staat altijd gevuld na LADR-058 migratie (layer-scoped writes)
         COALESCE(d.layer, 'UNKNOWN')                                  AS layer,
         COALESCE(lr.latest_status, 'UNKNOWN')                         AS latest_status,
@@ -271,8 +269,8 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
           ELSE 'UNKNOWN'
         END                                                           AS end_to_end_status,
         sr.latest_success_at,
-        COALESCE(up.upstream_entity_fqns,   ARRAY[]::TEXT[])         AS upstream_entity_fqns,
-        COALESCE(dn.downstream_entity_fqns, ARRAY[]::TEXT[])         AS downstream_entity_fqns
+        COALESCE(up.upstream_keys,   ARRAY[]::TEXT[])              AS upstream_keys,
+        COALESCE(dn.downstream_keys, ARRAY[]::TEXT[])              AS downstream_keys
       FROM meta.datasets d
       JOIN all_edge_datasets aed ON aed.dataset_id = d.dataset_id
       LEFT JOIN upstream      up ON up.dataset_id = d.dataset_id
@@ -287,22 +285,22 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
 
   return result.rows.map((row: {
     dataset_id: string | null;
-    entity_fqn: string;
+    name: string;
     layer: string;
     latest_status: string;
     end_to_end_status: string;
     latest_success_at: string | null;
-    upstream_entity_fqns: string[] | null;
-    downstream_entity_fqns: string[] | null;
+    upstream_keys: string[] | null;
+    downstream_keys: string[] | null;
   }) => ({
     dataset_id: row.dataset_id,
-    entity_fqn: row.entity_fqn,
+    name: row.name,
     layer: row.layer,
     latest_status: row.latest_status,
     end_to_end_status: row.end_to_end_status,
     latest_success_at: row.latest_success_at,
-    upstream_entity_fqns: row.upstream_entity_fqns ?? [],
-    downstream_entity_fqns: row.downstream_entity_fqns ?? [],
+    upstream_keys: row.upstream_keys ?? [],
+    downstream_keys: row.downstream_keys ?? [],
     lineage_group_id: row.dataset_id,
     last_completed_layer: row.latest_success_at ? row.layer : null,
   })) as LineageEntity[];
@@ -315,14 +313,11 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
   const result = await pool.query(
     `
       SELECT
-        -- LADR-058: geef de layer-scoped dataset_id mee als exacte graph node identifier.
-        -- De graph gebruikt lineageEntityKey() = "layer::fqn"; met deze velden is exacte
-        -- matching mogelijk zonder fuzzy FQN-resolving.
         c.source_dataset_id                       AS source_dataset_id,
         c.target_dataset_id                       AS target_dataset_id,
-        COALESCE(src.fqn, c.source_dataset_id)   AS source_entity_fqn,
+        COALESCE(src.fqn, c.source_dataset_id)   AS source_name,
         c.source_column                           AS source_attribute,
-        COALESCE(tgt.fqn, c.target_dataset_id)   AS target_entity_fqn,
+        COALESCE(tgt.fqn, c.target_dataset_id)   AS target_name,
         c.target_column                           AS target_attribute,
         src.layer                                 AS source_layer,
         tgt.layer                                 AS target_layer
@@ -334,7 +329,7 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
         ON tgt.installation_id = c.installation_id
        AND tgt.dataset_id      = c.target_dataset_id
       WHERE c.installation_id = $1
-      ORDER BY source_entity_fqn, c.source_column
+      ORDER BY source_name, c.source_column
     `,
     [installationId],
   );
@@ -342,18 +337,18 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
   return result.rows.map((row: {
     source_dataset_id: string | null;
     target_dataset_id: string | null;
-    source_entity_fqn: string;
+    source_name: string;
     source_attribute: string;
-    target_entity_fqn: string;
+    target_name: string;
     target_attribute: string;
     source_layer: string | null;
     target_layer: string | null;
   }) => ({
     source_dataset_id: row.source_dataset_id,
     target_dataset_id: row.target_dataset_id,
-    source_entity_fqn: row.source_entity_fqn,
+    source_name: row.source_name,
     source_attribute: row.source_attribute,
-    target_entity_fqn: row.target_entity_fqn,
+    target_name: row.target_name,
     target_attribute: row.target_attribute,
     source_layer: row.source_layer,
     target_layer: row.target_layer,
