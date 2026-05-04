@@ -288,6 +288,8 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
       WHERE d.installation_id = $1
         -- Exclude external/supplier nodes (unknown layer = not a managed pipeline dataset)
         AND d.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
+        -- Exclude framework context nodes: when fqn = source_system the dataset IS the framework itself (e.g. 'latero')
+        AND (d.source_system IS NULL OR d.fqn != d.source_system)
       ORDER BY d.fqn
     `,
     [installationId],
