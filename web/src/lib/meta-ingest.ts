@@ -1,9 +1,9 @@
 /**
- * meta-ingest.ts — LADR-040, fase 1: parallel schrijven naar meta.* schema
+ * meta-ingest.ts — LADR-040: exclusieve schrijflaag naar meta.* schema
  *
  * Elke functie gebruikt een poolclient met expliciete transactie.
- * De aanroeper vangt fouten op en logt ze — ze propageren NIET terug
- * naar de adapter (backward compatible parallel write).
+ * Publieke event-tabellen zijn verwijderd (LADR-041); dit is het
+ * enige schrijfpad voor pipeline-, DQ- en lineage-events.
  */
 
 import type { Pool } from "pg";
