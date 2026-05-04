@@ -171,18 +171,24 @@ action type, resource type).
 
 ### LINS-015 — English UI Language
 
-All user-facing product UI text MUST be in English.
+Latero Control is an English-only product. **All user-facing text MUST be in English without exception.**
 
 This includes:
 
 - navigation labels
-- page titles and descriptions
-- buttons and form labels
-- validation, empty, and error states
-- dashboard, settings, and admin interface text
+- page titles, headings, and descriptions
+- buttons, form labels, and placeholders
+- validation messages, empty states, and error states
+- dashboard, widget, settings, and admin interface text
+- tooltips, badges, status labels, and inline help text
+- onboarding, login, and authentication UI
 
-Dutch MAY remain in historical documentation, ADR context sections, or other
-non-product-authoring material, but it MUST NOT appear in the active product UI.
+Dutch MAY remain in:
+- ADR context/rationale sections
+- Internal team documentation
+- Non-product-authoring material (e.g. README prose, commit messages)
+
+Dutch MUST NOT appear in any rendered UI, including component labels, API error messages surfaced to the user, or any string visible in the browser.
 
 ### LINS-016 — Strict Tenant Data Isolation
 
