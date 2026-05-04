@@ -187,6 +187,7 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
         JOIN meta.datasets src
           ON src.dataset_id      = e.source_dataset_id
          AND src.installation_id = e.installation_id
+         AND src.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
         WHERE e.installation_id = $1
         GROUP BY e.target_dataset_id
       ),
@@ -200,6 +201,7 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
         JOIN meta.datasets tgt
           ON tgt.dataset_id      = e.target_dataset_id
          AND tgt.installation_id = e.installation_id
+         AND tgt.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
         WHERE e.installation_id = $1
         GROUP BY source_dataset_id
       ),
@@ -284,6 +286,8 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
       LEFT JOIN latest_run    lr ON lr.dataset_id = d.dataset_id
       LEFT JOIN status_rollup sr ON sr.dataset_id = d.dataset_id
       WHERE d.installation_id = $1
+        -- Exclude external/supplier nodes (unknown layer = not a managed pipeline dataset)
+        AND d.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
       ORDER BY d.fqn
     `,
     [installationId],
