@@ -164,8 +164,10 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
     `
       WITH upstream AS (
         SELECT
-          e.target_dataset_id                                         AS dataset_id,
-          ARRAY_AGG(DISTINCT src.fqn ORDER BY src.fqn)               AS upstream_entity_fqns
+          e.target_dataset_id                                                     AS dataset_id,
+          -- LADR-058: sla layer::fqn keys op zodat graph-view exact kan matchen via lineageEntityKey()
+          ARRAY_AGG(DISTINCT src.layer || '::' || src.fqn
+                    ORDER BY src.layer || '::' || src.fqn)                        AS upstream_entity_fqns
         FROM meta.lineage_edges e
         JOIN meta.datasets src
           ON src.dataset_id      = e.source_dataset_id
@@ -175,8 +177,10 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
       ),
       downstream AS (
         SELECT
-          e.source_dataset_id                                         AS dataset_id,
-          ARRAY_AGG(DISTINCT tgt.fqn ORDER BY tgt.fqn)               AS downstream_entity_fqns
+          e.source_dataset_id                                                     AS dataset_id,
+          -- LADR-058: idem — exacte layer-scoped keys voor downstream
+          ARRAY_AGG(DISTINCT tgt.layer || '::' || tgt.fqn
+                    ORDER BY tgt.layer || '::' || tgt.fqn)                        AS downstream_entity_fqns
         FROM meta.lineage_edges e
         JOIN meta.datasets tgt
           ON tgt.dataset_id      = e.target_dataset_id

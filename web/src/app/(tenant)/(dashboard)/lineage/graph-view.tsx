@@ -520,15 +520,20 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
     }
 
     // Edges from downstream refs (source = e, target = ds)
+    // LADR-058: downstream_entity_fqns zijn nu layer::fqn keys — probeer exacte match eerst,
+    // val terug op fuzzy FQN-resolving voor backward compatibility.
     for (const ds of e.downstream_entity_fqns) {
-      const resolved = resolveRefForDirection(ds, e, entities, "downstream");
+      const exact = entities.find((c) => lineageEntityKey(c) === ds);
+      const resolved = exact ?? resolveRefForDirection(ds, e, entities, "downstream");
       if (resolved && attributeEdgeEntityIds.has(lineageEntityKey(e)) && attributeEdgeEntityIds.has(lineageEntityKey(resolved))) continue;
       if (resolved) pushLayerEdge(edges, edgeSet, e, resolved);
     }
 
     // Edges from upstream refs (source = up, target = e)
+    // LADR-058: idem — exacte key match eerst.
     for (const up of e.upstream_entity_fqns) {
-      const resolved = resolveRefForDirection(up, e, entities, "upstream");
+      const exact = entities.find((c) => lineageEntityKey(c) === up);
+      const resolved = exact ?? resolveRefForDirection(up, e, entities, "upstream");
       if (resolved && attributeEdgeEntityIds.has(lineageEntityKey(resolved)) && attributeEdgeEntityIds.has(lineageEntityKey(e))) continue;
       if (resolved) pushLayerEdge(edges, edgeSet, resolved, e);
     }
@@ -563,7 +568,9 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
 function extractChain(anchor: string, allEntities: LineageEntity[]): LineageEntity[] {
   const seeds = allEntities.filter((e) => datasetKey(e) === anchor);
   const groupIds = new Set(seeds.map((e) => e.lineage_group_id).filter(Boolean) as string[]);
+  // LADR-058: upstream/downstream refs zijn layer::fqn keys — index op beide formaten
   const fqnIndex = new Map(allEntities.map((e) => [e.entity_fqn, e]));
+  const keyIndex = new Map(allEntities.map((e) => [lineageEntityKey(e), e]));
 
   const result = new Map<string, LineageEntity>();
   for (const e of allEntities) {
@@ -578,12 +585,15 @@ function extractChain(anchor: string, allEntities: LineageEntity[]): LineageEnti
     for (const e of allEntities) {
       const key = lineageEntityKey(e);
       if (result.has(key)) continue;
+      const entityKey = key;
       const reachableViaUpstream = e.upstream_entity_fqns.some((ref) => {
-        const up = fqnIndex.get(ref);
+        const up = keyIndex.get(ref) ?? fqnIndex.get(ref);
         return up && result.has(lineageEntityKey(up));
       });
       if (reachableViaUpstream) { result.set(key, e); changed = true; continue; }
-      const reachableViaDownstream = [...result.values()].some((re) => re.downstream_entity_fqns.includes(e.entity_fqn));
+      const reachableViaDownstream = [...result.values()].some((re) =>
+        re.downstream_entity_fqns.includes(entityKey) || re.downstream_entity_fqns.includes(e.entity_fqn)
+      );
       if (reachableViaDownstream) { result.set(key, e); changed = true; }
     }
   }

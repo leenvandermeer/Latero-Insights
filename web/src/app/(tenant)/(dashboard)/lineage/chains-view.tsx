@@ -156,7 +156,9 @@ function buildConnectedChains(entities: LineageEntity[]): Array<{ groupId: strin
     for (const ref of [...entity.upstream_entity_fqns, ...entity.downstream_entity_fqns]) {
       // Traverse niet door source-only entities: ze mergen anders alle chains samen
       if (sourceOnlyKeys.has(key)) continue;
-      const resolved = resolveLineageRef(ref, entities);
+      // LADR-058: refs zijn nu layer::fqn keys — exact match eerst, daarna fuzzy fallback
+      const exactEntity = entities.find((c) => lineageEntityKey(c) === ref);
+      const resolved = exactEntity ?? resolveLineageRef(ref, entities);
       if (!resolved) continue;
       const resolvedKey = lineageEntityKey(resolved);
       if (sourceOnlyKeys.has(resolvedKey)) continue;
