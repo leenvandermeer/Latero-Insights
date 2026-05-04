@@ -76,6 +76,10 @@ export interface LineageEntity {
 
 export interface LineageAttribute {
   dataset_id?: string | null;
+  // Layer-scoped dataset_id keys (bijv. "cbsenergie::bronze") — exacte graph node identifiers.
+  // Aanwezig wanneer data uit meta.lineage_columns komt; null voor legacy/cache payloads.
+  source_dataset_id?: string | null;
+  target_dataset_id?: string | null;
   source_entity_fqn: string;
   source_attribute: string;
   target_entity_fqn: string;

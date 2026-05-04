@@ -279,6 +279,11 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
   const result = await pool.query(
     `
       SELECT
+        -- LADR-058: geef de layer-scoped dataset_id mee als exacte graph node identifier.
+        -- De graph gebruikt lineageEntityKey() = "layer::fqn"; met deze velden is exacte
+        -- matching mogelijk zonder fuzzy FQN-resolving.
+        c.source_dataset_id                       AS source_dataset_id,
+        c.target_dataset_id                       AS target_dataset_id,
         COALESCE(src.fqn, c.source_dataset_id)   AS source_entity_fqn,
         c.source_column                           AS source_attribute,
         COALESCE(tgt.fqn, c.target_dataset_id)   AS target_entity_fqn,
@@ -299,6 +304,8 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
   );
 
   return result.rows.map((row: {
+    source_dataset_id: string | null;
+    target_dataset_id: string | null;
     source_entity_fqn: string;
     source_attribute: string;
     target_entity_fqn: string;
@@ -306,6 +313,8 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
     source_layer: string | null;
     target_layer: string | null;
   }) => ({
+    source_dataset_id: row.source_dataset_id,
+    target_dataset_id: row.target_dataset_id,
     source_entity_fqn: row.source_entity_fqn,
     source_attribute: row.source_attribute,
     target_entity_fqn: row.target_entity_fqn,

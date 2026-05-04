@@ -26,7 +26,6 @@ import {
   lineageDatasetLabel,
   lineageEntityKey,
   lineageLayerIndex,
-  resolveLineageRef,
 } from "./lineage-utils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -267,48 +266,26 @@ function sameDataset(entity: LineageEntity, other: LineageEntity) {
   return datasetKey(entity) === datasetKey(other);
 }
 
-function resolveRefForDirection(ref: string, entity: LineageEntity, entities: LineageEntity[], direction: "upstream" | "downstream") {
-  const scopedEntities = entities.filter((candidate) => sameDataset(entity, candidate));
-
-  if (ref === entity.entity_fqn) {
-    return neighborBySameFqn(entity, scopedEntities, direction);
-  }
-
-  const resolved = resolveLineageRef(ref, scopedEntities, { expectedLayer: adjacentLayer(entity, direction) });
-  if (!resolved) return null;
-
-  const matches = scopedEntities.filter((candidate) => candidate.entity_fqn === resolved.entity_fqn);
-  if (matches.length <= 1) return resolved;
-
-  const currentIdx = layerIndex(entity);
-  const sorted = matches.sort((a, b) => layerIndex(a) - layerIndex(b));
-  if (direction === "downstream") {
-    return sorted.find((candidate) => layerIndex(candidate) === currentIdx + 1) ?? resolved;
-  }
-
-  return sorted.reverse().find((candidate) => layerIndex(candidate) === currentIdx - 1) ?? resolved;
-}
-
 function resolveAttributeEntity(
-  ref: string,
-  layer: string | null | undefined,
-  datasetId: string | null | undefined,
-  entities: LineageEntity[]
-) {
-  if (!ref) return null;
-
-  const candidates = entities.filter((entity) => {
-    if (layer && entity.layer.toLowerCase() !== layer.toLowerCase()) return false;
-    if (datasetId && entity.dataset_id && entity.dataset_id !== datasetId) return false;
-    return true;
-  });
-
-  const exact =
-    candidates.find((entity) => entity.entity_fqn === ref) ??
-    candidates.find((entity) => entity.entity_fqn.toLowerCase().endsWith(`.${ref.toLowerCase()}`));
-  if (exact) return exact;
-
-  return resolveLineageRef(ref, candidates, { expectedLayer: layer ?? undefined });
+  attribute: LineageAttribute,
+  entityIndex: Map<string, LineageEntity>
+): { source: LineageEntity | null; target: LineageEntity | null } {
+  // LADR-058: gebruik de layer-scoped dataset_id als exacte graph node key.
+  // Fuzzy FQN-resolving is verwijderd — als source_dataset_id ontbreekt (legacy/cache)
+  // val terug op layer+fqn exact match.
+  const src =
+    (attribute.source_dataset_id ? entityIndex.get(attribute.source_dataset_id) : null) ??
+    (attribute.source_layer
+      ? entityIndex.get(`${attribute.source_layer.toLowerCase()}::${attribute.source_entity_fqn}`)
+      : null) ??
+    null;
+  const tgt =
+    (attribute.target_dataset_id ? entityIndex.get(attribute.target_dataset_id) : null) ??
+    (attribute.target_layer
+      ? entityIndex.get(`${attribute.target_layer.toLowerCase()}::${attribute.target_entity_fqn}`)
+      : null) ??
+    null;
+  return { source: src, target: tgt };
 }
 
 function pushLayerEdge(edges: Edge[], edgeSet: Set<string>, sourceEntity: LineageEntity, targetEntity: LineageEntity) {
@@ -492,16 +469,16 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
   }
 
   // Build edges — prefer current attribute lineage, fall back to entity refs.
-  // Databricks refs may use a physical table name such as workspace.bronze.foo_raw
-  // while current entities expose the product FQN, so resolve through shared heuristics.
   const edges: Edge[] = [];
   const edgeSet = new Set<string>();
   const attributeEdgeEntityIds = new Set<string>();
 
+  // LADR-058: bouw een key-index voor O(1) entity lookup.
+  const entityIndex = new Map(entities.map((e) => [lineageEntityKey(e), e]));
+
   for (const attribute of attributes) {
     if (!attribute.is_current) continue;
-    const sourceEntity = resolveAttributeEntity(attribute.source_entity_fqn, attribute.source_layer, attribute.dataset_id, entities);
-    const targetEntity = resolveAttributeEntity(attribute.target_entity_fqn, attribute.target_layer, attribute.dataset_id, entities);
+    const { source: sourceEntity, target: targetEntity } = resolveAttributeEntity(attribute, entityIndex);
     if (!sourceEntity || !targetEntity) continue;
     if (!areAdjacentLineageLayers(sourceEntity, targetEntity)) continue;
 
@@ -519,23 +496,20 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
       }
     }
 
-    // Edges from downstream refs (source = e, target = ds)
-    // LADR-058: downstream_entity_fqns zijn nu layer::fqn keys — probeer exacte match eerst,
-    // val terug op fuzzy FQN-resolving voor backward compatibility.
+    // LADR-058: downstream_entity_fqns zijn exacte layer::fqn keys — directe key lookup.
     for (const ds of e.downstream_entity_fqns) {
-      const exact = entities.find((c) => lineageEntityKey(c) === ds);
-      const resolved = exact ?? resolveRefForDirection(ds, e, entities, "downstream");
-      if (resolved && attributeEdgeEntityIds.has(lineageEntityKey(e)) && attributeEdgeEntityIds.has(lineageEntityKey(resolved))) continue;
-      if (resolved) pushLayerEdge(edges, edgeSet, e, resolved);
+      const resolved = entityIndex.get(ds);
+      if (!resolved) continue;
+      if (attributeEdgeEntityIds.has(lineageEntityKey(e)) && attributeEdgeEntityIds.has(ds)) continue;
+      pushLayerEdge(edges, edgeSet, e, resolved);
     }
 
-    // Edges from upstream refs (source = up, target = e)
-    // LADR-058: idem — exacte key match eerst.
+    // LADR-058: upstream_entity_fqns zijn exacte layer::fqn keys — directe key lookup.
     for (const up of e.upstream_entity_fqns) {
-      const exact = entities.find((c) => lineageEntityKey(c) === up);
-      const resolved = exact ?? resolveRefForDirection(up, e, entities, "upstream");
-      if (resolved && attributeEdgeEntityIds.has(lineageEntityKey(resolved)) && attributeEdgeEntityIds.has(lineageEntityKey(e))) continue;
-      if (resolved) pushLayerEdge(edges, edgeSet, resolved, e);
+      const resolved = entityIndex.get(up);
+      if (!resolved) continue;
+      if (attributeEdgeEntityIds.has(up) && attributeEdgeEntityIds.has(lineageEntityKey(e))) continue;
+      pushLayerEdge(edges, edgeSet, resolved, e);
     }
   }
 
@@ -727,13 +701,17 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
     [nodes, focusedEntities, selectedNodeId]
   );
 
-  // Navigate-to: select the adjacent layer node for refs shown in the detail panel.
+  // Navigate-to: selecteer de node waarvan de ref de layer::fqn key is.
+  // upstream_entity_fqns/downstream_entity_fqns zijn na LADR-058 exacte layer::fqn keys.
   const handleNavigateTo = useCallback((fqn: string, direction: "upstream" | "downstream") => {
-    const entity = selectedEntity
-      ? resolveRefForDirection(fqn, selectedEntity, focusedEntities, direction)
-      : resolveLineageRef(fqn, focusedEntities);
-    setSelectedNodeId(entity ? lineageEntityKey(entity) : null);
-  }, [focusedEntities, selectedEntity]);
+    // Probeer directe key lookup (primary path: fqn IS een layer::fqn key)
+    const byKey = focusedEntities.find((e) => lineageEntityKey(e) === fqn);
+    if (byKey) { setSelectedNodeId(lineageEntityKey(byKey)); return; }
+    // Fallback: fqn is een bare entity_fqn (bijv. vanuit detail panel legacy data)
+    const byFqn = focusedEntities.find((e) => e.entity_fqn === fqn);
+    if (byFqn) { setSelectedNodeId(lineageEntityKey(byFqn)); return; }
+    setSelectedNodeId(null);
+  }, [focusedEntities]);
 
   return (
     <div className="flex flex-col h-full">

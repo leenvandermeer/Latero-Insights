@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, AlertTriangle, XCircle, Clock, ChevronDown, ChevronUp, Search, ArrowRight } from "lucide-react";
 import type { LineageEntity } from "@/lib/adapters/types";
-import { lineageDatasetKey, lineageDatasetLabel, lineageEntityKey, lineageRefLabel, resolveLineageRef } from "./lineage-utils";
+import { lineageDatasetKey, lineageDatasetLabel, lineageEntityKey, lineageRefLabel } from "./lineage-utils";
 
 // ── Types & constants ─────────────────────────────────────────────────────────
 
@@ -154,11 +154,9 @@ function buildConnectedChains(entities: LineageEntity[]): Array<{ groupId: strin
   for (const entity of entities) {
     const key = lineageEntityKey(entity);
     for (const ref of [...entity.upstream_entity_fqns, ...entity.downstream_entity_fqns]) {
-      // Traverse niet door source-only entities: ze mergen anders alle chains samen
       if (sourceOnlyKeys.has(key)) continue;
-      // LADR-058: refs zijn nu layer::fqn keys — exact match eerst, daarna fuzzy fallback
-      const exactEntity = entities.find((c) => lineageEntityKey(c) === ref);
-      const resolved = exactEntity ?? resolveLineageRef(ref, entities);
+      // LADR-058: refs zijn exacte layer::fqn keys — directe key lookup via byKey index.
+      const resolved = byKey.get(ref);
       if (!resolved) continue;
       const resolvedKey = lineageEntityKey(resolved);
       if (sourceOnlyKeys.has(resolvedKey)) continue;
