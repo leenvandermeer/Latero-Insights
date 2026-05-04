@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     run_id: runId ?? "",
     entity_fqn: entityFqn ?? "",
   };
-  triggerAutoSyncIfDue("/api/quality");
+  triggerAutoSyncIfDue("/api/quality", installationId);
 
   if (isCacheOnly()) {
     // Cache-only mode: serve from cache or return 503

@@ -56,14 +56,14 @@ function canAttemptSync(): boolean {
   );
 }
 
-async function runSync(reason: string): Promise<void> {
+async function runSync(reason: string, installationId?: string | null): Promise<void> {
   state.running = true;
   state.lastStartedAt = Date.now();
   state.lastError = null;
 
   try {
     const range = defaultRange(getSyncWindowDays());
-    await syncFromDatabricks(range, undefined);
+    await syncFromDatabricks(range, installationId ?? undefined);
   } catch (err) {
     state.lastError = err instanceof Error ? err.message : "Auto-sync failed";
     console.warn(`[auto-sync] ${reason}: ${state.lastError}`);
@@ -73,7 +73,7 @@ async function runSync(reason: string): Promise<void> {
   }
 }
 
-export function triggerAutoSyncIfDue(reason: string): void {
+export function triggerAutoSyncIfDue(reason: string, installationId?: string | null): void {
   if (!canAttemptSync()) return;
   if (state.running) return;
 
@@ -84,7 +84,7 @@ export function triggerAutoSyncIfDue(reason: string): void {
     return;
   }
 
-  void runSync(reason);
+  void runSync(reason, installationId);
 }
 
 export function getAutoSyncState(): AutoSyncState {

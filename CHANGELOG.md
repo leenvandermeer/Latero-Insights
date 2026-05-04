@@ -15,6 +15,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+### Added (2026-05-04)
+
+- **Datasets Explorer** (`/datasets`) — nieuwe pagina in de Explore-sectie die alle geobserveerde datasets uit `meta.datasets` toont, ongeacht laag. Inclusief layer-filter tabs (All / Landing / Raw / Bronze / Silver / Gold), search en tabel met medallion layer badges, platform, entity type, group_id, laatste run-status en last-seen tijdstip. Elke rij linkt naar de lineage graph met `?focus=<fqn>`. Zichtbaar voor raw/bronze-only implementaties die nog geen entiteiten hebben (LADR-063).
+- **Quality Check Detail** (`/quality/[result_id]`) — drill-down pagina vanuit de quality explorer. Toont check details (dataset, step, category, severity, mode, policy version, executed at, run ID) en resultaat (result value, threshold, check result, message). Run ID linkt naar `/runs/[id]`. Bereikbaar via "Details →" link per rij in de kwaliteitstabel.
+- **API `GET /api/quality/[result_id]`** — endpoint voor DQ check detail, gefilterd op `installation_id` uit de sessie.
+- **API `GET /api/datasets`** — installation-scoped endpoint voor dataset-inventarisatie met layer- en search-filters.
+- **Hook `useDatasets`** — TanStack Query hook voor de datasets API.
+- **"Datasets" in sidebar** — eerste item in EXPLORE-sectie vóór Entities.
+
+### Fixed (2026-05-04)
+
+- **Externe leverancier-nodes (bijv. "latero") zichtbaar in lineage graph en chain readiness**: datasets zonder bekende pipeline-laag (`NULL` / `unknown`) werden opgenomen in `getLineageEntitiesFromMetaStore`. Filter `AND d.layer IN ('landing','raw','bronze','silver','gold')` toegevoegd aan de hoofdquery en aan de `upstream_keys`/`downstream_keys` CTEs.
+- **Auto-sync FK-fout** (`datasets_installation_id_fkey`): `triggerAutoSyncIfDue` riep `syncFromDatabricks(range, undefined)` aan, waardoor de sync schreef naar `installation_id = 'databricks-sync'` — een niet-bestaande installatie. De route-handlers geven nu hun `installationId` door aan `triggerAutoSyncIfDue`, die het doorstuurt naar `syncFromDatabricks`.
+- **`step`-kolom leeg in quality explorer**: query hardcodeerde `step` als `''`. Fixed via `LEFT JOIN meta.runs` en `COALESCE(r.step, '')`.
+- **`check_name` ontbrak in quality tabel**: extended SQL met `COALESCE(qru.check_name, qr.check_id) AS check_name`. Kolom getoond als primaire naam in de Check-kolom, check_id als mono-subtext.
+
 ### Added (2026-05-03)
 
 - **Uitlogknop in tenant sidebar** — "Log out" knop (rood, met `LogOut`-icoon) toegevoegd onderaan de sidebar, na de theme-toggle. Werkt in zowel collapsed (icoon + tooltip) als expanded state. Roept `POST /api/auth/logout` aan en redirect naar `/`.

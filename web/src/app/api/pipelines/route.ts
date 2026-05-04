@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     to,
     installation_id: installationId ?? "unknown",
   };
-  triggerAutoSyncIfDue("/api/pipelines");
+  triggerAutoSyncIfDue("/api/pipelines", installationId);
 
   if (isCacheOnly()) {
     // Cache-only mode: serve from cache or return 503
