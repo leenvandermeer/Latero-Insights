@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRuns } from "@/hooks/use-runs";
 import { Activity, CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 const STATUS_OPTIONS = ["", "SUCCESS", "FAILED", "WARNING", "RUNNING"];
 
@@ -81,6 +82,7 @@ export function RunsExplorer() {
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Dataset</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Started</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Duration</th>
+                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}></th>
               </tr>
             </thead>
             <tbody>
@@ -94,7 +96,7 @@ export function RunsExplorer() {
               {runs.map((run) => (
                 <tr
                   key={run.run_id}
-                  className="border-b"
+                  className="border-b hover:bg-[var(--color-surface-subtle)] transition-colors"
                   style={{ borderColor: "var(--color-border)" }}
                 >
                   <td className="px-4 py-3">
@@ -117,6 +119,15 @@ export function RunsExplorer() {
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {run.duration_ms != null ? `${Math.round(Number(run.duration_ms) / 1000)}s` : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <Link
+                      href={`/runs/${encodeURIComponent(run.run_id)}`}
+                      className="hover:underline"
+                      style={{ color: "var(--color-brand)" }}
+                    >
+                      Details →
+                    </Link>
                   </td>
                 </tr>
               ))}

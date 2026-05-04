@@ -17,12 +17,13 @@ export async function GET(request: NextRequest) {
   }
 
   const params = request.nextUrl.searchParams;
-  const from = params.get("from");
-  const to = params.get("to");
-
-  if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
-    return NextResponse.json({ error: "Missing or invalid from/to (YYYY-MM-DD)" }, { status: 400 });
-  }
+  // Default: last 30 days
+  const defaultTo = new Date().toISOString().slice(0, 10);
+  const defaultFrom = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+  const rawFrom = params.get("from");
+  const rawTo = params.get("to");
+  const from = rawFrom && /^\d{4}-\d{2}-\d{2}$/.test(rawFrom) ? rawFrom : defaultFrom;
+  const to   = rawTo   && /^\d{4}-\d{2}-\d{2}$/.test(rawTo)   ? rawTo   : defaultTo;
 
   const step = params.get("step");
   const status = params.get("status");

@@ -15,12 +15,19 @@ export interface RunsFilter {
   limit?: number;
 }
 
+function defaultDateRange() {
+  const to = new Date().toISOString().slice(0, 10);
+  const from = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+  return { from, to };
+}
+
 export function useRuns(filter: RunsFilter = {}) {
   const { installation } = useInstallation();
   const installationId = installation?.installation_id ?? null;
+  const merged = { ...defaultDateRange(), ...filter };
   return useQuery({
-    queryKey: ["runs", installationId, filter],
-    queryFn: () => fetchRuns(filter),
+    queryKey: ["runs", installationId, merged],
+    queryFn: () => fetchRuns(merged),
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
