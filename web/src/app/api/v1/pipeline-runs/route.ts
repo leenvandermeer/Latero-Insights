@@ -10,6 +10,7 @@ import {
   tokenFingerprint,
   verifyInstallationToken,
 } from "@/lib/insights-saas-db";
+import { writeMetaPipelineRun } from "@/lib/meta-ingest";
 
 export async function POST(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -99,6 +100,21 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ accepted: true, token_fingerprint: tokenFingerprint(token) }),
       ],
     );
+
+    // LADR-040 fase 1: parallel schrijven naar meta.* schema (best-effort)
+    writeMetaPipelineRun(pool, {
+      installationId,
+      datasetId,
+      sourceSystem: optionalString(body.source_system),
+      runId,
+      step,
+      status: runStatus,
+      environment,
+      timestampUtc,
+      durationMs,
+    }).catch((metaErr: unknown) => {
+      console.error("[meta-ingest] pipeline-run write failed:", metaErr);
+    });
 
     const response = NextResponse.json(
       { accepted: true, event_type: "pipeline_run", installation_id: installationId },

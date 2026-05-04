@@ -9,6 +9,7 @@ import {
   tokenFingerprint,
   verifyInstallationToken,
 } from "@/lib/insights-saas-db";
+import { writeMetaLineage } from "@/lib/meta-ingest";
 
 function normalizeHopKind(value: unknown): string {
   const hopKind = String(value ?? "data_flow").trim().toLowerCase();
@@ -121,6 +122,22 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ accepted: true, token_fingerprint: tokenFingerprint(token) }),
       ],
     );
+
+    // LADR-040 fase 1: parallel schrijven naar meta.* schema (best-effort)
+    writeMetaLineage(pool, {
+      installationId,
+      externalRunId: runId,
+      sourceEntity,
+      targetEntity,
+      sourceType: optionalString(body.source_type),
+      targetType: optionalString(body.target_type),
+      sourceAttribute: optionalString(body.source_attribute),
+      targetAttribute: optionalString(body.target_attribute),
+      sourceSystem: optionalString(body.source_system),
+      timestampUtc,
+    }).catch((metaErr: unknown) => {
+      console.error("[meta-ingest] lineage write failed:", metaErr);
+    });
 
     const response = NextResponse.json(
       { accepted: true, event_type: "data_lineage", installation_id: installationId },

@@ -10,6 +10,7 @@ import {
   tokenFingerprint,
   verifyInstallationToken,
 } from "@/lib/insights-saas-db";
+import { writeMetaDqCheck } from "@/lib/meta-ingest";
 
 function normalizeSeverity(value: unknown): string {
   const severity = String(value ?? "").trim().toLowerCase();
@@ -111,6 +112,23 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ accepted: true, token_fingerprint: tokenFingerprint(token) }),
       ],
     );
+
+    // LADR-040 fase 1: parallel schrijven naar meta.* schema (best-effort)
+    writeMetaDqCheck(pool, {
+      installationId,
+      datasetId,
+      checkId,
+      checkName,
+      checkStatus,
+      severity,
+      checkCategory: optionalString(body.check_category),
+      policyVersion: optionalString(body.policy_version),
+      message: optionalString(body.message),
+      externalRunId: optionalString(body.run_id),
+      timestampUtc,
+    }).catch((metaErr: unknown) => {
+      console.error("[meta-ingest] dq-check write failed:", metaErr);
+    });
 
     const response = NextResponse.json(
       { accepted: true, event_type: "data_quality_check", installation_id: installationId },
