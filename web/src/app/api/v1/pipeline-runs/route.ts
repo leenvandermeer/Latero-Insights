@@ -54,38 +54,17 @@ export async function POST(request: NextRequest) {
       : null;
 
     const pool = getPgPool();
-    await pool.query(
-      `
-        INSERT INTO pipeline_runs (
-          event_type,
-          timestamp_utc,
-          dataset_id,
-          source_system,
-          step,
-          run_id,
-          run_status,
-          duration_ms,
-          installation_id,
-          environment,
-          payload
-        ) VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11
-        )
-      `,
-      [
-        "pipeline_run",
-        timestampUtc,
-        datasetId,
-        optionalString(body.source_system),
-        step,
-        runId,
-        runStatus,
-        durationMs,
-        installationId,
-        environment,
-        JSON.stringify(body),
-      ],
-    );
+    await writeMetaPipelineRun(pool, {
+      installationId,
+      datasetId,
+      sourceSystem: optionalString(body.source_system),
+      runId,
+      step,
+      status: runStatus,
+      environment,
+      timestampUtc,
+      durationMs,
+    });
 
     await pool.query(
       `
@@ -100,21 +79,6 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ accepted: true, token_fingerprint: tokenFingerprint(token) }),
       ],
     );
-
-    // LADR-040 fase 1: parallel schrijven naar meta.* schema (best-effort)
-    writeMetaPipelineRun(pool, {
-      installationId,
-      datasetId,
-      sourceSystem: optionalString(body.source_system),
-      runId,
-      step,
-      status: runStatus,
-      environment,
-      timestampUtc,
-      durationMs,
-    }).catch((metaErr: unknown) => {
-      console.error("[meta-ingest] pipeline-run write failed:", metaErr);
-    });
 
     const response = NextResponse.json(
       { accepted: true, event_type: "pipeline_run", installation_id: installationId },

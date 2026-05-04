@@ -58,46 +58,19 @@ export async function POST(request: NextRequest) {
     const environment = requireString(body.environment, "environment");
 
     const pool = getPgPool();
-    await pool.query(
-      `
-        INSERT INTO data_quality_checks (
-          event_type,
-          timestamp_utc,
-          dataset_id,
-          step,
-          run_id,
-          check_id,
-          check_name,
-          check_status,
-          severity,
-          check_category,
-          policy_version,
-          message,
-          installation_id,
-          environment,
-          payload
-        ) VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
-        )
-      `,
-      [
-        "data_quality_check",
-        timestampUtc,
-        datasetId,
-        optionalString(body.step),
-        optionalString(body.run_id),
-        checkId,
-        checkName,
-        checkStatus,
-        severity,
-        optionalString(body.check_category),
-        optionalString(body.policy_version),
-        optionalString(body.message),
-        installationId,
-        environment,
-        JSON.stringify(body),
-      ],
-    );
+    await writeMetaDqCheck(pool, {
+      installationId,
+      datasetId,
+      checkId,
+      checkName,
+      checkStatus,
+      severity,
+      checkCategory: optionalString(body.check_category),
+      policyVersion: optionalString(body.policy_version),
+      message: optionalString(body.message),
+      externalRunId: optionalString(body.run_id),
+      timestampUtc,
+    });
 
     await pool.query(
       `
@@ -112,23 +85,6 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ accepted: true, token_fingerprint: tokenFingerprint(token) }),
       ],
     );
-
-    // LADR-040 fase 1: parallel schrijven naar meta.* schema (best-effort)
-    writeMetaDqCheck(pool, {
-      installationId,
-      datasetId,
-      checkId,
-      checkName,
-      checkStatus,
-      severity,
-      checkCategory: optionalString(body.check_category),
-      policyVersion: optionalString(body.policy_version),
-      message: optionalString(body.message),
-      externalRunId: optionalString(body.run_id),
-      timestampUtc,
-    }).catch((metaErr: unknown) => {
-      console.error("[meta-ingest] dq-check write failed:", metaErr);
-    });
 
     const response = NextResponse.json(
       { accepted: true, event_type: "data_quality_check", installation_id: installationId },
