@@ -28,6 +28,30 @@ function normalizePlatform(sourceType: string | null | undefined): string {
   return allowed.includes(t) ? t : "UNKNOWN";
 }
 
+const PIPELINE_LAYERS = new Set(["landing", "raw", "bronze", "silver", "gold"]);
+
+/**
+ * Leidt de logische pipeline-laag af uit een FQN in het formaat
+ * "catalog.layer.table" (bijv. "workspace.bronze.fact_sales" → "bronze").
+ * Retourneert null als het voorlaatste segment geen bekende laag is.
+ */
+function extractLayerFromFqn(fqn: string): string | null {
+  const parts = fqn.split(".").filter(Boolean);
+  const penultimate = parts.at(-2)?.toLowerCase() ?? "";
+  return PIPELINE_LAYERS.has(penultimate) ? penultimate : null;
+}
+
+/**
+ * LADR-058: Layer-scoped dataset identity.
+ * dataset_id in meta.datasets = "{entityName}::{layer}" (bijv. "cbs_arbeid::bronze").
+ * Dit maakt iedere (entity_name, layer) combinatie uniek en voorkomt zelf-refererende edges.
+ * "unknown" wordt gebruikt als de laag niet bepaald kan worden.
+ */
+function layerScopedId(entityName: string, layer: string | null | undefined): string {
+  const clean = layer?.toLowerCase().trim() ?? null;
+  return PIPELINE_LAYERS.has(clean ?? "") ? `${entityName}::${clean}` : `${entityName}::unknown`;
+}
+
 // ---------------------------------------------------------------------------
 // writeMetaPipelineRun
 // Writes: meta.datasets (1), meta.jobs (1), meta.runs (1), meta.run_io (1)
@@ -37,11 +61,13 @@ export interface MetaPipelineRunParams {
   installationId: string;
   datasetId: string;
   sourceSystem: string | null;
-  runId: string; // external_run_id (text)
+  layer?: string | null;
+  targetLayer?: string | null; // LADR-058: laag van de output-dataset (voor layer-scoped ID)
+  runId: string;
   step: string;
-  status: string; // SUCCESS | FAILED | WARNING | RUNNING
+  status: string;
   environment: string;
-  timestampUtc: string; // ISO-8601
+  timestampUtc: string;
   durationMs: number | null;
 }
 
@@ -53,20 +79,23 @@ export async function writeMetaPipelineRun(
   try {
     await client.query("BEGIN");
 
-    // 1. Upsert dataset
+    // 1. Upsert dataset (LADR-058: layer-scoped dataset_id)
     const objectName = extractObjectName(params.datasetId);
     const namespace = extractNamespace(params.datasetId);
+    // targetLayer heeft prioriteit over step-afleiding — runs schrijven naar de target-laag
+    const layer = params.targetLayer ?? params.layer ?? params.step?.toLowerCase() ?? extractLayerFromFqn(params.datasetId);
+    const scopedDatasetId = layerScopedId(params.datasetId, layer);
     await client.query(
       `
         INSERT INTO meta.datasets (
           dataset_id, installation_id, fqn, namespace, object_name,
-          platform, entity_type, source_system
-        ) VALUES ($1, $2, $1, $3, $4, 'UNKNOWN', 'TABLE', $5)
+          platform, entity_type, source_system, layer, group_id
+        ) VALUES ($1, $2, $3, $4, $5, 'UNKNOWN', 'TABLE', $6, $7, $3)
         ON CONFLICT (installation_id, dataset_id) DO UPDATE
           SET last_seen_at  = now(),
               source_system = COALESCE(EXCLUDED.source_system, meta.datasets.source_system)
       `,
-      [params.datasetId, params.installationId, namespace, objectName, params.sourceSystem],
+      [scopedDatasetId, params.installationId, params.datasetId, namespace, objectName, params.sourceSystem, layer],
     );
 
     // 2. Upsert job (job_name = dataset_id:step)
@@ -139,14 +168,14 @@ export async function writeMetaPipelineRun(
       runUuid = insertResult.rows[0].run_id as string;
     }
 
-    // 4. Upsert run_io (OUTPUT for the target dataset)
+    // 4. Upsert run_io (OUTPUT for the target dataset — layer-scoped ID)
     await client.query(
       `
         INSERT INTO meta.run_io (run_id, installation_id, dataset_id, role, observed_at)
         VALUES ($1, $2, $3, 'OUTPUT', $4)
         ON CONFLICT (run_id, dataset_id, role) DO NOTHING
       `,
-      [runUuid, params.installationId, params.datasetId, params.timestampUtc],
+      [runUuid, params.installationId, scopedDatasetId, params.timestampUtc],
     );
 
     await client.query("COMMIT");
@@ -156,6 +185,28 @@ export async function writeMetaPipelineRun(
   } finally {
     client.release();
   }
+}
+
+const ALLOWED_CHECK_CATEGORIES = new Set([
+  "schema", "accuracy", "completeness", "freshness", "uniqueness", "custom",
+]);
+
+/**
+ * Normaliseert check_category naar het beperkte vocabulaire van meta.quality_rules.
+ * Onbekende waarden worden teruggebracht naar 'custom' zodat de CHECK-constraint
+ * nooit faalt en de informatie zo goed mogelijk bewaard blijft.
+ */
+function normalizeCheckCategory(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const lower = raw.trim().toLowerCase();
+  if (ALLOWED_CHECK_CATEGORIES.has(lower)) return lower;
+  // Bekende MDCF/OL-patronen mappen naar het dichtstbijzijnde vocabulaire
+  if (lower.includes("schema") || lower.includes("struct")) return "schema";
+  if (lower.includes("null") || lower.includes("complete")) return "completeness";
+  if (lower.includes("unique") || lower.includes("duplicate")) return "uniqueness";
+  if (lower.includes("fresh") || lower.includes("lag") || lower.includes("delay")) return "freshness";
+  if (lower.includes("accura") || lower.includes("valid") || lower.includes("referential") || lower.includes("range")) return "accuracy";
+  return "custom";
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +269,7 @@ export async function writeMetaDqCheck(
         params.checkId,
         params.installationId,
         params.checkName,
-        params.checkCategory,
+        normalizeCheckCategory(params.checkCategory),
         params.severity.toUpperCase(),
         params.policyVersion,
         params.datasetId,
@@ -287,6 +338,8 @@ export interface MetaLineageParams {
   sourceAttribute: string | null;
   targetAttribute: string | null;
   sourceSystem: string | null;
+  sourceLayer?: string | null; // logische pipelinelaag bron (OpenLineage: namespace)
+  targetLayer?: string | null; // logische pipelinelaag doel
   timestampUtc: string;
 }
 
@@ -313,55 +366,61 @@ export async function writeMetaLineage(
     const metaRunId: string | null =
       (runRes.rows[0]?.run_id as string | undefined) ?? null;
 
-    // 1. Upsert source dataset
+    // 1. Upsert source dataset (LADR-058: layer-scoped dataset_id)
     const sourcePlatform = normalizePlatform(params.sourceType);
     const sourceObjectName = extractObjectName(params.sourceEntity);
     const sourceNamespace = extractNamespace(params.sourceEntity);
+    const sourceLayer = params.sourceLayer ?? extractLayerFromFqn(params.sourceEntity);
+    const sourceScopedId = layerScopedId(params.sourceEntity, sourceLayer);
     await client.query(
       `
         INSERT INTO meta.datasets (
           dataset_id, installation_id, fqn, namespace, object_name,
-          platform, entity_type, source_system
-        ) VALUES ($1, $2, $1, $3, $4, $5, 'TABLE', $6)
+          platform, entity_type, source_system, layer, group_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'TABLE', $7, $8, $3)
         ON CONFLICT (installation_id, dataset_id) DO UPDATE
           SET last_seen_at  = now(),
               source_system = COALESCE(EXCLUDED.source_system, meta.datasets.source_system)
       `,
       [
-        params.sourceEntity,
+        sourceScopedId,
         params.installationId,
+        params.sourceEntity,
         sourceNamespace,
         sourceObjectName,
         sourcePlatform,
         params.sourceSystem,
+        sourceLayer,
       ],
     );
 
-    // 2. Upsert target dataset
+    // 2. Upsert target dataset (LADR-058: layer-scoped dataset_id)
     const targetPlatform = normalizePlatform(params.targetType);
     const targetObjectName = extractObjectName(params.targetEntity);
     const targetNamespace = extractNamespace(params.targetEntity);
+    const targetLayer = params.targetLayer ?? extractLayerFromFqn(params.targetEntity);
+    const targetScopedId = layerScopedId(params.targetEntity, targetLayer);
     await client.query(
       `
         INSERT INTO meta.datasets (
           dataset_id, installation_id, fqn, namespace, object_name,
-          platform, entity_type, source_system
-        ) VALUES ($1, $2, $1, $3, $4, $5, 'TABLE', $6)
+          platform, entity_type, source_system, layer, group_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'TABLE', NULL, $7, $3)
         ON CONFLICT (installation_id, dataset_id) DO UPDATE
-          SET last_seen_at  = now(),
-              source_system = COALESCE(EXCLUDED.source_system, meta.datasets.source_system)
+          SET last_seen_at = now()
       `,
       [
-        params.targetEntity,
+        targetScopedId,
         params.installationId,
+        params.targetEntity,
         targetNamespace,
         targetObjectName,
         targetPlatform,
-        params.sourceSystem,
+        targetLayer,
       ],
     );
 
-    // 3. Upsert lineage edge
+    // 3. Upsert lineage edge (layer-scoped source en target)
     await client.query(
       `
         INSERT INTO meta.lineage_edges (
@@ -376,14 +435,35 @@ export async function writeMetaLineage(
       `,
       [
         params.installationId,
-        params.sourceEntity,
-        params.targetEntity,
+        sourceScopedId,
+        targetScopedId,
         metaRunId,
         params.timestampUtc,
       ],
     );
 
-    // 4. Upsert column-level lineage (only when both attributes are present)
+    // 4. Upsert run_io voor INPUT (bron) en OUTPUT (doel) zodat status-rollup werkt
+    //    ook voor datasets die alleen via lineage binnenkomen en niet via pipeline-runs.
+    if (metaRunId) {
+      await client.query(
+        `
+          INSERT INTO meta.run_io (run_id, installation_id, dataset_id, role, observed_at)
+          VALUES ($1, $2, $3, 'INPUT',  $4)
+          ON CONFLICT (run_id, dataset_id, role) DO NOTHING
+        `,
+        [metaRunId, params.installationId, sourceScopedId, params.timestampUtc],
+      );
+      await client.query(
+        `
+          INSERT INTO meta.run_io (run_id, installation_id, dataset_id, role, observed_at)
+          VALUES ($1, $2, $3, 'OUTPUT', $4)
+          ON CONFLICT (run_id, dataset_id, role) DO NOTHING
+        `,
+        [metaRunId, params.installationId, targetScopedId, params.timestampUtc],
+      );
+    }
+
+    // 5. Upsert column-level lineage (only when both attributes are present)
     if (params.sourceAttribute && params.targetAttribute) {
       await client.query(
         `
@@ -398,9 +478,9 @@ export async function writeMetaLineage(
         `,
         [
           params.installationId,
-          params.sourceEntity,
+          sourceScopedId,
           params.sourceAttribute,
-          params.targetEntity,
+          targetScopedId,
           params.targetAttribute,
           params.timestampUtc,
         ],
@@ -411,6 +491,72 @@ export async function writeMetaLineage(
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// writeMetaColumnLineage — LADR-058
+// Synchroniseert kolom-niveau lineage van lineage_attributes_current (Databricks)
+// naar meta.lineage_columns (Postgres). Gebruikt layer-scoped dataset IDs.
+// ---------------------------------------------------------------------------
+
+export interface MetaColumnLineageParams {
+  installationId: string;
+  sourceEntityFqn: string;   // Databricks FQN, bijv. "dev-free.cbsenergie.cbsenergie"
+  sourceColumn: string;
+  targetEntityFqn: string;   // Databricks FQN, bijv. "dev-free.cbsenergie.silver_energielabel"
+  targetColumn: string;
+  sourceLayer: string | null;
+  targetLayer: string | null;
+  transformationType: string | null; // OpenLineage: "DIRECT" | "INDIRECT" | "UNKNOWN"
+}
+
+const OL_TRANSFORM_TYPES = new Set(["DIRECT", "INDIRECT", "UNKNOWN"]);
+
+export async function writeMetaColumnLineage(
+  pool: Pool,
+  params: MetaColumnLineageParams,
+): Promise<void> {
+  if (!params.sourceColumn || !params.targetColumn) return;
+
+  // Extraheer korte entiteitnaam uit Databricks FQN (laatste segment)
+  const sourceEntityName = extractObjectName(params.sourceEntityFqn);
+  const targetEntityName = extractObjectName(params.targetEntityFqn);
+  const sourceScopedId = layerScopedId(sourceEntityName, params.sourceLayer);
+  const targetScopedId = layerScopedId(targetEntityName, params.targetLayer);
+
+  // Normaliseer naar OL-vocabulaire
+  const transformationType = OL_TRANSFORM_TYPES.has(params.transformationType ?? "")
+    ? params.transformationType
+    : null;
+
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `
+        INSERT INTO meta.lineage_columns (
+          installation_id,
+          source_dataset_id, source_column,
+          target_dataset_id, target_column,
+          transformation_type,
+          first_observed_at, last_observed_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, now(), now())
+        ON CONFLICT (installation_id, source_dataset_id, source_column, target_dataset_id, target_column)
+        DO UPDATE SET
+          last_observed_at   = now(),
+          transformation_type = COALESCE(EXCLUDED.transformation_type, meta.lineage_columns.transformation_type)
+      `,
+      [
+        params.installationId,
+        sourceScopedId,
+        params.sourceColumn,
+        targetScopedId,
+        params.targetColumn,
+        transformationType,
+      ],
+    );
   } finally {
     client.release();
   }

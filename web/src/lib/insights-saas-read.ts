@@ -216,26 +216,13 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
         SELECT DISTINCT target_dataset_id AS dataset_id FROM meta.lineage_edges WHERE installation_id = $1
       )
       SELECT
-        d.dataset_id,
+        -- LADR-058: dataset_id = fqn (bare entity name = group key).
+        -- De interne layer-scoped dataset_id is een implementatiedetail van meta.datasets;
+        -- de UI gebruikt de bare naam als group key voor graph-layout en chain-grouping.
+        d.fqn                                                         AS dataset_id,
         d.fqn                                                         AS entity_fqn,
-        -- Gebruik expliciete layer-kolom (migratie 015); val terug op FQN-afleiding
-        -- voor datasets geschreven vóór de migratie (voorlaatste FQN-segment als laagnaam).
-        COALESCE(
-          d.layer,
-          CASE
-            WHEN lower(
-              (string_to_array(d.fqn, '.'))[
-                array_length(string_to_array(d.fqn, '.'), 1) - 1
-              ]
-            ) IN ('landing', 'raw', 'bronze', 'silver', 'gold')
-            THEN lower(
-              (string_to_array(d.fqn, '.'))[
-                array_length(string_to_array(d.fqn, '.'), 1) - 1
-              ]
-            )
-          END,
-          'UNKNOWN'
-        )                                                             AS layer,
+        -- Laag staat altijd gevuld na LADR-058 migratie (layer-scoped writes)
+        COALESCE(d.layer, 'UNKNOWN')                                  AS layer,
         COALESCE(lr.latest_status, 'UNKNOWN')                         AS latest_status,
         CASE COALESCE(sr.worst_rank, 0)
           WHEN 3 THEN 'FAILED'

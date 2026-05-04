@@ -142,11 +142,25 @@ function buildConnectedChains(entities: LineageEntity[]): Array<{ groupId: strin
     for (let i = 1; i < fqnKeys.length; i++) connect(fqnKeys[i - 1], fqnKeys[i]);
   }
 
+  // LADR-058: Sluit source-only entities uit van chain-merging.
+  // Source systems (bijv. "latero") hebben geen upstream maar wel veel downstreams.
+  // Ze verbinden anders alle data-product chains tot één giant component.
+  const sourceOnlyKeys = new Set(
+    entities
+      .filter((e) => e.upstream_entity_fqns.length === 0 && e.downstream_entity_fqns.length > 1)
+      .map((e) => lineageEntityKey(e))
+  );
+
   for (const entity of entities) {
     const key = lineageEntityKey(entity);
     for (const ref of [...entity.upstream_entity_fqns, ...entity.downstream_entity_fqns]) {
+      // Traverse niet door source-only entities: ze mergen anders alle chains samen
+      if (sourceOnlyKeys.has(key)) continue;
       const resolved = resolveLineageRef(ref, entities);
-      if (resolved) connect(key, lineageEntityKey(resolved));
+      if (!resolved) continue;
+      const resolvedKey = lineageEntityKey(resolved);
+      if (sourceOnlyKeys.has(resolvedKey)) continue;
+      connect(key, resolvedKey);
     }
   }
 

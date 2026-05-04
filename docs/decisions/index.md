@@ -47,3 +47,4 @@ Naming note:
 | [LADR-039](20260503-admin-tenant-layout-css-isolation.md) | 2026-05-03 | Admin/Tenant layout- en CSS-isolatie via Next.js route group root layouts | ACCEPTED |
 | [LADR-040](20260504-meta-schema-datamodel.md) | 2026-05-04 | meta.* schema: gestructureerd operationeel datamodel (OpenLineage-gebaseerd) | ACCEPTED |
 | [LADR-041](20260504-drop-public-event-tables.md) | 2026-05-04 | Drop public.* event-tabellen na volledige migratie naar meta.* | ACCEPTED |
+| [LADR-058](20260504-lineage-layer-scoped-entity-model.md) | 2026-05-04 | Lineage layer-scoped entity model: dataset_id als {entity}::{layer} compound key | ACCEPTED |

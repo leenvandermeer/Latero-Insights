@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
       sourceAttribute: optionalString(body.source_attribute),
       targetAttribute: optionalString(body.target_attribute),
       sourceSystem: optionalString(body.source_system),
+      sourceLayer: optionalString(body.source_layer),
+      targetLayer: optionalString(body.target_layer),
       timestampUtc,
     });
 

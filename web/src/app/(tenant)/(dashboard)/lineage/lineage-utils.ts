@@ -91,7 +91,10 @@ export function areAdjacentLineageLayers(source: LineageEntity, target: LineageE
   const sourceIdx = lineageLayerIndex(source);
   const targetIdx = lineageLayerIndex(target);
   if (sourceIdx === -1 || targetIdx === -1) return true;
-  return targetIdx - sourceIdx === 1;
+  // LADR-058: Sta same-layer cross-entity hops (diff=0) en forward hops (diff>0) toe.
+  // Backward edges (silver → landing) worden geblokkeerd. Zelf-loops zijn al geblokkeerd
+  // via de source === target guard in pushLayerEdge.
+  return targetIdx >= sourceIdx;
 }
 
 export function resolveLineageRef(

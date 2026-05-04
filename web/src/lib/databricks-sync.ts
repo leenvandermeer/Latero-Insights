@@ -1,6 +1,6 @@
 import { DatabricksAdapter } from "@/lib/adapters/databricks";
 import { getPgPool } from "@/lib/insights-saas-db";
-import { writeMetaDqCheck, writeMetaLineage, writeMetaPipelineRun } from "@/lib/meta-ingest";
+import { writeMetaColumnLineage, writeMetaDqCheck, writeMetaLineage, writeMetaPipelineRun } from "@/lib/meta-ingest";
 
 // Fallback installation_id used when no session is available (e.g. CLI/admin triggers).
 const SYNC_INSTALLATION_ID = "databricks-sync";
@@ -18,6 +18,7 @@ export interface SyncResult {
   pipeline_runs: number;
   dq_checks: number;
   lineage: number;
+  column_lineage: number;
 }
 
 function assertDate(value: string): string {
@@ -65,11 +66,17 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
     adapter.getLineageHops({ from, to }),
   ]);
 
+  // Column lineage: snapshot uit lineage_attributes_current (niet tijdgebonden)
+  // Wordt geparallel opgehaald want onafhankelijk van date range
+  const attributes = await adapter.getLineageAttributes();
+
   for (const run of runs) {
     await writeMetaPipelineRun(pool, {
       installationId: effectiveInstallationId,
       datasetId: run.dataset_id,
       sourceSystem: run.source_system || null,
+      // LADR-058: target_layer voor correcte layer-scoped dataset_id in meta.datasets
+      targetLayer: run.target_layer ?? run.step?.toLowerCase() ?? null,
       runId: run.run_id,
       step: run.step,
       status: run.run_status,
@@ -113,9 +120,25 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
     });
   }
 
+  // Column lineage: schrijf per attribuut-mapping naar meta.lineage_columns
+  for (const attr of attributes) {
+    if (!attr.source_attribute || !attr.target_attribute) continue;
+    await writeMetaColumnLineage(pool, {
+      installationId: effectiveInstallationId,
+      sourceEntityFqn: attr.source_entity_fqn,
+      sourceColumn: attr.source_attribute,
+      targetEntityFqn: attr.target_entity_fqn,
+      targetColumn: attr.target_attribute,
+      sourceLayer: attr.source_layer ?? null,
+      targetLayer: attr.target_layer ?? null,
+      transformationType: attr.transformation_type ?? null,
+    });
+  }
+
   return {
     pipeline_runs: runs.length,
     dq_checks: checks.length,
     lineage: hops.length,
+    column_lineage: attributes.length,
   };
 }
