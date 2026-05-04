@@ -16,7 +16,7 @@ import {
   Panel,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { RotateCcw, Search } from "lucide-react";
+import { RotateCcw, Search, GitBranch, ArrowUpFromLine, ArrowDownToLine } from "lucide-react";
 import type { LineageEntity, LineageAttribute } from "@/lib/adapters/types";
 import { EntityNode } from "./entity-node";
 import { EntityDetailPanel } from "./entity-detail-panel";
@@ -575,6 +575,38 @@ function extractChain(anchor: string, allEntities: LineageEntity[]): LineageEnti
   return [...result.values()];
 }
 
+// ── Viewpoint trace helpers ───────────────────────────────────────────────────
+
+/** BFS upstream: alle ancestor-keys van anchorKey via upstream_entity_fqns. */
+function computeUpstreamKeys(anchorKey: string, entityIndex: Map<string, LineageEntity>): Set<string> {
+  const result = new Set<string>([anchorKey]);
+  const queue: string[] = [anchorKey];
+  while (queue.length > 0) {
+    const key = queue.shift()!;
+    const entity = entityIndex.get(key);
+    if (!entity) continue;
+    for (const up of entity.upstream_entity_fqns) {
+      if (!result.has(up)) { result.add(up); queue.push(up); }
+    }
+  }
+  return result;
+}
+
+/** BFS downstream: alle descendant-keys van anchorKey via downstream_entity_fqns. */
+function computeDownstreamKeys(anchorKey: string, entityIndex: Map<string, LineageEntity>): Set<string> {
+  const result = new Set<string>([anchorKey]);
+  const queue: string[] = [anchorKey];
+  while (queue.length > 0) {
+    const key = queue.shift()!;
+    const entity = entityIndex.get(key);
+    if (!entity) continue;
+    for (const ds of entity.downstream_entity_fqns) {
+      if (!result.has(ds)) { result.add(ds); queue.push(ds); }
+    }
+  }
+  return result;
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface GraphViewProps {
@@ -590,6 +622,7 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
   const [statusFilter, setStatusFilter] = useState("all");
   const [datasetFocus, setDatasetFocus] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"all" | "upstream" | "downstream">("all");
   const [flow, setFlow] = useState<ReactFlowInstance | null>(null);
 
   const normalizedEntities = useMemo(() => normalizeLineageEntities(entities), [entities]);
@@ -646,6 +679,7 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
     setStatusFilter("all");
     setDatasetFocus(null);
     setSelectedNodeId(null);
+    setViewMode("all");
     window.requestAnimationFrame(() => {
       flow?.fitView({ ...DEFAULT_FIT_VIEW_OPTIONS, duration: 300 });
     });
@@ -653,7 +687,12 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
 
   const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     const data = node.data as unknown as GraphNodeData;
-    setSelectedNodeId((prev) => (prev === data.nodeId ? null : data.nodeId));
+    const newId = data.nodeId;
+    setSelectedNodeId((prev) => {
+      if (prev === newId) { setViewMode("all"); return null; }
+      setViewMode("all");
+      return newId;
+    });
   }, []);
 
   // Derive layer options from focused entities
@@ -675,6 +714,66 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
       return { ...n, style: { ...(n.style ?? {}), opacity: visible ? 1 : 0.15 } };
     });
   }, [nodes, search, layerFilter, statusFilter]);
+
+  // Neighbor highlight: direct 1-hop connections of selected node
+  const neighborNodeIds = useMemo(() => {
+    if (!selectedNodeId) return null;
+    const ids = new Set<string>([selectedNodeId]);
+    edges.forEach((e) => {
+      if (e.source === selectedNodeId) ids.add(e.target);
+      if (e.target === selectedNodeId) ids.add(e.source);
+    });
+    return ids;
+  }, [selectedNodeId, edges]);
+
+  // Viewpoint trace: full upstream or downstream path from selected node
+  const viewpointNodeIds = useMemo(() => {
+    if (viewMode === "all" || !selectedNodeId) return null;
+    const entityIndex = new Map(focusedEntities.map((e) => [lineageEntityKey(e), e]));
+    if (viewMode === "upstream") return computeUpstreamKeys(selectedNodeId, entityIndex);
+    return computeDownstreamKeys(selectedNodeId, entityIndex);
+  }, [viewMode, selectedNodeId, focusedEntities]);
+
+  // Active highlight set: viewpoint takes precedence over neighbor
+  const highlightedNodeIds = viewpointNodeIds ?? neighborNodeIds;
+
+  // Merge filter opacity with highlight dimming
+  const displayNodes = useMemo(() => {
+    if (!highlightedNodeIds) return filteredNodes;
+    return filteredNodes.map((n) => {
+      if (n.type === "layerHeader") return n;
+      const inFocus = highlightedNodeIds.has(n.id);
+      const isSelected = n.id === selectedNodeId;
+      const base = (n.style?.opacity as number) ?? 1;
+      const dim = inFocus ? base : Math.min(base, 0.12);
+      return {
+        ...n,
+        style: {
+          ...n.style,
+          opacity: dim,
+          outline: isSelected ? "2px solid var(--color-accent)" : undefined,
+          outlineOffset: "2px",
+        },
+      };
+    });
+  }, [filteredNodes, highlightedNodeIds, selectedNodeId]);
+
+  // Edge highlight: dim edges not connected to highlighted nodes
+  const displayEdges = useMemo(() => {
+    if (!highlightedNodeIds) return edges;
+    return edges.map((e) => {
+      const connected = highlightedNodeIds.has(e.source) && highlightedNodeIds.has(e.target);
+      const isDirectConnection = e.source === selectedNodeId || e.target === selectedNodeId;
+      return {
+        ...e,
+        style: {
+          ...e.style,
+          opacity: connected ? 1 : 0.07,
+          strokeWidth: isDirectConnection ? 3 : (e.style?.strokeWidth ?? 2),
+        },
+      };
+    });
+  }, [edges, highlightedNodeIds, selectedNodeId]);
 
   const selectedEntity = useMemo(
     () => {
@@ -801,6 +900,35 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
           Reset
         </button>
 
+        {/* Viewpoint toggle — only shown when a node is selected */}
+        {selectedNodeId && (
+          <>
+            <span style={{ width: 1, height: 20, background: "var(--color-border)", flexShrink: 0 }} />
+            <div className="flex items-center gap-1">
+              {[
+                { mode: "all" as const, label: "Context", Icon: GitBranch },
+                { mode: "upstream" as const, label: "Upstream", Icon: ArrowUpFromLine },
+                { mode: "downstream" as const, label: "Downstream", Icon: ArrowDownToLine },
+              ].map(({ mode, label, Icon }) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors"
+                  style={{
+                    background: viewMode === mode ? "var(--color-accent)" : "var(--color-surface)",
+                    color: viewMode === mode ? "#fff" : "var(--color-text-muted)",
+                    border: `1px solid ${viewMode === mode ? "var(--color-accent)" : "var(--color-border)"}`,
+                  }}
+                  title={`Show ${label} path`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
         <span className="ml-auto text-xs" style={{ color: "var(--color-text-muted)" }}>
           {focusedEntities.length}{datasetFocus ? ` of ${normalizedEntities.length}` : ""} entit{focusedEntities.length === 1 ? "y" : "ies"}
           {refreshedAt && (
@@ -812,8 +940,8 @@ export function GraphView({ entities, attributes, refreshedAt, onOpenColumns }: 
       {/* Canvas + detail panel */}
       <div className="flex-1 min-h-0 relative">
         <ReactFlow
-          nodes={filteredNodes}
-          edges={edges}
+          nodes={displayNodes}
+          edges={displayEdges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}

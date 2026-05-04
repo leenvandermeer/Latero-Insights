@@ -187,7 +187,7 @@ export function LineageDashboard() {
         ) : activeTab === "chains" ? (
           <ChainsView entities={entities} />
         ) : (
-          <ColumnsView attributes={attributes} initialSearch={columnsSearch} />
+          <ColumnsView attributes={attributes} entities={entities} initialSearch={columnsSearch} />
         )}
       </div>
     </div>

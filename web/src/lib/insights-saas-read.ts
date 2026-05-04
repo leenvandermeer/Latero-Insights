@@ -188,31 +188,58 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
         WHERE e.installation_id = $1
         GROUP BY source_dataset_id
       ),
-      latest_run AS (
-        SELECT DISTINCT ON (io.dataset_id)
-          io.dataset_id,
-          r.status                                                    AS latest_status
+      -- LADR-058 fix: run_io wordt niet altijd gevuld (bijv. Python-script sync).
+      -- Gebruik meta.jobs.dataset_id (bare fqn) + step-afleiding als primaire
+      -- statusbron. split_part(...'_to_'...) + suffix-strip geeft de target layer.
+      run_status_base AS (
+        SELECT
+          d.dataset_id,
+          r.status,
+          r.started_at,
+          r.ended_at
+        FROM meta.runs r
+        JOIN meta.jobs j USING (job_id)
+        JOIN meta.datasets d
+          ON d.installation_id = r.installation_id
+         AND d.fqn = j.dataset_id
+         AND d.layer = CASE
+               WHEN split_part(r.step, '_to_', 2)
+                      IN ('landing', 'raw', 'bronze', 'silver', 'gold')
+                 THEN split_part(r.step, '_to_', 2)
+               ELSE regexp_replace(split_part(r.step, '_to_', 2), '_.*$', '')
+             END
+        WHERE r.installation_id = $1
+        UNION ALL
+        -- API-push mode: run_io bevat de layer-scoped dataset_id direct
+        SELECT d.dataset_id, r.status, r.started_at, r.ended_at
         FROM meta.run_io io
         JOIN meta.runs r USING (run_id)
+        JOIN meta.datasets d
+          ON d.installation_id = io.installation_id
+         AND d.dataset_id      = io.dataset_id
         WHERE io.installation_id = $1
-        ORDER BY io.dataset_id, r.started_at DESC
+      ),
+      latest_run AS (
+        SELECT DISTINCT ON (dataset_id)
+          dataset_id,
+          status                                                      AS latest_status
+        FROM run_status_base
+        ORDER BY dataset_id, started_at DESC
       ),
       status_rollup AS (
         SELECT
-          io.dataset_id,
+          dataset_id,
           MAX(
-            CASE r.status
+            CASE status
               WHEN 'FAILED'  THEN 3
               WHEN 'WARNING' THEN 2
               WHEN 'SUCCESS' THEN 1
               ELSE 0
             END
           )                                                           AS worst_rank,
-          MAX(CASE WHEN r.status = 'SUCCESS' THEN r.ended_at END)    AS latest_success_at
-        FROM meta.run_io io
-        JOIN meta.runs r USING (run_id)
-        WHERE io.installation_id = $1
-        GROUP BY io.dataset_id
+          MAX(CASE WHEN status = 'SUCCESS' THEN ended_at END)        AS latest_success_at
+        FROM run_status_base
+        GROUP BY dataset_id
       ),
       all_edge_datasets AS (
         SELECT DISTINCT source_dataset_id AS dataset_id FROM meta.lineage_edges WHERE installation_id = $1

@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, ArrowRight } from "lucide-react";
-import type { LineageAttribute } from "@/lib/adapters/types";
+import { Search, ArrowRight, AlertCircle } from "lucide-react";
+import type { LineageAttribute, LineageEntity } from "@/lib/adapters/types";
 import { lineageRefLabel } from "./lineage-utils";
 
 interface ColumnsViewProps {
   attributes: LineageAttribute[];
+  entities?: LineageEntity[];
   initialSearch?: string;
 }
 
-export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps) {
+export function ColumnsView({ attributes, entities = [], initialSearch = "" }: ColumnsViewProps) {
   const [search, setSearch] = useState("");
   const [entityFilter, setEntityFilter] = useState("all");
 
@@ -22,10 +23,19 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
   // Only show is_current=true rows (server already filters, but belt+suspenders)
   const current = useMemo(() => attributes.filter((a) => a.is_current), [attributes]);
 
-  const sourceEntities = useMemo(() => {
-    const unique = [...new Set(current.map((a) => a.source_entity_fqn))].sort();
-    return unique;
-  }, [current]);
+  // Entities that have column lineage
+  const coveredFqns = useMemo(() => new Set(current.map((a) => a.source_entity_fqn)), [current]);
+
+  // All unique source entities: those from column data + all lineage entities that could be sources
+  const allSourceEntities = useMemo(() => {
+    const fromAttrs = current.map((a) => a.source_entity_fqn);
+    // Add all lineage entities that are not pure sinks (have downstream connections)
+    // to surface coverage gaps
+    const fromGraph = entities
+      .filter((e) => e.downstream_entity_fqns.length > 0)
+      .map((e) => e.entity_fqn);
+    return [...new Set([...fromAttrs, ...fromGraph])].sort();
+  }, [current, entities]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -55,17 +65,31 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
         </span>
 
         <div className="flex items-center gap-2 ml-auto flex-wrap">
+          {/* Coverage indicator */}
+          {allSourceEntities.length > 0 && (
+            <span className="text-[10px] font-medium" style={{ color: "var(--color-text-muted)" }}>
+              {coveredFqns.size}/{allSourceEntities.length} entities met coverage
+            </span>
+          )}
+
           {/* Entity filter */}
           <select
             value={entityFilter}
             onChange={(e) => setEntityFilter(e.target.value)}
-            className="text-xs rounded-lg px-2.5 py-1.5 outline-none max-w-[220px]"
+            className="text-xs rounded-lg px-2.5 py-1.5 outline-none max-w-[240px]"
             style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
           >
-            <option value="all">All source entities</option>
-            {sourceEntities.map((e) => (
-              <option key={e} value={e} title={e}>{lineageRefLabel(e)}</option>
-            ))}
+            <option value="all">All source entities ({coveredFqns.size} with coverage)</option>
+            {allSourceEntities.map((fqn) => {
+              const hasCoverage = coveredFqns.has(fqn);
+              return (
+                <option key={fqn} value={fqn} title={fqn}
+                  style={{ color: hasCoverage ? "var(--color-text)" : "var(--color-text-muted)" }}
+                >
+                  {lineageRefLabel(fqn)}{hasCoverage ? "" : " (no coverage)"}
+                </option>
+              );
+            })}
           </select>
 
           {/* Search */}
@@ -86,12 +110,25 @@ export function ColumnsView({ attributes, initialSearch = "" }: ColumnsViewProps
       {/* Table */}
       <div className="flex-1 overflow-auto">
         {filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              {current.length === 0
-                ? "No column lineage data available."
-                : "No results for this filter."}
-            </p>
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            {entityFilter !== "all" && !coveredFqns.has(entityFilter) ? (
+              <>
+                <AlertCircle className="h-8 w-8" style={{ color: "var(--color-text-muted)" }} />
+                <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                  No column lineage for {lineageRefLabel(entityFilter)}
+                </p>
+                <p className="text-xs text-center max-w-xs" style={{ color: "var(--color-text-muted)" }}>
+                  This entity exists in the lineage graph but column-level mappings have not been synced yet.
+                  Column lineage is derived from the source system and may not be available for all entities.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                {current.length === 0
+                  ? "No column lineage data available."
+                  : "No results for this filter."}
+              </p>
+            )}
           </div>
         ) : (
           <table className="w-full text-xs border-collapse">
