@@ -7,7 +7,7 @@ import {
   useAdminInstallations,
   useCreateInstallation,
 } from "@/hooks/use-admin";
-import { Building2, Plus, ExternalLink, AlertCircle, CheckCircle, Copy, UserPlus } from "lucide-react";
+import { Building2, Plus, ExternalLink, AlertCircle, CheckCircle, Copy, UserPlus, Trash2 } from "lucide-react";
 import { AdminInstallation } from "@/types/admin";
 
 export default function AdminInstallationsPage() {
@@ -119,17 +119,18 @@ export default function AdminInstallationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="flex items-center gap-3 text-3xl font-bold text-slate-900 dark:text-white">
+          <h1 className="flex items-center gap-3 text-3xl font-bold" style={{ color: "var(--color-text)" }}>
             <Building2 className="h-8 w-8" />
             Installations
           </h1>
-          <p className="text-slate-600 dark:text-slate-400">
+          <p style={{ color: "var(--color-text-muted)" }}>
             Add sites and manage customer installations
           </p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+          className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white"
+          style={{ background: "var(--color-brand)" }}
         >
           <Plus className="h-4 w-4" />
           Add Site
@@ -140,7 +141,8 @@ export default function AdminInstallationsPage() {
         <button
           type="button"
           onClick={() => setShowArchived((value) => !value)}
-          className="rounded border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          className="rounded px-3 py-1.5 text-xs font-medium"
+          style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
         >
           {showArchived ? "Hide archived" : "Show archived"}
         </button>
@@ -203,13 +205,13 @@ export default function AdminInstallationsPage() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-slate-900">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+          <div className="w-full max-w-md rounded-lg p-6" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <h2 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>
               Add Site
             </h2>
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label className="block text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
                   Customer
                 </label>
                 <input
@@ -220,7 +222,8 @@ export default function AdminInstallationsPage() {
                     setFormData({ ...formData, customer_name: e.target.value })
                   }
                   placeholder="Acme Corp"
-                  className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                  className="mt-1 w-full rounded px-3 py-2"
+                  style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
                   required
                 />
                 <datalist id="existing-customers">
@@ -233,7 +236,7 @@ export default function AdminInstallationsPage() {
 
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label className="block text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
                   Contact Email (Optional)
                 </label>
                 <input
@@ -242,14 +245,16 @@ export default function AdminInstallationsPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, contact_email: e.target.value })
                   }
-                  className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                  className="mt-1 w-full rounded px-3 py-2"
+                  style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
                 />
               </div>
 
               <div className="flex gap-2 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 rounded bg-slate-900 py-2 font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+                  className="flex-1 rounded py-2 font-medium text-white"
+                  style={{ background: "var(--color-brand)" }}
                   disabled={createMutation.isPending}
                 >
                   {createMutation.isPending ? "Adding..." : "Add site"}
@@ -257,7 +262,8 @@ export default function AdminInstallationsPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 rounded border border-slate-300 py-2 font-medium hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800"
+                  className="flex-1 rounded py-2 font-medium"
+                  style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
                 >
                   Cancel
                 </button>
@@ -268,24 +274,24 @@ export default function AdminInstallationsPage() {
       )}
 
       {/* Installations Table */}
-      <div className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-lg" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
         {isLoading ? (
-          <div className="p-6 text-center text-slate-500">Loading...</div>
+          <div className="p-6 text-center" style={{ color: "var(--color-text-muted)" }}>Loading...</div>
         ) : visibleInstallations.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800">
-                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">
+                <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>
                     Label
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">
+                  <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">
+                  <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>
                     Users
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">
+                  <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>
                     Actions
                   </th>
                 </tr>
@@ -294,29 +300,46 @@ export default function AdminInstallationsPage() {
                 {visibleInstallations.map((inst: AdminInstallation) => (
                   <tr
                     key={inst.installation_id}
-                    className="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                    style={{ borderBottom: "1px solid var(--color-border)" }}
                   >
-                    <td className="px-6 py-3 text-slate-900 dark:text-white">
-                      {inst.label || inst.installation_id}
+                    <td className="px-6 py-3">
+                      <Link
+                        href={`/admin/installations/${inst.installation_id}`}
+                        className="font-medium hover:underline"
+                        style={{ color: "var(--color-text)" }}
+                      >
+                        {inst.label || inst.installation_id}
+                      </Link>
                     </td>
                     <td className="px-6 py-3">
                       <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeColor(inst.status)}`}
+                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+                        style={statusBadgeColor(inst.status)}
                       >
                         {statusIcon(inst.status)}
                         {inst.status}
                       </span>
                     </td>
-                    <td className="px-6 py-3 text-slate-600 dark:text-slate-400">
+                    <td className="px-6 py-3" style={{ color: "var(--color-text-muted)" }}>
                       {inst.user_count}
                     </td>
                     <td className="px-6 py-3">
-                      <Link
-                        href={`/admin/installations/${inst.installation_id}`}
-                        className="inline-flex items-center rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
-                      >
-                        View
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/admin/installations/${inst.installation_id}`}
+                          className="inline-flex items-center rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+                        >
+                          View
+                        </Link>
+                        <Link
+                          href={`/admin/installations/${inst.installation_id}#danger-zone`}
+                          className="inline-flex items-center rounded border px-3 py-1.5 text-xs font-semibold hover:opacity-80 transition-opacity"
+                          style={{ borderColor: "var(--color-error, #dc2626)", color: "var(--color-error, #dc2626)" }}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Clear data
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -324,7 +347,7 @@ export default function AdminInstallationsPage() {
             </table>
           </div>
         ) : (
-          <div className="p-6 text-center text-slate-500">
+          <div className="p-6 text-center" style={{ color: "var(--color-text-muted)" }}>
             {showArchived ? "No installations found." : "No active installations found. Create one to get started."}
           </div>
         )}

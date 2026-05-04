@@ -116,35 +116,38 @@ export default function AdminInstallationDetailPage() {
         <div>
           <Link
             href="/admin/installations"
-            className="mb-2 inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            className="mb-2 inline-flex items-center gap-1 text-sm"
+            style={{ color: "var(--color-text-muted)" }}
           >
             <ArrowLeft className="h-4 w-4" />
             Back to installations
           </Link>
-          <h1 className="flex items-center gap-3 text-3xl font-bold text-slate-900 dark:text-white">
+          <h1 className="flex items-center gap-3 text-3xl font-bold" style={{ color: "var(--color-text)" }}>
             <Building2 className="h-8 w-8" />
             {installation.label ?? installation.installation_id}
           </h1>
-          <p className="text-slate-600 dark:text-slate-400">
+          <p style={{ color: "var(--color-text-muted)" }}>
             {installation.installation_id}
           </p>
         </div>
         <Link
           href={`/admin/installations/${installation.installation_id}/auth`}
-          className="inline-flex items-center gap-2 rounded border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          className="inline-flex items-center gap-2 rounded px-4 py-2 text-sm font-medium"
+          style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
         >
           <ShieldCheck className="h-4 w-4" />
           Auth configuration
         </Link>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-lg p-6" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
         <div className="mb-6">
           <button
             type="button"
             onClick={() => setShowRotateConfirm(true)}
             disabled={rotating}
-            className="rounded bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
+            className="rounded px-4 py-2 text-sm font-semibold text-white transition-colors"
+            style={{ background: "var(--color-brand)" }}
           >
             {rotating ? "Generating..." : "Generate new API key"}
           </button>
@@ -153,8 +156,8 @@ export default function AdminInstallationDetailPage() {
         {showRotateConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-sm rounded-xl p-6 shadow-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
-              <h3 className="text-sm font-semibold mb-1 text-slate-900 dark:text-white">Rotate API key?</h3>
-              <p className="text-xs mb-5 text-slate-500 dark:text-slate-400">
+              <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>Rotate API key?</h3>
+              <p className="text-xs mb-5" style={{ color: "var(--color-text-muted)" }}>
                 The current key will be immediately invalidated. Any client using it will stop working until the new key is configured.
               </p>
               <div className="flex justify-end gap-2">
@@ -192,13 +195,14 @@ export default function AdminInstallationDetailPage() {
                 Dismiss
               </button>
             </div>
-            <div className="mt-4 rounded border bg-white p-3 dark:bg-slate-900" style={{borderColor: 'var(--color-warning)'}}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">API key (one-time share)</p>
+            <div className="mt-4 rounded border p-3" style={{ background: "var(--color-surface)", borderColor: "var(--color-warning)" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>API key (one-time share)</p>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <p className="truncate font-mono text-sm text-slate-900 dark:text-slate-100">{newApiKey}</p>
+                <p className="truncate font-mono text-sm" style={{ color: "var(--color-text)" }}>{newApiKey}</p>
                 <button
                   onClick={() => navigator.clipboard.writeText(newApiKey)}
-                  className="inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium"
+                  style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
                 >
                   <Copy className="h-3.5 w-3.5" />
                   Copy
@@ -207,31 +211,33 @@ export default function AdminInstallationDetailPage() {
             </div>
           </div>
         )}
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Installation settings</h2>
+        <h2 className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>Installation settings</h2>
         <form onSubmit={handleSave} className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Label</label>
+            <label className="block text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>Label</label>
             <input
               type="text"
               value={form.label}
               onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+              className="mt-1 w-full rounded px-3 py-2"
+              style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Contact email</label>
+            <label className="block text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>Contact email</label>
             <input
               type="email"
               value={form.contact_email}
               onChange={(event) => setForm((prev) => ({ ...prev, contact_email: event.target.value }))}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+              className="mt-1 w-full rounded px-3 py-2"
+              style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
             />
           </div>
 
           <div className="sm:col-span-2">
-            <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
               <input
                 type="checkbox"
                 checked={form.active}
@@ -245,7 +251,8 @@ export default function AdminInstallationDetailPage() {
             <button
               type="submit"
               disabled={updateMutation.isPending}
-              className="inline-flex items-center gap-2 rounded bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+              className="inline-flex items-center gap-2 rounded px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            style={{ background: "var(--color-brand)" }}
             >
               <Save className="h-4 w-4" />
               {updateMutation.isPending ? "Saving..." : "Save changes"}
@@ -259,7 +266,7 @@ export default function AdminInstallationDetailPage() {
       </div>
 
       {/* LINS-018: Danger Zone */}
-      <div className="rounded-lg border-2 p-6 space-y-4" style={{ borderColor: "var(--color-error, #dc2626)" }}>
+      <div id="danger-zone" className="rounded-lg border-2 p-6 space-y-4" style={{ borderColor: "var(--color-error, #dc2626)" }}>
         <div className="flex items-center gap-2">
           <Trash2 className="h-4 w-4" style={{ color: "var(--color-error, #dc2626)" }} />
           <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: "var(--color-error, #dc2626)" }}>
@@ -269,8 +276,8 @@ export default function AdminInstallationDetailPage() {
 
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-sm font-medium text-slate-900 dark:text-white">Clear operational data</p>
-            <p className="text-xs mt-0.5 text-slate-500 dark:text-slate-400">
+            <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>Clear operational data</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
               Verwijdert alle runs, entities, lineage en DQ-resultaten voor deze installatie.
               De installatie-definitie, gebruikers en API-sleutel blijven intact. Onherstelbaar.
             </p>
@@ -295,23 +302,24 @@ export default function AdminInstallationDetailPage() {
       {/* Clear data confirmation modal */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl p-6 shadow-xl space-y-4" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+          <div className="w-full max-w-sm rounded-xl p-6 shadow-xl space-y-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
             <div className="flex items-center gap-2">
-              <Trash2 className="h-4 w-4 shrink-0" style={{ color: "var(--color-error, #dc2626)" }} />
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Clear installation data?</h3>
+              <Trash2 className="h-4 w-4 shrink-0" style={{ color: "var(--color-error)" }} />
+              <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Clear installation data?</h3>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
               Dit verwijdert alle operationele data voor <strong>{installationId}</strong>. Runs, entities, lineage en DQ-resultaten worden permanent gewist. Dit kan niet ongedaan worden gemaakt.
             </p>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Typ <code className="rounded bg-slate-100 px-1 py-0.5 dark:bg-slate-800">{installationId}</code> ter bevestiging
+              <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
+                Typ <code className="rounded px-1 py-0.5" style={{ background: "var(--color-bg)", color: "var(--color-text)" }}>{installationId}</code> ter bevestiging
               </label>
               <input
                 type="text"
                 value={clearConfirmInput}
                 onChange={(e) => setClearConfirmInput(e.target.value)}
-                className="w-full rounded border border-slate-300 px-3 py-2 text-xs dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded px-3 py-2 text-xs"
+                style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
                 placeholder={installationId}
                 autoFocus
               />
