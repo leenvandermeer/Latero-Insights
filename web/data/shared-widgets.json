@@ -193,5 +193,35 @@
     "id": "11089c27-9f57-4641-b57d-437146a25943",
     "installation_id": "prod_ko5o09uj9",
     "publishedAt": "2026-05-03T07:36:18.150Z"
+  },
+  {
+    "label": "DQ Check Results",
+    "description": "Table of latest data quality check results per check ID",
+    "templateType": "dq-checks-table",
+    "category": "tables",
+    "defaultSize": {
+      "w": 8,
+      "h": 3,
+      "minW": 4,
+      "minH": 2
+    },
+    "id": "e7f36088-2a89-4df3-a8e7-b912397b61ca",
+    "installation_id": "prod_ko5o09uj9",
+    "publishedAt": "2026-05-04T18:55:23.238Z"
+  },
+  {
+    "label": "DQ Check Resultsv1",
+    "description": "Table of latest data quality check results per check ID",
+    "templateType": "dq-checks-table",
+    "category": "tables",
+    "defaultSize": {
+      "w": 8,
+      "h": 3,
+      "minW": 4,
+      "minH": 2
+    },
+    "id": "e50606e8-900c-4d48-bf5c-1bb799731290",
+    "installation_id": "prod_ko5o09uj9",
+    "publishedAt": "2026-05-04T18:55:56.899Z"
   }
 ]

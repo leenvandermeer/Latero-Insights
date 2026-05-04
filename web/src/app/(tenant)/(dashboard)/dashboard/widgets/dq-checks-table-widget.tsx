@@ -48,13 +48,13 @@ export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
     else { setCol(k); setDir(k === "timestamp_utc" ? "desc" : "asc"); setPage(0); }
   };
 
-  if (isLoading) return <TableSkeleton rows={6} />;
-  if (error) return <div className="h-full flex items-center justify-center text-xs" style={{ color: "var(--color-text-muted)" }}>Failed to load</div>;
-
   const sorted = useMemo(() => [...(res?.data ?? [])].sort((a, b) => {
     const va = (a[col] ?? "") as string, vb = (b[col] ?? "") as string;
     return dir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
   }), [res, col, dir]);
+
+  if (isLoading) return <TableSkeleton rows={6} />;
+  if (error) return <div className="h-full flex items-center justify-center text-xs" style={{ color: "var(--color-text-muted)" }}>Failed to load</div>;
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);

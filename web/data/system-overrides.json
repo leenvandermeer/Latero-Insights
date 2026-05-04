@@ -194,46 +194,46 @@
     "id": "system:quality",
     "widgets": [
       {
-        "instanceId": "custom-f6624459-fb32-482f-b8ff-54505ff8f3a0",
-        "type": "custom",
-        "customWidgetId": "aa75c5a2-d29b-48a7-bcf5-06293edd47e3"
+        "instanceId": "shared-d8a9efca-460c-4a59-96cc-2bf78e4739eb",
+        "type": "shared",
+        "customWidgetId": "e7f36088-2a89-4df3-a8e7-b912397b61ca"
       }
     ],
     "layout": {
       "lg": [
         {
-          "i": "custom-f6624459-fb32-482f-b8ff-54505ff8f3a0",
+          "i": "shared-d8a9efca-460c-4a59-96cc-2bf78e4739eb",
           "x": 0,
           "y": 0,
-          "w": 3,
-          "h": 4,
-          "minW": 2,
+          "w": 8,
+          "h": 3,
+          "minW": 4,
           "minH": 2
         }
       ],
       "md": [
         {
-          "i": "custom-f6624459-fb32-482f-b8ff-54505ff8f3a0",
+          "i": "shared-d8a9efca-460c-4a59-96cc-2bf78e4739eb",
           "x": 0,
           "y": 0,
-          "w": 3,
-          "h": 4,
-          "minW": 2,
+          "w": 8,
+          "h": 3,
+          "minW": 4,
           "minH": 2
         }
       ],
       "sm": [
         {
-          "i": "custom-f6624459-fb32-482f-b8ff-54505ff8f3a0",
+          "i": "shared-d8a9efca-460c-4a59-96cc-2bf78e4739eb",
           "x": 0,
           "y": 0,
-          "w": 3,
-          "h": 4,
-          "minW": 2,
+          "w": 4,
+          "h": 3,
+          "minW": 4,
           "minH": 2
         }
       ]
     },
-    "updatedAt": "2026-05-04T15:43:37.075Z"
+    "updatedAt": "2026-05-04T18:57:13.321Z"
   }
 }
