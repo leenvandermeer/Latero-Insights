@@ -46,9 +46,9 @@ export async function getSaaSReadStoreCounts(): Promise<{
   const result = await pool.query(
     `
       SELECT
-        (SELECT COUNT(*)::int FROM pipeline_runs) AS pipeline_runs,
-        (SELECT COUNT(*)::int FROM data_quality_checks) AS dq_checks,
-        (SELECT COUNT(*)::int FROM data_lineage) AS lineage
+        (SELECT COUNT(*)::int FROM meta.runs)            AS pipeline_runs,
+        (SELECT COUNT(*)::int FROM meta.quality_results) AS dq_checks,
+        (SELECT COUNT(*)::int FROM meta.lineage_edges)   AS lineage
     `,
   );
 

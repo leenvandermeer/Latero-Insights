@@ -45,3 +45,5 @@ Naming note:
 | [LADR-037](20260503-admin-login-entrypoint.md) | 2026-05-03 | Separate login entrypoint voor platform operators (/admin/login) | ACCEPTED |
 | [LADR-038](20260503-installation-switcher-env-default.md) | 2026-05-03 | Installation switcher: environment indicator en default-installatie | ACCEPTED |
 | [LADR-039](20260503-admin-tenant-layout-css-isolation.md) | 2026-05-03 | Admin/Tenant layout- en CSS-isolatie via Next.js route group root layouts | ACCEPTED |
+| [LADR-040](20260504-meta-schema-datamodel.md) | 2026-05-04 | meta.* schema: gestructureerd operationeel datamodel (OpenLineage-gebaseerd) | ACCEPTED |
+| [LADR-041](20260504-drop-public-event-tables.md) | 2026-05-04 | Drop public.* event-tabellen na volledige migratie naar meta.* | ACCEPTED |
