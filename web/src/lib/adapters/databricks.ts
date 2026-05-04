@@ -198,21 +198,21 @@ export class DatabricksAdapter implements DataAdapter {
     const [entities, attributes, hops] = await Promise.all([
       describeColumns("lineage_entities_current", id),
       describeColumns("lineage_attributes_current", id),
-      describeColumns("data_lineage", id),
+      describeColumns("lineage_dataset", id),
     ]);
 
     return {
       lineage_entities_current: entities,
       lineage_attributes_current: attributes,
-      data_lineage: hops,
+      lineage_dataset: hops,
     };
   }
 
   async getPipelineRuns(range: DateRange): Promise<PipelineRun[]> {
     const id = this.installationId;
-    const columns = await describeColumns("pipeline_runs", id);
+    const columns = await describeColumns("runs", id);
     const optional = ["job_name", "parent_run_id"].filter((name) => hasColumn(columns, name));
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, source_system, step, run_id, run_status, duration_ms, environment${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("pipeline_runs", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("pipeline_runs", columns, id)} ORDER BY timestamp_utc DESC`;
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, source_system, step, run_id, run_status, duration_ms, environment${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("runs", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("runs", columns, id)} ORDER BY timestamp_utc DESC`;
     const resp = await executeStatement(sql, [
       { name: "date_from", value: range.from, type: "STRING" },
       { name: "date_to", value: range.to, type: "STRING" },
@@ -235,9 +235,9 @@ export class DatabricksAdapter implements DataAdapter {
 
   async getDataQualityChecks(range: DateRange): Promise<DataQualityCheck[]> {
     const id = this.installationId;
-    const columns = await describeColumns("data_quality_checks", id);
+    const columns = await describeColumns("dq_results", id);
     const optional = ["environment", "severity", "check_mode", "check_result", "parent_run_id"].filter((name) => hasColumn(columns, name));
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, step, run_id, check_id, check_status, check_category, policy_version${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("data_quality_checks", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("data_quality_checks", columns, id)} ORDER BY timestamp_utc DESC`;
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, step, run_id, check_id, check_status, check_category, policy_version${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("dq_results", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("dq_results", columns, id)} ORDER BY timestamp_utc DESC`;
     const resp = await executeStatement(sql, [
       { name: "date_from", value: range.from, type: "STRING" },
       { name: "date_to", value: range.to, type: "STRING" },
@@ -263,10 +263,10 @@ export class DatabricksAdapter implements DataAdapter {
 
   async getLineageHops(range: DateRange): Promise<LineageHop[]> {
     const id = this.installationId;
-    const columns = await describeColumns("data_lineage", id);
-    const optional = ["source_system", "installation_id", "environment", "schema_version", "lineage_evidence", "hop_kind"]
+    const columns = await describeColumns("lineage_dataset", id);
+    const optional = ["source_system", "installation_id", "environment", "schema_version", "hop_kind"]
       .filter((name) => hasColumn(columns, name));
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, step, run_id, source_entity, source_type, source_ref, source_attribute, target_entity, target_type, target_ref, target_attribute${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("data_lineage", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("data_lineage", columns, id)} ORDER BY timestamp_utc DESC`;
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, step, run_id, source_entity, source_type, source_ref, source_attribute, target_entity, target_type, target_ref, target_attribute${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("lineage_dataset", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("lineage_dataset", columns, id)} ORDER BY timestamp_utc DESC`;
     const resp = await executeStatement(sql, [
       { name: "date_from", value: range.from, type: "STRING" },
       { name: "date_to", value: range.to, type: "STRING" },
@@ -367,7 +367,7 @@ export class DatabricksAdapter implements DataAdapter {
   async testConnection(): Promise<boolean> {
     const id = this.installationId;
     try {
-      const sql = `SELECT 1 AS ok FROM ${fqTable("pipeline_runs", id)} LIMIT 1`;
+      const sql = `SELECT 1 AS ok FROM ${fqTable("runs", id)} LIMIT 1`;
       const resp = await executeStatement(sql, undefined, id);
       return resp.status.state === "SUCCEEDED";
     } catch {

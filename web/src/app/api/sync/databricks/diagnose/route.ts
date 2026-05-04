@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   const catalog = settings.databricksCatalog || "workspace";
   const schema = settings.databricksSchema || "meta";
-  const tables = ["pipeline_runs", "data_quality_checks", "data_lineage"];
+  const tables = ["runs", "dq_results", "lineage_dataset"];
 
   async function query(sql: string): Promise<{ columns: string[]; rows: string[][] }> {
     const url = `https://${settings.databricksHost}/api/2.0/sql/statements`;

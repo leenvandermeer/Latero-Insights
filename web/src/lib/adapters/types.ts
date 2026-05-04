@@ -83,7 +83,7 @@ export interface LineageAttribute {
 export interface LineageSchemaInventory {
   lineage_entities_current: string[];
   lineage_attributes_current: string[];
-  data_lineage: string[];
+  lineage_dataset: string[];
 }
 
 export interface DateRange {
