@@ -5,6 +5,7 @@ import { useQuality } from "@/hooks/use-quality";
 import { useDateRange } from "@/hooks/use-date-range";
 import { DateRangePicker } from "@/components/ui";
 import { ShieldCheck, CheckCircle, XCircle, AlertTriangle, HelpCircle } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { DataQualityCheck } from "@/lib/adapters/types";
 
@@ -90,17 +91,18 @@ export function QualityExplorer() {
             <thead>
               <tr style={{ background: "var(--color-surface-subtle)", borderBottom: "1px solid var(--color-border)" }}>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Status</th>
-                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Check ID</th>
+                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Check</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Dataset</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Step</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Category</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Time</th>
+                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}></th>
               </tr>
             </thead>
             <tbody>
               {checks.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center" style={{ color: "var(--color-text-muted)" }}>
+                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: "var(--color-text-muted)" }}>
                     No checks found
                   </td>
                 </tr>
@@ -123,20 +125,32 @@ export function QualityExplorer() {
                       </span>
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs" style={{ color: "var(--color-text)" }}>
-                    {check.check_id ?? "—"}
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text)" }}>
+                    <div className="font-medium">{check.check_name ?? check.check_id}</div>
+                    <div className="font-mono text-[10px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>{check.check_id}</div>
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {check.dataset_id ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {check.step ?? "—"}
+                    {check.step || "—"}
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {check.check_category ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {check.timestamp_utc ? new Date(check.timestamp_utc).toLocaleString() : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {check.result_id && (
+                      <Link
+                        href={`/quality/${encodeURIComponent(check.result_id)}`}
+                        className="hover:underline"
+                        style={{ color: "var(--color-brand)" }}
+                      >
+                        Details →
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -23,7 +23,9 @@ export interface DataQualityCheck {
   dataset_id: string;
   step: string;
   run_id: string;
+  result_id?: string | null;
   check_id: string;
+  check_name?: string | null;
   check_status: string; // MDCF: PASS|FAIL|WARN|ERROR — normalize before writing to meta.*
   check_category: string | null;
   policy_version: string | null;
@@ -31,6 +33,9 @@ export interface DataQualityCheck {
   environment?: string | null;
   check_mode?: string | null;
   check_result?: string | null;
+  result_value?: number | null;
+  threshold_value?: number | null;
+  message?: string | null;
   parent_run_id?: string | null;
 }
 
