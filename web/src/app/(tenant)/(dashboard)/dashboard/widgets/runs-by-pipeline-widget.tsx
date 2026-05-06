@@ -17,7 +17,7 @@ export function RunsByPipelineWidget({ from, to, titleOverride }: Props) {
   const chartData = useMemo(() => {
     const counts = new Map<string, { total: number; failed: number }>();
     for (const run of latestPipelineStepRuns(response?.data ?? [])) {
-      const key = run.job_name ?? run.dataset_id;
+      const key = run.dataset_id;
       const entry = counts.get(key) ?? { total: 0, failed: 0 };
       entry.total++;
       if (normalizeStatus(run.run_status) === "FAILED") entry.failed++;
