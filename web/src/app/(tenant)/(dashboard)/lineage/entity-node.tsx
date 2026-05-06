@@ -13,6 +13,9 @@ interface EntityData {
   hopCount: number;
   health: HealthStatus;
   layer?: string;
+  // LADR-064: dataset vs entity split
+  nodeKind?: "dataset" | "entity";
+  sourceDatasetsCount?: number;
 }
 
 const HEALTH_COLORS: Record<HealthStatus, { border: string; dot: string; statusBg: string }> = {
@@ -32,18 +35,22 @@ const LAYER_ACCENT: Record<string, string> = {
 };
 
 function EntityNodeComponent({ data }: NodeProps) {
-  const { label, type, attributes, health, atRisk, layer } = data as unknown as EntityData & { atRisk?: boolean };
+  const { label, type, attributes, health, atRisk, layer, nodeKind, sourceDatasetsCount } = data as unknown as EntityData & { atRisk?: boolean };
   const Icon = type === "table" ? Table2 : type === "file" ? FileText : Database;
   const colors = HEALTH_COLORS[health ?? "unknown"];
   const layerKey = layer?.toLowerCase() ?? "raw";
   const accentColor = LAYER_ACCENT[layerKey] ?? "var(--color-border)";
+  // LADR-064: entity-nodes (silver/gold) krijgen afgeronde hoeken en subtiele achtergrond
+  const isEntity = nodeKind === "entity" || layerKey === "silver" || layerKey === "gold";
+  const borderRadius = isEntity ? "12px" : "8px";
 
   return (
     <div
-      className="rounded-lg shadow-sm overflow-hidden min-w-[200px] max-w-[280px]"
+      className="shadow-sm overflow-hidden min-w-[200px] max-w-[280px]"
       style={{
-        background: "var(--color-card)",
+        background: isEntity ? "var(--color-surface)" : "var(--color-card)",
         border: "1px solid var(--color-border)",
+        borderRadius,
         outline: health !== "unknown" ? `1.5px solid ${colors.border}` : undefined,
         outlineOffset: "-1px",
       }}
@@ -51,7 +58,7 @@ function EntityNodeComponent({ data }: NodeProps) {
       <Handle type="target" position={Position.Left} className="!w-2 !h-2" style={{ background: accentColor, border: "none" }} />
 
       {/* Layer stripe */}
-      <div style={{ height: 3, background: accentColor }} />
+      <div style={{ height: 3, background: accentColor, borderRadius: `${borderRadius} ${borderRadius} 0 0` }} />
 
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2">
@@ -59,6 +66,16 @@ function EntityNodeComponent({ data }: NodeProps) {
         <span className="text-[13px] font-semibold flex-1 leading-snug line-clamp-2" style={{ color: "var(--color-text)" }}>
           {label}
         </span>
+        {/* LADR-064: entity badge voor silver/gold nodes */}
+        {isEntity && (
+          <span
+            className="text-[9px] font-bold rounded-full px-1.5 py-0.5 shrink-0"
+            style={{ background: `${accentColor}22`, color: accentColor, border: `1px solid ${accentColor}44` }}
+            title="Business entity (silver/gold)"
+          >
+            ENTITY
+          </span>
+        )}
         {atRisk && (
           <span
             className="text-[9px] font-bold rounded px-1 py-0.5 shrink-0"
@@ -76,6 +93,16 @@ function EntityNodeComponent({ data }: NodeProps) {
           />
         )}
       </div>
+
+      {/* LADR-064: toon source datasets voor entity-nodes (1-to-many) */}
+      {isEntity && sourceDatasetsCount !== undefined && sourceDatasetsCount > 0 && (
+        <div
+          className="px-3 py-1 text-[10px]"
+          style={{ borderTop: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+        >
+          gevoed door {sourceDatasetsCount} bron{sourceDatasetsCount > 1 ? "nen" : ""}
+        </div>
+      )}
 
       {/* Attributes */}
       {attributes.length > 0 && (

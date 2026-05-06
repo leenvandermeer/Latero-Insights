@@ -455,17 +455,23 @@ export async function writeMetaLineage(
     );
 
     // 3. Upsert lineage edge (layer-scoped source en target)
+    // LADR-064: source_kind / target_kind op basis van layer
+    const sourceKind = ["silver", "gold"].includes(sourceLayer ?? "") ? "entity" : "dataset";
+    const targetKind = ["silver", "gold"].includes(targetLayer ?? "") ? "entity" : "dataset";
     await client.query(
       `
         INSERT INTO meta.lineage_edges (
           installation_id, source_dataset_id, target_dataset_id,
           first_observed_run, last_observed_run,
-          first_observed_at, last_observed_at, observation_count
-        ) VALUES ($1, $2, $3, $4, $4, $5, $5, 1)
+          first_observed_at, last_observed_at, observation_count,
+          source_kind, target_kind
+        ) VALUES ($1, $2, $3, $4, $4, $5, $5, 1, $6, $7)
         ON CONFLICT (installation_id, source_dataset_id, target_dataset_id) DO UPDATE
           SET last_observed_run  = EXCLUDED.last_observed_run,
               last_observed_at   = EXCLUDED.last_observed_at,
-              observation_count  = meta.lineage_edges.observation_count + 1
+              observation_count  = meta.lineage_edges.observation_count + 1,
+              source_kind        = EXCLUDED.source_kind,
+              target_kind        = EXCLUDED.target_kind
       `,
       [
         params.installationId,
@@ -473,8 +479,65 @@ export async function writeMetaLineage(
         targetScopedId,
         metaRunId,
         params.timestampUtc,
+        sourceKind,
+        targetKind,
       ],
     );
+
+    // 3a. LADR-064: Vul meta.entity_sources voor bronze→silver en silver→gold hops
+    //     Een entiteit (silver/gold) kan worden gevoed door meerdere bronnen.
+    if (targetKind === "entity" && sourceKind === "dataset") {
+      // Zorg eerst dat de target entity bestaat in meta.entities
+      await client.query(
+        `
+          INSERT INTO meta.entities (entity_id, installation_id, entity_name, display_name, source_system)
+          VALUES ($1, $2, $3, $3, $4)
+          ON CONFLICT (installation_id, entity_id) DO UPDATE
+            SET entity_name  = COALESCE(meta.entities.entity_name, EXCLUDED.entity_name),
+                display_name = COALESCE(meta.entities.display_name, EXCLUDED.display_name),
+                updated_at   = now()
+        `,
+        [
+          extractObjectName(params.targetEntity),
+          params.installationId,
+          extractObjectName(params.targetEntity),
+          params.sourceSystem,
+        ],
+      );
+      // Link dataset → entity in bridge-tabel
+      await client.query(
+        `
+          INSERT INTO meta.entity_sources (
+            installation_id, entity_id, source_dataset_id, source_layer,
+            first_observed_at, last_observed_at
+          ) VALUES ($1, $2, $3, $4, $5, $5)
+          ON CONFLICT (installation_id, entity_id, source_dataset_id) DO UPDATE
+            SET last_observed_at = EXCLUDED.last_observed_at
+        `,
+        [
+          params.installationId,
+          extractObjectName(params.targetEntity),
+          sourceScopedId,
+          sourceLayer ?? "bronze",
+          params.timestampUtc,
+        ],
+      );
+      // Zet ook entity_id op de target dataset-rij
+      await client.query(
+        `
+          UPDATE meta.datasets
+          SET entity_id = $1
+          WHERE installation_id = $2
+            AND dataset_id = $3
+            AND entity_id IS DISTINCT FROM $1
+        `,
+        [
+          extractObjectName(params.targetEntity),
+          params.installationId,
+          targetScopedId,
+        ],
+      );
+    }
 
     // 4. Upsert run_io voor INPUT (bron) en OUTPUT (doel) zodat status-rollup werkt
     //    ook voor datasets die alleen via lineage binnenkomen en niet via pipeline-runs.

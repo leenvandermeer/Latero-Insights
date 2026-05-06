@@ -77,6 +77,10 @@ export interface LineageEntity {
   downstream_keys: string[];
   lineage_group_id: string | null;
   last_completed_layer: string | null;
+  // LADR-064: dataset vs entity split
+  node_kind?: "dataset" | "entity";          // dataset = landing/raw/bronze, entity = silver/gold
+  entity_name?: string | null;               // leesbare entiteitsnaam (silver/gold)
+  source_datasets?: string[];                // bronze dataset_ids die deze entiteit voeden (1-to-many)
 }
 
 export interface LineageAttribute {

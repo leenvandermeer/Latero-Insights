@@ -262,11 +262,20 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
         SELECT DISTINCT source_dataset_id AS dataset_id FROM meta.lineage_edges WHERE installation_id = $1
         UNION
         SELECT DISTINCT target_dataset_id AS dataset_id FROM meta.lineage_edges WHERE installation_id = $1
+      ),
+      -- LADR-064: source_datasets per silver/gold entiteit (1-to-many bridge)
+      entity_source_names AS (
+        SELECT
+          es.entity_id,
+          ARRAY_AGG(DISTINCT es.source_dataset_id ORDER BY es.source_dataset_id) AS source_datasets
+        FROM meta.entity_sources es
+        WHERE es.installation_id = $1
+        GROUP BY es.entity_id
       )
       SELECT
 
-        d.fqn                                                         AS dataset_id,
-        d.fqn                                                         AS name,
+        d.dataset_name                                                AS dataset_id,
+        d.dataset_name                                                AS name,
         -- Laag staat altijd gevuld na LADR-058 migratie (layer-scoped writes)
         COALESCE(d.layer, 'UNKNOWN')                                  AS layer,
         COALESCE(lr.latest_status, 'UNKNOWN')                         AS latest_status,
@@ -278,13 +287,21 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
         END                                                           AS end_to_end_status,
         sr.latest_success_at,
         COALESCE(up.upstream_keys,   ARRAY[]::TEXT[])              AS upstream_keys,
-        COALESCE(dn.downstream_keys, ARRAY[]::TEXT[])              AS downstream_keys
+        COALESCE(dn.downstream_keys, ARRAY[]::TEXT[])              AS downstream_keys,
+        -- LADR-064: voor silver/gold: welke bronze datasets voeden deze entiteit
+        COALESCE(es.source_datasets, ARRAY[]::TEXT[])              AS source_datasets,
+        -- node_kind: dataset voor landing/raw/bronze, entity voor silver/gold
+        CASE WHEN d.layer IN ('silver', 'gold') THEN 'entity' ELSE 'dataset' END AS node_kind,
+        COALESCE(ent.entity_name, d.dataset_name)                  AS entity_name
       FROM meta.datasets d
       JOIN all_edge_datasets aed ON aed.dataset_id = d.dataset_id
-      LEFT JOIN upstream      up ON up.dataset_id = d.dataset_id
-      LEFT JOIN downstream    dn ON dn.dataset_id = d.dataset_id
-      LEFT JOIN latest_run    lr ON lr.dataset_id = d.dataset_id
-      LEFT JOIN status_rollup sr ON sr.dataset_id = d.dataset_id
+      LEFT JOIN upstream           up  ON up.dataset_id  = d.dataset_id
+      LEFT JOIN downstream         dn  ON dn.dataset_id  = d.dataset_id
+      LEFT JOIN latest_run         lr  ON lr.dataset_id  = d.dataset_id
+      LEFT JOIN status_rollup      sr  ON sr.dataset_id  = d.dataset_id
+      LEFT JOIN entity_source_names es ON es.entity_id   = d.entity_id
+      LEFT JOIN meta.entities      ent ON ent.installation_id = d.installation_id
+                                       AND ent.entity_id      = d.entity_id
       WHERE d.installation_id = $1
         -- Exclude external/supplier nodes (unknown layer = not a managed pipeline dataset)
         AND d.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
@@ -304,6 +321,9 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
     latest_success_at: string | null;
     upstream_keys: string[] | null;
     downstream_keys: string[] | null;
+    source_datasets: string[] | null;
+    node_kind: string;
+    entity_name: string | null;
   }) => ({
     dataset_id: row.dataset_id,
     name: row.name,
@@ -315,6 +335,9 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
     downstream_keys: row.downstream_keys ?? [],
     lineage_group_id: row.dataset_id,
     last_completed_layer: row.latest_success_at ? row.layer : null,
+    source_datasets: row.source_datasets ?? [],
+    node_kind: row.node_kind,
+    entity_name: row.entity_name ?? row.name,
   })) as LineageEntity[];
 }
 

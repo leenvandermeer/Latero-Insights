@@ -53,3 +53,4 @@ Naming note:
 | [LADR-061](LADR-061-20260504-v2-navigation-and-routing.md) | 2026-05-04 | V2: Navigation en routing herstructurering — drill-down model en nieuwe routes | PROPOSED |
 | [LADR-062](LADR-062-20260504-v2-openlineage-compliance.md) | 2026-05-04 | V2: OpenLineage Event Model als primair ingest-formaat (facets, Marquez compat) | PROPOSED |
 | [LADR-063](20260504-datasets-explorer.md) | 2026-05-04 | Datasets Explorer: zichtbaarheid voor alle pipeline-lagen in Explore | ACCEPTED |
+| [LADR-064](20260506-dataset-vs-entity-split.md) | 2026-05-06 | Dataset vs Entity: conceptuele scheiding, `dataset_name`, `entity_name`, `meta.entity_sources` bridge-tabel en 1-to-many support | PROPOSED |

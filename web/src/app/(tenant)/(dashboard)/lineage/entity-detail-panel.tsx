@@ -137,6 +137,27 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
           </div>
         )}
 
+        {/* LADR-064: Bronnen (source datasets voor silver/gold entities) */}
+        {entity.source_datasets && entity.source_datasets.length > 0 && (
+          <div>
+            <dt className="text-[10px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+              Gevoed door ({entity.source_datasets.length})
+            </dt>
+            <dd className="space-y-1">
+              {entity.source_datasets.map((ds) => (
+                <div
+                  key={ds}
+                  className="text-[11px] font-mono px-2 py-1 rounded-md truncate"
+                  style={{ color: "var(--color-text-muted)", border: "1px solid var(--color-border)", background: "var(--color-surface)" }}
+                  title={ds}
+                >
+                  {ds}
+                </div>
+              ))}
+            </dd>
+          </div>
+        )}
+
         {/* Upstream */}
         {entity.upstream_keys.length > 0 && (
           <div>

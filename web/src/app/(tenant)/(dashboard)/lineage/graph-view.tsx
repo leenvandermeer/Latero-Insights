@@ -48,6 +48,9 @@ interface GraphNodeData {
   upstream_entity_fqns: string[];
   downstream_entity_fqns: string[];
   lineage_group_id: string | null;
+  // LADR-064
+  nodeKind?: "dataset" | "entity";
+  sourceDatasetsCount?: number;
 }
 
 type VirtualFileRef = {
@@ -389,6 +392,9 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
         upstream_entity_fqns: e.upstream_keys,
         downstream_entity_fqns: e.downstream_keys,
         lineage_group_id: e.lineage_group_id,
+        // LADR-064: dataset vs entity visueel onderscheid
+        nodeKind: e.node_kind ?? (["silver", "gold"].includes(e.layer.toLowerCase()) ? "entity" : "dataset"),
+        sourceDatasetsCount: e.source_datasets?.length ?? 0,
       };
       nodes.push({
         id: nodeId,
