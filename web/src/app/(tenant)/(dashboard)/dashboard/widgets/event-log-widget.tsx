@@ -89,7 +89,7 @@ export function EventLogWidget({ from, to, titleOverride }: Props) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-semibold truncate" style={{ color: "var(--color-text)" }}>
-                        {run.dataset_id}
+                        {run.job_name ?? run.dataset_id}
                       </p>
                       <span className="text-[10px] shrink-0" style={{ color: "var(--color-text-muted)" }}>
                         {fmtTs(run.timestamp_utc)}

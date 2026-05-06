@@ -86,10 +86,10 @@ export function RunDetail({ runId }: { runId: string }) {
       {/* Meta grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Dataset",   value: String(run.dataset_id  ?? "—") },
-          { label: "Omgeving",  value: String(run.environment ?? "—") },
-          { label: "Gestart",   value: run.started_at ? new Date(String(run.started_at)).toLocaleString() : "—" },
-          { label: "Duur",      value: run.duration_ms != null ? `${Math.round(Number(run.duration_ms) / 1000)}s` : "—" },
+          { label: "Job",         value: String(run.job_name ?? run.dataset_id ?? "—") },
+          { label: "Environment", value: String(run.environment ?? "—") },
+          { label: "Started",     value: run.started_at ? new Date(String(run.started_at)).toLocaleString() : "—" },
+          { label: "Duration",    value: run.duration_ms != null ? `${Math.round(Number(run.duration_ms) / 1000)}s` : "—" },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-lg border px-4 py-3" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
             <p className="text-xs mb-1" style={{ color: "var(--color-text-muted)" }}>{label}</p>
