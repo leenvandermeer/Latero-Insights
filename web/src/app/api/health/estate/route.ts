@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   try {
     const [products, entities, runs, issues] = await Promise.all([
       pool.query(`SELECT COUNT(*)::int AS cnt FROM meta.data_products WHERE installation_id = $1`, [installationId]),
-      pool.query(`SELECT COUNT(*)::int AS cnt FROM meta.entities WHERE installation_id = $1`, [installationId]),
+      pool.query(`SELECT COUNT(*)::int AS cnt FROM meta.entities WHERE installation_id = $1 AND is_context_node = false`, [installationId]),
       pool.query(
         `SELECT MAX(started_at) AS last_run_at,
                 MAX(CASE WHEN status = 'SUCCESS' THEN started_at END) AS last_success_at

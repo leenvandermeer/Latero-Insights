@@ -42,6 +42,21 @@ function extractLayerFromFqn(fqn: string): string | null {
 }
 
 /**
+ * Strips a layer prefix from a dataset name that follows the dbt naming convention
+ * (e.g. "silver_gemeente_arbeid" → { entityName: "gemeente_arbeid", layer: "silver" }).
+ * dbt models are often named "{layer}_{entity}" — this separates the two.
+ * Returns the original name unchanged if no known layer prefix is found.
+ */
+function stripLayerPrefix(name: string): { entityName: string; prefixLayer: string | null } {
+  for (const layer of PIPELINE_LAYERS) {
+    if (name.toLowerCase().startsWith(`${layer}_`)) {
+      return { entityName: name.slice(layer.length + 1), prefixLayer: layer };
+    }
+  }
+  return { entityName: name, prefixLayer: null };
+}
+
+/**
  * LADR-058: Layer-scoped dataset identity.
  * dataset_id in meta.datasets = "{entityName}::{layer}" (bijv. "cbs_arbeid::bronze").
  * Dit maakt iedere (entity_name, layer) combinatie uniek en voorkomt zelf-refererende edges.
@@ -79,23 +94,42 @@ export async function writeMetaPipelineRun(
   try {
     await client.query("BEGIN");
 
+    // 0. Normalise entity name: strip dbt layer prefix (e.g. "silver_gemeente_arbeid" → "gemeente_arbeid")
+    //    so the canonical entity_id is layer-independent, matching the v2 data model.
+    const { entityName, prefixLayer } = stripLayerPrefix(params.datasetId);
+    const layer = params.targetLayer ?? params.layer ?? prefixLayer ?? extractLayerFromFqn(params.datasetId);
+
+    // Upsert entity. Context nodes (e.g. "latero" where datasetId === sourceSystem)
+    // are marked is_context_node = true so they are excluded from entity listings.
+    const isContextNode = params.sourceSystem !== null && params.datasetId === params.sourceSystem;
+    await client.query(
+      `
+        INSERT INTO meta.entities (entity_id, installation_id, display_name, source_system, is_context_node)
+        VALUES ($1, $2, $1, $3, $4)
+        ON CONFLICT (installation_id, entity_id) DO UPDATE
+          SET source_system   = COALESCE(EXCLUDED.source_system, meta.entities.source_system),
+              is_context_node = meta.entities.is_context_node OR EXCLUDED.is_context_node
+      `,
+      [entityName, params.installationId, params.sourceSystem, isContextNode],
+    );
+
     // 1. Upsert dataset (LADR-058: layer-scoped dataset_id)
     const objectName = extractObjectName(params.datasetId);
     const namespace = extractNamespace(params.datasetId);
-    // targetLayer heeft prioriteit over step-afleiding — runs schrijven naar de target-laag
-    const layer = params.targetLayer ?? params.layer ?? params.step?.toLowerCase() ?? extractLayerFromFqn(params.datasetId);
-    const scopedDatasetId = layerScopedId(params.datasetId, layer);
+    const scopedDatasetId = layerScopedId(entityName, layer);
     await client.query(
       `
         INSERT INTO meta.datasets (
           dataset_id, installation_id, fqn, namespace, object_name,
-          platform, entity_type, source_system, layer, group_id
-        ) VALUES ($1, $2, $3, $4, $5, 'UNKNOWN', 'TABLE', $6, $7, $3)
+          platform, entity_type, source_system, layer, group_id, entity_id
+        ) VALUES ($1, $2, $3, $4, $5, 'UNKNOWN', 'TABLE', $6, $7, $3, $3)
         ON CONFLICT (installation_id, dataset_id) DO UPDATE
           SET last_seen_at  = now(),
+              object_name   = EXCLUDED.object_name,
+              entity_id     = COALESCE(meta.datasets.entity_id, EXCLUDED.entity_id),
               source_system = COALESCE(EXCLUDED.source_system, meta.datasets.source_system)
       `,
-      [scopedDatasetId, params.installationId, params.datasetId, namespace, objectName, params.sourceSystem, layer],
+      [scopedDatasetId, params.installationId, entityName, namespace, objectName, params.sourceSystem, layer],
     );
 
     // 2. Upsert job (job_name = dataset_id:step)

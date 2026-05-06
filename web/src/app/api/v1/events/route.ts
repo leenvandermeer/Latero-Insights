@@ -109,31 +109,35 @@ async function processOLEvent(
 
   const scopedDatasetId = layerScopedId(jobEntity, jobLayer);
 
-  // 1. Upsert dataset
+  // 1. Upsert entity (V2)
+  // Context nodes: job namespace IS the entity itself (e.g. "latero" processing "latero")
+  const jobIsContextNode = jobEntity === jobNamespace.replace(/^[a-z]+:\/\//, "").split("/")[0];
+  await pool.query(
+    `INSERT INTO meta.entities (entity_id, installation_id, display_name, is_context_node)
+     VALUES ($1, $2, $1, $3)
+     ON CONFLICT (installation_id, entity_id) DO UPDATE
+       SET is_context_node = meta.entities.is_context_node OR EXCLUDED.is_context_node`,
+    [jobEntity, installationId, jobIsContextNode]
+  );
+
+  // 2. Upsert dataset
   await pool.query(
     `INSERT INTO meta.datasets (dataset_id, installation_id, fqn, namespace, object_name,
-       platform, entity_type, layer, group_id)
-     VALUES ($1, $2, $3, $4, $5, 'UNKNOWN', 'TABLE', $6, $3)
+       platform, entity_type, layer, group_id, entity_id)
+     VALUES ($1, $2, $3, $4, $5, 'UNKNOWN', 'TABLE', $6, $3, $3)
      ON CONFLICT (installation_id, dataset_id) DO UPDATE
        SET last_seen_at = now(),
+           entity_id = COALESCE(meta.datasets.entity_id, EXCLUDED.entity_id),
            dataset_facets = COALESCE(meta.datasets.dataset_facets, '{}') || $7`,
     [scopedDatasetId, installationId, jobEntity, jobNamespace, jobEntity, jobLayer,
       JSON.stringify(jobFacets)]
-  );
-
-  // 2. Upsert entity (V2)
-  await pool.query(
-    `INSERT INTO meta.entities (entity_id, installation_id, display_name)
-     VALUES ($1, $2, $1)
-     ON CONFLICT (installation_id, entity_id) DO NOTHING`,
-    [jobEntity, installationId]
   );
 
   // 3. Upsert job
   const fullJobName = `${jobNamespace}/${jobName}`.replace(/^\//, "");
   const jobResult = await pool.query(
     `INSERT INTO meta.jobs (installation_id, job_name, job_type, dataset_id)
-     VALUES ($1, $2, 'OPENLINEAGE', $3)
+     VALUES ($1, $2, 'PIPELINE', $3)
      ON CONFLICT (installation_id, job_name) DO UPDATE
        SET dataset_id = COALESCE(EXCLUDED.dataset_id, meta.jobs.dataset_id)
      RETURNING job_id`,
@@ -179,12 +183,23 @@ async function processOLEvent(
     const dsId = layerScopedId(entityName, layer);
     const dsFacets = (ds.facets as Record<string, unknown>) ?? {};
 
+    // Ensure entity exists before upserting dataset
+    const dsIsContextNode = entityName === String(ds.namespace ?? "").replace(/^[a-z]+:\/\//, "").split("/")[0];
+    await pool.query(
+      `INSERT INTO meta.entities (entity_id, installation_id, display_name, is_context_node)
+       VALUES ($1, $2, $1, $3)
+       ON CONFLICT (installation_id, entity_id) DO UPDATE
+         SET is_context_node = meta.entities.is_context_node OR EXCLUDED.is_context_node`,
+      [entityName, installationId, dsIsContextNode]
+    );
+
     await pool.query(
       `INSERT INTO meta.datasets (dataset_id, installation_id, fqn, namespace, object_name,
-         platform, entity_type, layer, group_id, dataset_facets)
-       VALUES ($1, $2, $3, $4, $3, 'UNKNOWN', 'TABLE', $5, $3, $6)
+         platform, entity_type, layer, group_id, entity_id, dataset_facets)
+       VALUES ($1, $2, $3, $4, $3, 'UNKNOWN', 'TABLE', $5, $3, $3, $6)
        ON CONFLICT (installation_id, dataset_id) DO UPDATE
          SET last_seen_at = now(),
+             entity_id = COALESCE(meta.datasets.entity_id, EXCLUDED.entity_id),
              dataset_facets = COALESCE(meta.datasets.dataset_facets, '{}') || $6`,
       [dsId, installationId, entityName, String(ds.namespace ?? ""), layer,
         JSON.stringify(dsFacets)]

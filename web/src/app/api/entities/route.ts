@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
          ), '[]'::json) AS layer_statuses
        FROM meta.entities e
        WHERE e.installation_id = $1
+         AND e.is_context_node = false
          ${filters}
        ORDER BY e.entity_id`,
       values

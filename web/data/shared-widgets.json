@@ -223,5 +223,20 @@
     "id": "e50606e8-900c-4d48-bf5c-1bb799731290",
     "installation_id": "prod_ko5o09uj9",
     "publishedAt": "2026-05-04T18:55:56.899Z"
+  },
+  {
+    "label": "Total Runs",
+    "description": "Count of pipeline runs in the selected period",
+    "templateType": "total-runs",
+    "category": "counter",
+    "defaultSize": {
+      "w": 3,
+      "h": 2,
+      "minW": 2,
+      "minH": 2
+    },
+    "id": "4a0e60bc-7872-4aca-b0a7-05f05d3951ec",
+    "installation_id": "prod_ko5o09uj9",
+    "publishedAt": "2026-05-06T11:27:06.996Z"
   }
 ]
