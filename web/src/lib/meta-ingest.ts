@@ -104,10 +104,11 @@ export async function writeMetaPipelineRun(
     const isContextNode = params.sourceSystem !== null && params.datasetId === params.sourceSystem;
     await client.query(
       `
-        INSERT INTO meta.entities (entity_id, installation_id, display_name, source_system, is_context_node)
-        VALUES ($1, $2, $1, $3, $4)
+        INSERT INTO meta.entities (entity_id, installation_id, entity_name, display_name, source_system, is_context_node)
+        VALUES ($1, $2, $1, $1, $3, $4)
         ON CONFLICT (installation_id, entity_id) DO UPDATE
-          SET source_system   = COALESCE(EXCLUDED.source_system, meta.entities.source_system),
+          SET entity_name     = COALESCE(meta.entities.entity_name, EXCLUDED.entity_name),
+              source_system   = COALESCE(EXCLUDED.source_system, meta.entities.source_system),
               is_context_node = meta.entities.is_context_node OR EXCLUDED.is_context_node
       `,
       [entityName, params.installationId, params.sourceSystem, isContextNode],
@@ -484,10 +485,11 @@ export async function writeMetaLineage(
       ],
     );
 
-    // 3a. LADR-064: Vul meta.entity_sources voor bronze→silver en silver→gold hops
-    //     Een entiteit (silver/gold) kan worden gevoed door meerdere bronnen.
-    if (targetKind === "entity" && sourceKind === "dataset") {
-      // Zorg eerst dat de target entity bestaat in meta.entities
+    // 3a. LADR-064: Vul meta.entities voor alle silver/gold targets (entity-nodes)
+    //     Vul meta.entity_sources alleen wanneer de bron een dataset is (bronze→silver, silver is niet dataset)
+    if (targetKind === "entity") {
+      const targetEntityName = extractObjectName(params.targetEntity);
+      // Altijd entiteit aanmaken voor silver/gold targets
       await client.query(
         `
           INSERT INTO meta.entities (entity_id, installation_id, entity_name, display_name, source_system)
@@ -497,32 +499,9 @@ export async function writeMetaLineage(
                 display_name = COALESCE(meta.entities.display_name, EXCLUDED.display_name),
                 updated_at   = now()
         `,
-        [
-          extractObjectName(params.targetEntity),
-          params.installationId,
-          extractObjectName(params.targetEntity),
-          params.sourceSystem,
-        ],
+        [targetEntityName, params.installationId, targetEntityName, params.sourceSystem],
       );
-      // Link dataset → entity in bridge-tabel
-      await client.query(
-        `
-          INSERT INTO meta.entity_sources (
-            installation_id, entity_id, source_dataset_id, source_layer,
-            first_observed_at, last_observed_at
-          ) VALUES ($1, $2, $3, $4, $5, $5)
-          ON CONFLICT (installation_id, entity_id, source_dataset_id) DO UPDATE
-            SET last_observed_at = EXCLUDED.last_observed_at
-        `,
-        [
-          params.installationId,
-          extractObjectName(params.targetEntity),
-          sourceScopedId,
-          sourceLayer ?? "bronze",
-          params.timestampUtc,
-        ],
-      );
-      // Zet ook entity_id op de target dataset-rij
+      // Zet entity_id op de target dataset-rij
       await client.query(
         `
           UPDATE meta.datasets
@@ -531,12 +510,28 @@ export async function writeMetaLineage(
             AND dataset_id = $3
             AND entity_id IS DISTINCT FROM $1
         `,
-        [
-          extractObjectName(params.targetEntity),
-          params.installationId,
-          targetScopedId,
-        ],
+        [targetEntityName, params.installationId, targetScopedId],
       );
+      // Vul entity_sources alleen voor dataset→entity hops (bron is een data-laag)
+      if (sourceKind === "dataset") {
+        await client.query(
+          `
+            INSERT INTO meta.entity_sources (
+              installation_id, entity_id, source_dataset_id, source_layer,
+              first_observed_at, last_observed_at
+            ) VALUES ($1, $2, $3, $4, $5, $5)
+            ON CONFLICT (installation_id, entity_id, source_dataset_id) DO UPDATE
+              SET last_observed_at = EXCLUDED.last_observed_at
+          `,
+          [
+            params.installationId,
+            targetEntityName,
+            sourceScopedId,
+            sourceLayer ?? "bronze",
+            params.timestampUtc,
+          ],
+        );
+      }
     }
 
     // 4. Upsert run_io voor INPUT (bron) en OUTPUT (doel) zodat status-rollup werkt
