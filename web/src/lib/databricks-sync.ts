@@ -14,6 +14,17 @@ function extractLayerFromFqnSync(fqn: string): string | null {
   return PIPELINE_LAYER_NAMES.has(penultimate) ? penultimate : null;
 }
 
+/**
+ * Extraheer de doellaag uit een step-naam zoals "raw_to_bronze" → "bronze".
+ * Retourneert null als de candidate geen geldige laagnaam is.
+ */
+function extractTargetLayerFromStep(step?: string | null): string | null {
+  if (!step) return null;
+  const parts = step.toLowerCase().split("_to_");
+  const candidate = parts[parts.length - 1];
+  return PIPELINE_LAYER_NAMES.has(candidate) ? candidate : null;
+}
+
 export interface SyncResult {
   pipeline_runs: number;
   dq_checks: number;
@@ -76,7 +87,7 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       datasetId: run.dataset_id,
       sourceSystem: run.source_system || null,
       // LADR-058: target_layer voor correcte layer-scoped dataset_id in meta.datasets
-      targetLayer: run.target_layer ?? run.step?.toLowerCase() ?? null,
+      targetLayer: run.target_layer ?? extractTargetLayerFromStep(run.step) ?? null,
       runId: run.run_id,
       step: run.step,
       status: run.run_status,
