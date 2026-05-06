@@ -205,29 +205,8 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
         WHERE e.installation_id = $1
         GROUP BY source_dataset_id
       ),
-      -- LADR-058 fix: run_io wordt niet altijd gevuld (bijv. Python-script sync).
-      -- Gebruik meta.jobs.dataset_id (bare fqn) + step-afleiding als primaire
-      -- statusbron. split_part(...'_to_'...) + suffix-strip geeft de target layer.
+      -- run_io bevat de layer-scoped dataset_id direct (geschreven door sync)
       run_status_base AS (
-        SELECT
-          d.dataset_id,
-          r.status,
-          r.started_at,
-          r.ended_at
-        FROM meta.runs r
-        JOIN meta.jobs j USING (job_id)
-        JOIN meta.datasets d
-          ON d.installation_id = r.installation_id
-         AND d.fqn = j.dataset_id
-         AND d.layer = CASE
-               WHEN split_part(r.step, '_to_', 2)
-                      IN ('landing', 'raw', 'bronze', 'silver', 'gold')
-                 THEN split_part(r.step, '_to_', 2)
-               ELSE regexp_replace(split_part(r.step, '_to_', 2), '_.*$', '')
-             END
-        WHERE r.installation_id = $1
-        UNION ALL
-        -- API-push mode: run_io bevat de layer-scoped dataset_id direct
         SELECT d.dataset_id, r.status, r.started_at, r.ended_at
         FROM meta.run_io io
         JOIN meta.runs r USING (run_id)

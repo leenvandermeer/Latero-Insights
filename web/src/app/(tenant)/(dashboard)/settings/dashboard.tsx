@@ -129,7 +129,8 @@ export function SettingsDashboard() {
           setSyncResult({
             ok: true,
             empty: true,
-            message: `Sync voltooid — geen nieuwe records gevonden. Bestaande data ongewijzigd. (${Math.round((data.duration_ms ?? 0) / 1000)}s)`,
+            message: `Sync complete — no new records found. Existing data unchanged. (${Math.round((data.duration_ms ?? 0) / 1000)}s)`,
+
           });
         } else {
           setSyncResult({ ok: true, message: `Synced ${total} records in ${Math.round((data.duration_ms ?? 0) / 1000)}s` });

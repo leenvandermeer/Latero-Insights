@@ -28,29 +28,7 @@ interface RunEvent {
   hops: LineageHop[];
 }
 
-function buildJobName(datasetId: string, step: string): string {
-  return `${datasetId}.${step}`;
-}
-
-const STEP_LAYER_LABELS: Record<string, string> = {
-  landing: "Landing",
-  raw: "Raw",
-  bronze: "Bronze",
-  silver: "Silver",
-  gold: "Gold",
-};
-
 const STEP_LAYER_ORDER = ["landing", "raw", "bronze", "silver", "gold"];
-
-function stepToLayer(step: string): string {
-  const normalized = step.toLowerCase();
-  if (normalized.includes("to_gold") || normalized === "gold") return "gold";
-  if (normalized.includes("to_silver") || normalized === "silver") return "silver";
-  if (normalized.includes("to_bronze") || normalized === "bronze") return "bronze";
-  if (normalized.includes("to_raw") || normalized === "raw") return "raw";
-  if (normalized.includes("landing")) return "landing";
-  return normalized;
-}
 
 export function OpenLineageDashboard() {
   const { from, to, setRange } = useDateRange();
@@ -71,10 +49,10 @@ export function OpenLineageDashboard() {
       if (!byRun.has(hop.run_id)) {
         byRun.set(hop.run_id, {
           run_id: hop.run_id,
-          job_name: buildJobName(hop.dataset_id, hop.step),
+          job_name: hop.dataset_id,
           dataset_id: hop.dataset_id,
           step: hop.step,
-          layer: stepToLayer(hop.step),
+          layer: hop.step,
           timestamp: hop.timestamp_utc,
           hops: [],
         });

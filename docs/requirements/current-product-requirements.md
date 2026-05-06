@@ -220,60 +220,64 @@ Requirements:
 
 This requirement is the foundation for multi-tenant safe operation.
 
-### LINS-018 — Installatie data reset (admin) ✓ IMPLEMENTED
+### LINS-017 — (Skipped)
 
-Een admin MOET via de admin-module de operationele data van een specifieke installatie
-kunnen wissen zonder de installatie-definitie te verwijderen.
+LINS-017 was not assigned. The numbering gap is intentional and is preserved for traceability.
 
-Scope van "wissen":
+### LINS-018 — Installation data reset (admin) ✓ IMPLEMENTED
+
+An admin MUST be able to delete all operational data for a specific installation via the admin module, without removing the installation definition itself.
+
+Scope of deletion:
 - `meta.quality_results`, `meta.run_io`, `meta.lineage_columns`, `meta.lineage_edges`
 - `meta.runs`, `meta.jobs`, `meta.datasets`, `meta.entities`, `meta.data_products`
 
-Scope van "bewaren":
-- `insights_installations` rij, gebruikers, SSO-config, settings (`.cache/`)
+Scope of preservation:
+- `insights_installations` row, users, SSO config, settings (`.cache/`)
 
-Gedragsregels:
-1. Alleen uitvoerbaar door een `is_admin = true` sessie
-2. Vereist expliciete bevestiging via `installation_id`-invoer in UI
-3. Volledig geauditeerd in `admin_audit_log` (actor, target, deleted counts, timestamp)
-4. API-route: `DELETE /api/v1/admin/installations/[installation_id]/data`
-5. Response bevat deleted counts per tabel en totaal
-6. Niet reversibel
+Rules:
+1. Only executable by an `is_admin = true` session
+2. Requires explicit confirmation via `installation_id` input in the UI
+3. Fully audited in `admin_audit_log` (actor, target, deleted counts, timestamp)
+4. API route: `DELETE /api/v1/admin/installations/[installation_id]/data`
+5. Response contains deleted counts per table and total
+6. Irreversible
 
-### LINS-019 — Sync-uitkomst feedback in de UI ✓ IMPLEMENTED
+### LINS-019 — Sync outcome feedback in the UI ✓ IMPLEMENTED
 
-Na elke sync-actie MOET de gebruiker een zichtbare statusmelding zien:
-- `synced > 0`: *"Synced N records in Xs"* (groen)
-- `synced = 0`: *"Sync voltooid — geen nieuwe records gevonden. Bestaande data ongewijzigd."* (amber)
-- Fout: foutbericht (rood)
+After every sync action, the user MUST see a visible status message:
+- `synced > 0`: *"Synced N records in Xs"* (green)
+- `synced = 0`: *"Sync complete — no new records found. Existing data unchanged."* (amber)
+- Error: error message (red)
 
-Implementatie: inline feedback onder de sync-knop in de Settings-pagina.
+Implementation: inline feedback below the sync button on the Settings page.
 
-### LINS-020 — Job name als primaire identifier in de runs-tabel ✓ IMPLEMENTED
+### LINS-020 — Job name as primary identifier in the runs table ✓ IMPLEMENTED
 
-De runs-tabel op `/runs` MOET de naam van de pipeline-job tonen als primaire identifier, niet de dataset-ID.
+The runs table at `/runs` MUST show the pipeline job name as the primary identifier, not the dataset ID.
 
-Rationale: `dataset_id` (bijv. `"arbeidsmarkt"`) is een technische sleutel die niets zegt over de uitgevoerde job. De operator wil weten welke job er draaide, niet welk dataset-object werd bijgewerkt.
+Rationale: `dataset_id` (e.g. `"arbeidsmarkt"`) is a technical key that conveys nothing about the job that ran. The operator needs to know which job executed, not which dataset object was updated.
 
-Eisen:
-1. De kolom "Dataset" wordt hernoemd naar "Job"
-2. Er wordt `job_name` getoond i.p.v. `dataset_id`
-3. Als de Databricks-source een native `job_name`-kolom bevat (optioneel), wordt die waarde opgeslagen en getoond
-4. Fallback indien geen native job name: `dataset_id` — directe DB-veldwaarde, nooit geconstrueerd
-5. De `/api/runs` route retourneert `job_name` — alleen de weergave in de UI verandert
-6. Databricks-sync geeft de native `job_name` door aan `writeMetaPipelineRun` als die beschikbaar is
+Requirements:
+1. The "Dataset" column is renamed to "Job"
+2. `job_name` is shown instead of `dataset_id`
+3. If the Databricks source contains a native `job_name` column (optional), that value is stored and shown
+4. Fallback when no native job name is available: `dataset_id` — a direct DB field value, never constructed
+5. The `/api/runs` route already returns `job_name` — only the UI display changes
+6. Databricks sync passes the native `job_name` to `writeMetaPipelineRun` when available
 
-### LINS-021 — Geen gefabriceerde waarden in Postgres ✓ IMPLEMENTED
+### LINS-021 — No fabricated values in the data store ✓ IMPLEMENTED
 
-Alle waarden die naar Postgres worden geschreven MOETEN afkomstig zijn uit directe databasevelden van de bron (Databricks). Constructie, parsing of afleiding van waarden is verboden.
+All values written to Postgres or derived in read queries and UI logic MUST originate from direct database fields of the source (Databricks or API ingest). Construction, parsing, or derivation of values is forbidden.
 
-Verboden patronen:
-- Layer afleiden uit step-naam (bijv. `"raw_to_bronze"` → `"bronze"`) — `extractTargetLayerFromStep` verwijderd
-- Layer afleiden uit FQN (bijv. `"workspace.bronze.fact_sales"` → `"bronze"`) — `extractLayerFromFqn` verwijderd
-- Job name construeren als `{dataset_id}:{step}` — verwijderd; fallback is `dataset_id` (directe DB-waarde)
-- Layer prefix strippen uit entiteitnamen (bijv. `"silver_gemeente_arbeid"` → `"gemeente_arbeid"`) — `stripLayerPrefix` verwijderd
+Forbidden patterns:
+- Deriving layer from a step name (e.g. `"raw_to_bronze"` → `"bronze"`) — `extractTargetLayerFromStep` removed
+- Deriving layer from an FQN (e.g. `"workspace.bronze.fact_sales"` → `"bronze"`) — `extractLayerFromFqn` removed
+- Constructing a job name as `{dataset_id}:{step}` or `{dataset_id}.{step}` — removed; fallback is `dataset_id` (direct DB value)
+- Stripping layer prefixes from entity names (e.g. `"silver_gemeente_arbeid"` → `"gemeente_arbeid"`) — `stripLayerPrefix` removed
+- SQL `split_part(step, '_to_', N)` or `regexp_replace` to derive layer from step — removed from read queries
 
-Toegestaan: `null` schrijven als een veld niet aanwezig is in de bron.
+Allowed: writing `null` when a field is absent in the source.
 
 ## Implemented (was Deferred Backlog)
 

@@ -60,7 +60,7 @@ export default function AdminInstallationDetailPage() {
       });
       const data = await res.json() as { success?: boolean; total_deleted?: number; error?: string };
       if (res.ok && data.success) {
-        setClearResult({ ok: true, message: `Verwijderd — ${data.total_deleted ?? 0} records gewist.` });
+        setClearResult({ ok: true, message: `Cleared — ${data.total_deleted ?? 0} records deleted.` });
         setShowClearConfirm(false);
         setClearConfirmInput("");
       } else {
@@ -278,8 +278,8 @@ export default function AdminInstallationDetailPage() {
           <div>
             <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>Clear operational data</p>
             <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-              Verwijdert alle runs, entities, lineage en DQ-resultaten voor deze installatie.
-              De installatie-definitie, gebruikers en API-sleutel blijven intact. Onherstelbaar.
+              Permanently removes all runs, entities, lineage and DQ results for this installation.
+              The installation definition, users and API key are preserved. This action is irreversible.
             </p>
           </div>
           <button
@@ -308,11 +308,11 @@ export default function AdminInstallationDetailPage() {
               <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Clear installation data?</h3>
             </div>
             <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Dit verwijdert alle operationele data voor <strong>{installationId}</strong>. Runs, entities, lineage en DQ-resultaten worden permanent gewist. Dit kan niet ongedaan worden gemaakt.
+              This will permanently delete all operational data for <strong>{installationId}</strong>. Runs, entities, lineage and DQ results will be erased. This cannot be undone.
             </p>
             <div className="space-y-1.5">
               <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-                Typ <code className="rounded px-1 py-0.5" style={{ background: "var(--color-bg)", color: "var(--color-text)" }}>{installationId}</code> ter bevestiging
+                Type <code className="rounded px-1 py-0.5" style={{ background: "var(--color-bg)", color: "var(--color-text)" }}>{installationId}</code> to confirm
               </label>
               <input
                 type="text"
@@ -338,7 +338,7 @@ export default function AdminInstallationDetailPage() {
                 className="rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
                 style={{ background: "var(--color-error, #dc2626)" }}
               >
-                {isClearing ? "Clearing…" : "Ja, verwijder alle data"}
+                {isClearing ? "Clearing…" : "Yes, delete all data"}
               </button>
             </div>
           </div>

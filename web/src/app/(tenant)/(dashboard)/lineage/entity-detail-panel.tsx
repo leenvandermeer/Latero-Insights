@@ -141,7 +141,7 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
         {entity.source_datasets && entity.source_datasets.length > 0 && (
           <div>
             <dt className="text-[10px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: "var(--color-text-muted)" }}>
-              Gevoed door ({entity.source_datasets.length})
+              Fed by ({entity.source_datasets.length})
             </dt>
             <dd className="space-y-1">
               {entity.source_datasets.map((ds) => (
