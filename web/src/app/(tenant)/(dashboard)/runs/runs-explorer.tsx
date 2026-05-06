@@ -83,7 +83,7 @@ export function RunsExplorer() {
               <tr style={{ background: "var(--color-surface-subtle)", borderBottom: "1px solid var(--color-border)" }}>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Status</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Step</th>
-                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Dataset</th>
+                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Job</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Started</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Duration</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}></th>
@@ -117,7 +117,7 @@ export function RunsExplorer() {
                     </span>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: "var(--color-text)" }}>{run.step ?? "—"}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>{run.dataset_id ?? "—"}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>{run.job_name ?? run.dataset_id ?? "—"}</td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {run.started_at ? new Date(run.started_at).toLocaleString() : "—"}
                   </td>

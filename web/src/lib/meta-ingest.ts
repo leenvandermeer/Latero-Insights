@@ -81,6 +81,7 @@ function normalizeLayer(layer: string | null | undefined): string | null {
 export interface MetaPipelineRunParams {
   installationId: string;
   datasetId: string;
+  jobName?: string | null; // LINS-020: native job name van de bron (bijv. Databricks job name)
   sourceSystem: string | null;
   layer?: string | null;
   targetLayer?: string | null; // LADR-058: laag van de output-dataset (voor layer-scoped ID)
@@ -139,8 +140,8 @@ export async function writeMetaPipelineRun(
       [scopedDatasetId, params.installationId, entityName, namespace, objectName, params.sourceSystem, layer],
     );
 
-    // 2. Upsert job (job_name = dataset_id:step)
-    const jobName = `${params.datasetId}:${params.step}`;
+    // 2. Upsert job (job_name: gebruik native naam indien beschikbaar — LINS-020)
+    const jobName = params.jobName?.trim() || `${params.datasetId}:${params.step}`;
     const jobResult = await client.query(
       `
         INSERT INTO meta.jobs (installation_id, job_name, job_type, dataset_id)

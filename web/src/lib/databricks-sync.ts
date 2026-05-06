@@ -86,6 +86,7 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
     await writeMetaPipelineRun(pool, {
       installationId: effectiveInstallationId,
       datasetId: run.dataset_id,
+      jobName: run.job_name ?? null, // LINS-020: native Databricks job name indien aanwezig
       sourceSystem: run.source_system || null,
       // LADR-058: target_layer voor correcte layer-scoped dataset_id in meta.datasets
       targetLayer: tl,

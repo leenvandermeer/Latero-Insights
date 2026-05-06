@@ -249,6 +249,20 @@ Na elke sync-actie MOET de gebruiker een zichtbare statusmelding zien:
 
 Implementatie: inline feedback onder de sync-knop in de Settings-pagina.
 
+### LINS-020 — Job name als primaire identifier in de runs-tabel ✓ IMPLEMENTED
+
+De runs-tabel op `/runs` MOET de naam van de pipeline-job tonen als primaire identifier, niet de dataset-ID.
+
+Rationale: `dataset_id` (bijv. `"arbeidsmarkt"`) is een technische sleutel die niets zegt over de uitgevoerde job. De operator wil weten welke job er draaide, niet welk dataset-object werd bijgewerkt.
+
+Eisen:
+1. De kolom "Dataset" wordt hernoemd naar "Job"
+2. Er wordt `job_name` getoond i.p.v. `dataset_id`
+3. Als de Databricks-source een native `job_name`-kolom bevat (optioneel), wordt die waarde opgeslagen en getoond
+4. Fallback indien geen native job name beschikbaar: `{dataset_id}:{step}` (huidig gedrag van `meta.jobs`)
+5. De `/api/runs` route retourneert `job_name` al — alleen de weergave in de UI verandert
+6. Databricks-sync geeft de native `job_name` door aan `writeMetaPipelineRun` als die beschikbaar is
+
 ## Implemented (was Deferred Backlog)
 
 ### B-001 — Full Session Auth ✓ IMPLEMENTED
