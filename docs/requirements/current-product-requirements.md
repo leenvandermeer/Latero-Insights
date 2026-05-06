@@ -259,9 +259,21 @@ Eisen:
 1. De kolom "Dataset" wordt hernoemd naar "Job"
 2. Er wordt `job_name` getoond i.p.v. `dataset_id`
 3. Als de Databricks-source een native `job_name`-kolom bevat (optioneel), wordt die waarde opgeslagen en getoond
-4. Fallback indien geen native job name beschikbaar: `{dataset_id}:{step}` (huidig gedrag van `meta.jobs`)
-5. De `/api/runs` route retourneert `job_name` al — alleen de weergave in de UI verandert
+4. Fallback indien geen native job name: `dataset_id` — directe DB-veldwaarde, nooit geconstrueerd
+5. De `/api/runs` route retourneert `job_name` — alleen de weergave in de UI verandert
 6. Databricks-sync geeft de native `job_name` door aan `writeMetaPipelineRun` als die beschikbaar is
+
+### LINS-021 — Geen gefabriceerde waarden in Postgres ✓ IMPLEMENTED
+
+Alle waarden die naar Postgres worden geschreven MOETEN afkomstig zijn uit directe databasevelden van de bron (Databricks). Constructie, parsing of afleiding van waarden is verboden.
+
+Verboden patronen:
+- Layer afleiden uit step-naam (bijv. `"raw_to_bronze"` → `"bronze"`) — `extractTargetLayerFromStep` verwijderd
+- Layer afleiden uit FQN (bijv. `"workspace.bronze.fact_sales"` → `"bronze"`) — `extractLayerFromFqn` verwijderd
+- Job name construeren als `{dataset_id}:{step}` — verwijderd; fallback is `dataset_id` (directe DB-waarde)
+- Layer prefix strippen uit entiteitnamen (bijv. `"silver_gemeente_arbeid"` → `"gemeente_arbeid"`) — `stripLayerPrefix` verwijderd
+
+Toegestaan: `null` schrijven als een veld niet aanwezig is in de bron.
 
 ## Implemented (was Deferred Backlog)
 

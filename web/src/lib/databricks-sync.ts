@@ -5,26 +5,6 @@ import { writeMetaColumnLineage, writeMetaDqCheck, writeMetaLineage, writeMetaPi
 // Fallback installation_id used when no session is available (e.g. CLI/admin triggers).
 const SYNC_INSTALLATION_ID = "databricks-sync";
 
-const PIPELINE_LAYER_NAMES = new Set(["landing", "raw", "bronze", "silver", "gold"]);
-
-/** Leid logische pipelinelaag af uit FQN (bijv. workspace.bronze.fact_sales → bronze). */
-function extractLayerFromFqnSync(fqn: string): string | null {
-  const parts = fqn.split(".").filter(Boolean);
-  const penultimate = parts.at(-2)?.toLowerCase() ?? "";
-  return PIPELINE_LAYER_NAMES.has(penultimate) ? penultimate : null;
-}
-
-/**
- * Extraheer de doellaag uit een step-naam zoals "raw_to_bronze" → "bronze".
- * Retourneert null als de candidate geen geldige laagnaam is.
- */
-function extractTargetLayerFromStep(step?: string | null): string | null {
-  if (!step) return null;
-  const parts = step.toLowerCase().split("_to_");
-  const candidate = parts[parts.length - 1];
-  return PIPELINE_LAYER_NAMES.has(candidate) ? candidate : null;
-}
-
 export interface SyncResult {
   pipeline_runs: number;
   dq_checks: number;
@@ -82,14 +62,12 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
   const attributes = await adapter.getLineageAttributes();
 
   for (const run of runs) {
-    const tl = (run.target_layer || null) ?? extractTargetLayerFromStep(run.step) ?? null;
     await writeMetaPipelineRun(pool, {
       installationId: effectiveInstallationId,
       datasetId: run.dataset_id,
-      jobName: run.job_name ?? null, // LINS-020: native Databricks job name indien aanwezig
+      jobName: run.job_name || null,
       sourceSystem: run.source_system || null,
-      // LADR-058: target_layer voor correcte layer-scoped dataset_id in meta.datasets
-      targetLayer: tl,
+      targetLayer: run.target_layer || null,
       runId: run.run_id,
       step: run.step,
       status: run.run_status,
@@ -126,9 +104,8 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       sourceAttribute: hop.source_attribute ?? null,
       targetAttribute: hop.target_attribute ?? null,
       sourceSystem: hop.source_system ?? null,
-      // Gebruik native layer uit Databricks lineage_dataset; val terug op FQN-afleiding
-      sourceLayer: (hop.source_layer || null) ?? extractLayerFromFqnSync(hop.source_entity),
-      targetLayer: (hop.target_layer || null) ?? extractLayerFromFqnSync(hop.target_entity),
+      sourceLayer: hop.source_layer || null,
+      targetLayer: hop.target_layer || null,
       timestampUtc: hop.timestamp_utc,
     });
   }

@@ -32,30 +32,6 @@ const PIPELINE_LAYERS = new Set(["landing", "raw", "bronze", "silver", "gold"]);
 
 /**
  * Leidt de logische pipeline-laag af uit een FQN in het formaat
- * "catalog.layer.table" (bijv. "workspace.bronze.fact_sales" → "bronze").
- * Retourneert null als het voorlaatste segment geen bekende laag is.
- */
-function extractLayerFromFqn(fqn: string): string | null {
-  const parts = fqn.split(".").filter(Boolean);
-  const penultimate = parts.at(-2)?.toLowerCase() ?? "";
-  return PIPELINE_LAYERS.has(penultimate) ? penultimate : null;
-}
-
-/**
- * Strips a layer prefix from a dataset name that follows the dbt naming convention
- * (e.g. "silver_gemeente_arbeid" → { entityName: "gemeente_arbeid", layer: "silver" }).
- * dbt models are often named "{layer}_{entity}" — this separates the two.
- * Returns the original name unchanged if no known layer prefix is found.
- */
-function stripLayerPrefix(name: string): { entityName: string; prefixLayer: string | null } {
-  for (const layer of PIPELINE_LAYERS) {
-    if (name.toLowerCase().startsWith(`${layer}_`)) {
-      return { entityName: name.slice(layer.length + 1), prefixLayer: layer };
-    }
-  }
-  return { entityName: name, prefixLayer: null };
-}
-
 /**
  * LADR-058: Layer-scoped dataset identity.
  * dataset_id in meta.datasets = "{entityName}::{layer}" (bijv. "cbs_arbeid::bronze").
@@ -101,10 +77,9 @@ export async function writeMetaPipelineRun(
   try {
     await client.query("BEGIN");
 
-    // 0. Normalise entity name: strip dbt layer prefix (e.g. "silver_gemeente_arbeid" → "gemeente_arbeid")
-    //    so the canonical entity_id is layer-independent, matching the v2 data model.
-    const { entityName, prefixLayer } = stripLayerPrefix(params.datasetId);
-    const layer = normalizeLayer(params.targetLayer ?? params.layer ?? prefixLayer ?? extractLayerFromFqn(params.datasetId));
+    // Entity name = dataset_id as-is from the source — no fabrication.
+    const entityName = params.datasetId;
+    const layer = normalizeLayer(params.targetLayer ?? params.layer ?? null);
 
     // Upsert entity. Context nodes (e.g. "latero" where datasetId === sourceSystem)
     // are marked is_context_node = true so they are excluded from entity listings.
@@ -140,8 +115,8 @@ export async function writeMetaPipelineRun(
       [scopedDatasetId, params.installationId, entityName, namespace, objectName, params.sourceSystem, layer],
     );
 
-    // 2. Upsert job (job_name: gebruik native naam indien beschikbaar — LINS-020)
-    const jobName = params.jobName?.trim() || `${params.datasetId}:${params.step}`;
+    // 2. Upsert job — gebruik native job_name indien aanwezig (LINS-020), anders dataset_id
+    const jobName = params.jobName?.trim() || params.datasetId;
     const jobResult = await client.query(
       `
         INSERT INTO meta.jobs (installation_id, job_name, job_type, dataset_id)
@@ -412,7 +387,7 @@ export async function writeMetaLineage(
     const sourcePlatform = normalizePlatform(params.sourceType);
     const sourceObjectName = extractObjectName(params.sourceEntity);
     const sourceNamespace = extractNamespace(params.sourceEntity);
-    const sourceLayer = normalizeLayer(params.sourceLayer ?? extractLayerFromFqn(params.sourceEntity));
+    const sourceLayer = normalizeLayer(params.sourceLayer ?? null);
     const sourceScopedId = layerScopedId(params.sourceEntity, sourceLayer);
     await client.query(
       `
@@ -440,7 +415,7 @@ export async function writeMetaLineage(
     const targetPlatform = normalizePlatform(params.targetType);
     const targetObjectName = extractObjectName(params.targetEntity);
     const targetNamespace = extractNamespace(params.targetEntity);
-    const targetLayer = normalizeLayer(params.targetLayer ?? extractLayerFromFqn(params.targetEntity));
+    const targetLayer = normalizeLayer(params.targetLayer ?? null);
     const targetScopedId = layerScopedId(params.targetEntity, targetLayer);
     await client.query(
       `
