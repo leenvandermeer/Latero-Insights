@@ -63,8 +63,14 @@ function stripLayerPrefix(name: string): { entityName: string; prefixLayer: stri
  * "unknown" wordt gebruikt als de laag niet bepaald kan worden.
  */
 function layerScopedId(entityName: string, layer: string | null | undefined): string {
-  const clean = layer?.toLowerCase().trim() ?? null;
+  const clean = layer?.toLowerCase().trim() || null; // "" → null
   return PIPELINE_LAYERS.has(clean ?? "") ? `${entityName}::${clean}` : `${entityName}::unknown`;
+}
+
+/** Normaliseert een layer-waarde: lege string of ongeldige waarde → null */
+function normalizeLayer(layer: string | null | undefined): string | null {
+  const clean = layer?.toLowerCase().trim() || null;
+  return PIPELINE_LAYERS.has(clean ?? "") ? clean : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +103,7 @@ export async function writeMetaPipelineRun(
     // 0. Normalise entity name: strip dbt layer prefix (e.g. "silver_gemeente_arbeid" → "gemeente_arbeid")
     //    so the canonical entity_id is layer-independent, matching the v2 data model.
     const { entityName, prefixLayer } = stripLayerPrefix(params.datasetId);
-    const layer = params.targetLayer ?? params.layer ?? prefixLayer ?? extractLayerFromFqn(params.datasetId);
+    const layer = normalizeLayer(params.targetLayer ?? params.layer ?? prefixLayer ?? extractLayerFromFqn(params.datasetId));
 
     // Upsert entity. Context nodes (e.g. "latero" where datasetId === sourceSystem)
     // are marked is_context_node = true so they are excluded from entity listings.
@@ -405,7 +411,7 @@ export async function writeMetaLineage(
     const sourcePlatform = normalizePlatform(params.sourceType);
     const sourceObjectName = extractObjectName(params.sourceEntity);
     const sourceNamespace = extractNamespace(params.sourceEntity);
-    const sourceLayer = params.sourceLayer ?? extractLayerFromFqn(params.sourceEntity);
+    const sourceLayer = normalizeLayer(params.sourceLayer ?? extractLayerFromFqn(params.sourceEntity));
     const sourceScopedId = layerScopedId(params.sourceEntity, sourceLayer);
     await client.query(
       `
@@ -433,7 +439,7 @@ export async function writeMetaLineage(
     const targetPlatform = normalizePlatform(params.targetType);
     const targetObjectName = extractObjectName(params.targetEntity);
     const targetNamespace = extractNamespace(params.targetEntity);
-    const targetLayer = params.targetLayer ?? extractLayerFromFqn(params.targetEntity);
+    const targetLayer = normalizeLayer(params.targetLayer ?? extractLayerFromFqn(params.targetEntity));
     const targetScopedId = layerScopedId(params.targetEntity, targetLayer);
     await client.query(
       `

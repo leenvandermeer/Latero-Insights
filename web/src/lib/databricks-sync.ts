@@ -82,12 +82,13 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
   const attributes = await adapter.getLineageAttributes();
 
   for (const run of runs) {
+    const tl = (run.target_layer || null) ?? extractTargetLayerFromStep(run.step) ?? null;
     await writeMetaPipelineRun(pool, {
       installationId: effectiveInstallationId,
       datasetId: run.dataset_id,
       sourceSystem: run.source_system || null,
       // LADR-058: target_layer voor correcte layer-scoped dataset_id in meta.datasets
-      targetLayer: run.target_layer ?? extractTargetLayerFromStep(run.step) ?? null,
+      targetLayer: tl,
       runId: run.run_id,
       step: run.step,
       status: run.run_status,
@@ -125,8 +126,8 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       targetAttribute: hop.target_attribute ?? null,
       sourceSystem: hop.source_system ?? null,
       // Gebruik native layer uit Databricks lineage_dataset; val terug op FQN-afleiding
-      sourceLayer: hop.source_layer ?? extractLayerFromFqnSync(hop.source_entity),
-      targetLayer: hop.target_layer ?? extractLayerFromFqnSync(hop.target_entity),
+      sourceLayer: (hop.source_layer || null) ?? extractLayerFromFqnSync(hop.source_entity),
+      targetLayer: (hop.target_layer || null) ?? extractLayerFromFqnSync(hop.target_entity),
       timestampUtc: hop.timestamp_utc,
     });
   }
