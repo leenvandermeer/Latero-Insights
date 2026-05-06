@@ -15,6 +15,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+### Added (2026-05-06) — LADR-064 Dataset vs Entity Split
+
+- **Structurele scheiding dataset ↔ entiteit** (`infra/sql/init/020_dataset_entity_split.sql`): Postgres-migratie die het conceptuele verschil tussen *datasets* (technische landing/raw/bronze objecten) en *entiteiten* (business objecten silver/gold) formaliseert. Voegt toe: `dataset_name` (generated column), `entity_name`, `meta.entity_sources` (brug-tabel voor 1-op-veel relaties), `source_kind`/`target_kind` op `lineage_edges`.
+- **1-op-veel entity support in `meta-ingest.ts`**: `writeMetaLineage` detecteert nu automatisch bron-laag en upsert entiteiten + `entity_sources` wanneer een dataset→entity-edge geïngesteerd wordt.
+- **Visueel onderscheid dataset/entity-nodes in lineage graph** (`entity-node.tsx`, `graph-view.tsx`): silver/gold nodes krijgen afgeronde hoeken (`border-radius: 12px`), subtiele achtergrond en een "ENTITY" badge. Dataset-nodes (landing/raw/bronze) behouden de huidige rechthoekige stijl. `sourceDatasetsCount` wordt getoond als "gevoed door N bronnen".
+- **Entity Detail Panel bronnen-sectie** (`entity-detail-panel.tsx`): toont "Gevoed door (N)" voor entiteiten met `source_datasets`, met alle bronnen als mono-labels.
+- **`node_kind`, `entity_name`, `source_datasets` in `LineageEntity` type** (`types.ts`): optionele velden voor de dataset/entity-scheiding.
+- **Postgres read-API uitgebreid** (`insights-saas-read.ts`): `getLineageEntitiesFromMetaStore` geeft nu `dataset_name`, `entity_name`, `source_datasets`, `node_kind` terug.
+- **Databricks adapter** (`databricks.ts`): `getLineageEntities` geeft nu `node_kind`, `entity_name`, `source_datasets` terug (optional-column safe via `preferredColumn`).
+- **ADR LADR-064** (`docs/decisions/20260506-dataset-vs-entity-split.md`): architectuurbesluit vastgelegd inclusief 5 work packages, conceptueel model en migratiestrategie.
+
 ### Added (2026-05-04)
 
 - **Datasets Explorer** (`/datasets`) — nieuwe pagina in de Explore-sectie die alle geobserveerde datasets uit `meta.datasets` toont, ongeacht laag. Inclusief layer-filter tabs (All / Landing / Raw / Bronze / Silver / Gold), search en tabel met medallion layer badges, platform, entity type, group_id, laatste run-status en last-seen tijdstip. Elke rij linkt naar de lineage graph met `?focus=<fqn>`. Zichtbaar voor raw/bronze-only implementaties die nog geen entiteiten hebben (LADR-063).
