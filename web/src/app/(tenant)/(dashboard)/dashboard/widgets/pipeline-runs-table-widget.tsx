@@ -109,7 +109,7 @@ export function PipelineRunsTableWidget({ from, to, titleOverride }: Props) {
                   onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "var(--color-surface)")}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")}
                 >
-                  <td className="px-4 py-2 font-medium truncate max-w-[120px]" style={{ color: "var(--color-text)" }}>{r.dataset_id}</td>
+                  <td className="px-4 py-2 font-medium truncate max-w-[120px]" style={{ color: "var(--color-text)" }}>{r.job_name ?? r.dataset_id}</td>
                   <td className="px-4 py-2" style={{ color: "var(--color-text-muted)" }}>{r.step}</td>
                   <td className="px-4 py-2">
                     <span
@@ -142,7 +142,7 @@ export function PipelineRunsTableWidget({ from, to, titleOverride }: Props) {
           <div className="mb-4 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>Run detail</p>
-              <p className="truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>{selectedRun.dataset_id}</p>
+              <p className="truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>{selectedRun.job_name ?? selectedRun.dataset_id}</p>
             </div>
             <button onClick={() => setSelectedRun(null)} className="rounded-md p-1" aria-label="Close">
               <X className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
