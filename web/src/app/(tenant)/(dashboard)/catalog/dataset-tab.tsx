@@ -126,7 +126,7 @@ function DatasetRow({
 
 // ── Tab ───────────────────────────────────────────────────────────────────────
 
-const LAYERS = ["landing", "raw", "bronze", "silver", "gold"] as const;
+const LAYERS = ["landing", "raw", "bronze"] as const;
 
 export function DatasetTab({
   q,

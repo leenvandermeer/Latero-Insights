@@ -130,7 +130,7 @@ function EntityRow({ entity, onOpenTrace }: { entity: Entity; onOpenTrace: (enti
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const LAYERS = ["landing", "raw", "bronze", "silver", "gold"] as const;
+const LAYERS = ["silver", "gold"] as const;
 const STATUSES = ["SUCCESS", "FAILED", "WARNING", "RUNNING"] as const;
 
 const STATUS_LABEL: Record<string, string> = {
