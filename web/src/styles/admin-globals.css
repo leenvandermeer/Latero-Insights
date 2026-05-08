@@ -15,67 +15,94 @@
 /* ── Admin design tokens — light mode ──────────────────────── */
 :root,
 [data-theme="light"] {
+  /* Brand */
+  --color-brand:            #1B3B6B;
+  --color-brand-hover:      #143060;
+  --color-brand-subtle:     #DCE9F5;
+  --color-accent:           #C8892A;
+  --color-accent-subtle:    #FDF5E4;
+
   /* Surfaces */
-  --color-bg:               #f8fafc;
-  --color-surface:          #ffffff;
+  --color-bg:               #FDFAF4;
+  --color-surface:          #F5EFE4;
+  --color-card:             rgba(255, 252, 246, 0.78);
+  --color-surface-alt:      #ECE4D6;
 
   /* Borders */
-  --color-border:           #e2e8f0;
-  --color-border-focus:     #1e3a5f;
+  --color-border:           #D6CCBA;
+  --color-border-focus:     #1B3B6B;
 
   /* Text */
-  --color-text:             #0f172a;
-  --color-text-muted:       #475569;
-  --color-text-subtle:      #94a3b8;
-  --color-text-on-dark:     #f8fafc;
-
-  /* Brand */
-  --color-brand:            #1e3a5f;
+  --color-text:             #1A1208;
+  --color-text-muted:       #4A3C2A;
+  --color-text-subtle:      #8A7860;
+  --color-text-on-dark:     #F5EDE0;
 
   /* Semantic — error */
-  --color-error:            #dc2626;
-  --color-error-subtle:     #fee2e2;
-  --color-error-bg:         #fee2e2;
-  --color-error-text:       #991b1b;
+  --color-error:            #EF4444;
+  --color-error-subtle:     #FEE2E2;
+  --color-error-bg:         #FEE2E2;
+  --color-error-text:       #991B1B;
 
   /* Semantic — success */
-  --color-success:          #16a34a;
-  --color-success-bg:       #dcfce7;
-  --color-success-text:     #14532d;
+  --color-success:          #10B981;
+  --color-success-bg:       #D1FAE5;
+  --color-success-text:     #065F46;
 
   /* Semantic — warning */
-  --color-warning:          #d97706;
-  --color-warning-bg:       #fef9c3;
-  --color-warning-text:     #92400e;
+  --color-warning:          #F59E0B;
+  --color-warning-bg:       #FEF3C7;
+  --color-warning-text:     #92400E;
+
+  /* Shell */
+  --color-admin-sidebar:    rgba(245, 239, 228, 0.92);
+  --color-admin-hover:      rgba(27, 59, 107, 0.08);
+  --color-admin-active-bg:  #1B3B6B;
+  --color-admin-active-text:#F5EDE0;
+
+  /* Shadow */
+  --shadow-card:            0 2px 8px rgba(27, 59, 107, 0.08), 0 8px 24px rgba(27, 59, 107, 0.07);
 }
 
 /* ── Admin design tokens — dark mode ───────────────────────── */
 [data-theme="dark"] {
-  --color-bg:               #0f172a;
-  --color-surface:          #1e293b;
+  --color-brand:            #6B96D4;
+  --color-brand-hover:      #8AB0E0;
+  --color-brand-subtle:     #1A2A40;
+  --color-accent:           #D4A840;
+  --color-accent-subtle:    #2A2010;
 
-  --color-border:           #334155;
-  --color-border-focus:     #60a5fa;
+  --color-bg:               #0F0D08;
+  --color-surface:          #1A1710;
+  --color-card:             rgba(26, 23, 16, 0.86);
+  --color-surface-alt:      #242018;
 
-  --color-text:             #f1f5f9;
-  --color-text-muted:       #94a3b8;
-  --color-text-subtle:      #64748b;
-  --color-text-on-dark:     #f1f5f9;
+  --color-border:           #3A3428;
+  --color-border-focus:     #6B96D4;
 
-  --color-brand:            #3b82f6;
+  --color-text:             #F0EBE0;
+  --color-text-muted:       #B8AE9A;
+  --color-text-subtle:      #7A7060;
+  --color-text-on-dark:     #F0EBE0;
 
-  --color-error:            #f87171;
-  --color-error-subtle:     #450a0a;
-  --color-error-bg:         #450a0a;
-  --color-error-text:       #fca5a5;
+  --color-error:            #F87171;
+  --color-error-subtle:     #7F1D1D;
+  --color-error-bg:         #3A1010;
+  --color-error-text:       #FCA5A5;
 
-  --color-success:          #4ade80;
-  --color-success-bg:       #052e16;
-  --color-success-text:     #86efac;
+  --color-success:          #34D399;
+  --color-success-bg:       #064E3B;
+  --color-success-text:     #A7F3D0;
 
-  --color-warning:          #fbbf24;
-  --color-warning-bg:       #422006;
-  --color-warning-text:     #fde68a;
+  --color-warning:          #FBBF24;
+  --color-warning-bg:       #78350F;
+  --color-warning-text:     #FDE68A;
+
+  --color-admin-sidebar:    rgba(26, 23, 16, 0.94);
+  --color-admin-hover:      rgba(107, 150, 212, 0.12);
+  --color-admin-active-bg:  #6B96D4;
+  --color-admin-active-text:#0F0D08;
+  --shadow-card:            0 2px 8px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.20);
 }
 
 html, body {
@@ -88,6 +115,13 @@ body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   line-height: 1.6;
+}
+
+.admin-theme {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(200,137,42,0.12), transparent 22%),
+    radial-gradient(circle at 85% 85%, rgba(27,59,107,0.10), transparent 26%),
+    var(--color-bg);
 }
 
 /* Form element font inheritance — alleen font, geen padding/border.

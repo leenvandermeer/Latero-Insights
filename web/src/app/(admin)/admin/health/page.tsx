@@ -1,15 +1,18 @@
 "use client";
 
+import Link from "next/link";
+import { ActivitySquare, AlertCircle, CheckCircle, Database, RefreshCw, XCircle } from "lucide-react";
 import { useAdminHealth, useAdminInstallations } from "@/hooks/use-admin";
-import { ActivitySquare, CheckCircle, AlertCircle, XCircle, Database, RefreshCw } from "lucide-react";
+import { AdminPageHeader, AdminSectionTitle, AdminStatCard, AdminSurface } from "@/components/admin/admin-ui";
 
 function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-      style={ok
-        ? { backgroundColor: "var(--color-success-bg)", color: "var(--color-success-text)" }
-        : { backgroundColor: "var(--color-error-bg)", color: "var(--color-error-text)" }
+      style={
+        ok
+          ? { background: "var(--color-success-bg)", color: "var(--color-success-text)" }
+          : { background: "var(--color-error-bg)", color: "var(--color-error-text)" }
       }
     >
       {ok ? <CheckCircle className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
@@ -27,113 +30,111 @@ export default function AdminHealthPage() {
   const offline = installations.filter((i) => i.status === "offline");
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="flex items-center gap-3 text-3xl font-bold text-slate-900 dark:text-white">
-            <ActivitySquare className="h-8 w-8" />
-            System Health
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            Infrastructure status and tenant connectivity
-          </p>
-        </div>
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
-          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+    <div className="space-y-6">
+      <AdminPageHeader
+        eyebrow="Platform health"
+        title="Platform health"
+        actions={
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+            style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        }
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <AdminStatCard label="Connected" value={isLoading ? "—" : health?.connected ?? 0} meta="Healthy tenant connections" />
+        <AdminStatCard label="Degraded" value={isLoading ? "—" : health?.degraded ?? 0} meta="Tenants with partial platform health" />
+        <AdminStatCard label="Offline" value={isLoading ? "—" : health?.offline ?? 0} meta="Tenants that need operator attention" />
+        <AdminStatCard label="Unknown" value={isLoading ? "—" : health?.unknown ?? 0} meta="Tenants without enough health evidence" />
       </div>
 
-      {/* Infrastructure */}
-      <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white mb-4">
-          <Database className="h-5 w-5" />
-          Infrastructure
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded border border-slate-100 p-4 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">PostgreSQL</p>
-              {isLoading ? (
-                <span className="text-xs text-slate-400">—</span>
-              ) : (
-                <StatusBadge ok={health?.postgres_connection_ok ?? false} label={health?.postgres_connection_ok ? "OK" : "ERROR"} />
-              )}
-            </div>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Latency: {isLoading ? "—" : `${health?.postgres_latency_ms ?? "—"}ms`}
-            </p>
-          </div>
-          <div className="rounded border border-slate-100 p-4 dark:border-slate-800">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Avg error rate</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {isLoading ? "—" : `${(health?.avg_error_rate ?? 0).toFixed(2)}%`}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Tenant status summary */}
-      <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Tenant status</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: "Connected", value: health?.connected, color: "var(--color-success-text)", bg: "var(--color-success-bg)" },
-            { label: "Degraded", value: health?.degraded, color: "var(--color-warning-text)", bg: "var(--color-warning-bg)" },
-            { label: "Offline", value: health?.offline, color: "var(--color-error-text)", bg: "var(--color-error-bg)" },
-            { label: "Unknown", value: health?.unknown, color: "var(--color-text-muted)", bg: "var(--color-surface-alt)" },
-          ].map(({ label, value, color, bg }) => (
-            <div key={label} className="rounded-lg p-4 text-center" style={{ background: bg }}>
-              <p className="text-2xl font-bold" style={{ color }}>{isLoading ? "—" : (value ?? 0)}</p>
-              <p className="text-xs font-medium mt-1" style={{ color }}>{label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Attention required */}
-      {(degraded.length > 0 || offline.length > 0) && (
-        <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white mb-4">
-            <AlertCircle className="h-5 w-5" style={{ color: "var(--color-error)" }} />
-            Attention required
-          </h2>
-          <div className="space-y-2">
-            {[...offline, ...degraded].map((inst) => (
-              <div key={inst.installation_id} className="flex items-center justify-between rounded border p-3"
-                style={{
-                  borderColor: inst.status === "offline" ? "var(--color-error)" : "var(--color-warning)",
-                  background: inst.status === "offline" ? "var(--color-error-bg)" : "var(--color-warning-bg)",
-                }}
-              >
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <AdminSurface className="p-5 md:p-6">
+          <AdminSectionTitle title="Infrastructure" />
+          <div className="grid gap-3">
+            <div className="rounded-2xl border p-4" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium" style={{ color: inst.status === "offline" ? "var(--color-error-text)" : "var(--color-warning-text)" }}>
-                    {inst.label ?? inst.installation_id}
-                  </p>
-                  <p className="text-xs" style={{ color: inst.status === "offline" ? "var(--color-error-text)" : "var(--color-warning-text)", opacity: 0.8 }}>
-                    {inst.installation_id} · {inst.status}
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>PostgreSQL</p>
+                  <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
+                    Latency {isLoading ? "—" : `${health?.postgres_latency_ms ?? "—"}ms`}
                   </p>
                 </div>
-                <a
-                  href={`/admin/installations/${inst.installation_id}`}
-                  className="rounded border px-2 py-1 text-xs font-medium hover:opacity-80"
-                  style={{ borderColor: inst.status === "offline" ? "var(--color-error-text)" : "var(--color-warning-text)", color: inst.status === "offline" ? "var(--color-error-text)" : "var(--color-warning-text)" }}
-                >
-                  View
-                </a>
+                {isLoading ? (
+                  <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>—</span>
+                ) : (
+                  <StatusBadge ok={health?.postgres_connection_ok ?? false} label={health?.postgres_connection_ok ? "Connected" : "Error"} />
+                )}
               </div>
-            ))}
+            </div>
+
+            <div className="rounded-2xl border p-4" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
+              <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Average error rate</p>
+              <p className="mt-2 text-3xl font-semibold" style={{ color: "var(--color-text)" }}>
+                {isLoading ? "—" : `${(health?.avg_error_rate ?? 0).toFixed(2)}%`}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        </AdminSurface>
+
+        <AdminSurface className="p-5 md:p-6">
+          <AdminSectionTitle title="Attention required" />
+          {degraded.length === 0 && offline.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+              No degraded or offline tenants right now.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {[...offline, ...degraded].map((inst) => (
+                <div
+                  key={inst.installation_id}
+                  className="flex flex-col gap-3 rounded-2xl border p-4 md:flex-row md:items-center md:justify-between"
+                  style={{
+                    borderColor: inst.status === "offline" ? "var(--color-error)" : "var(--color-warning)",
+                    background: inst.status === "offline" ? "var(--color-error-bg)" : "var(--color-warning-bg)",
+                  }}
+                >
+                  <div>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: inst.status === "offline" ? "var(--color-error-text)" : "var(--color-warning-text)" }}
+                    >
+                      {inst.label ?? inst.installation_id}
+                    </p>
+                    <p
+                      className="mt-1 text-xs"
+                      style={{ color: inst.status === "offline" ? "var(--color-error-text)" : "var(--color-warning-text)" }}
+                    >
+                      {inst.installation_id} · {inst.status}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/admin/installations/${inst.installation_id}`}
+                    className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold"
+                    style={{
+                      border: `1px solid ${inst.status === "offline" ? "var(--color-error-text)" : "var(--color-warning-text)"}`,
+                      color: inst.status === "offline" ? "var(--color-error-text)" : "var(--color-warning-text)",
+                    }}
+                  >
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    Open tenant
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </AdminSurface>
+      </div>
 
       {health && (
-        <p className="text-xs text-slate-400">
-          Last updated: {new Date(health.timestamp).toLocaleString()}
+        <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+          Last updated {new Date(health.timestamp).toLocaleString()}
         </p>
       )}
     </div>

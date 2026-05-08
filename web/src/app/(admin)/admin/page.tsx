@@ -1,20 +1,23 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
-import { useAdminHealth, useAdminAuditLog } from "@/hooks/use-admin";
 import {
-  Building2,
-  AlertCircle,
-  CheckCircle,
-  TrendingUp,
-  Clock,
-  Database,
-  ArrowUpRight,
-  Users,
-  ClipboardList,
   ActivitySquare,
+  Building2,
+  ClipboardList,
+  Database,
+  ShieldCheck,
+  TrendingUp,
+  Users,
 } from "lucide-react";
+import { useAdminAuditLog, useAdminHealth } from "@/hooks/use-admin";
+import {
+  AdminActionCard,
+  AdminPageHeader,
+  AdminSectionTitle,
+  AdminStatCard,
+  AdminSurface,
+} from "@/components/admin/admin-ui";
 
 function formatRelativeTime(iso: string): string {
   const date = new Date(iso).getTime();
@@ -22,15 +25,11 @@ function formatRelativeTime(iso: string): string {
   const diffSeconds = Math.max(1, Math.floor((now - date) / 1000));
 
   if (diffSeconds < 60) return `${diffSeconds}s ago`;
-
   const diffMinutes = Math.floor(diffSeconds / 60);
   if (diffMinutes < 60) return `${diffMinutes}m ago`;
-
   const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
 }
 
 export default function AdminOverviewPage() {
@@ -40,169 +39,176 @@ export default function AdminOverviewPage() {
   const actionFlows = [
     {
       href: "/admin/installations",
-      title: "Tenant Lifecycle",
-      text: "Onboard installations, manage environment metadata and rotate ingest credentials.",
-      icon: Building2,
+      title: "Installation lifecycle",
+      icon: <Building2 className="h-5 w-5" />,
     },
     {
       href: "/admin/users",
-      title: "Access & Roles",
-      text: "Control who can access which tenant and manage admin privilege boundaries.",
-      icon: Users,
+      title: "Access and roles",
+      icon: <Users className="h-5 w-5" />,
     },
     {
       href: "/admin/health",
-      title: "Reliability",
-      text: "Track service health and identify degraded tenants before incidents escalate.",
-      icon: ActivitySquare,
+      title: "Platform health",
+      icon: <ActivitySquare className="h-5 w-5" />,
     },
     {
       href: "/admin/audit",
-      title: "Audit & Compliance",
-      text: "Review admin actions across tenants with traceable operational evidence.",
-      icon: ClipboardList,
+      title: "Audit evidence",
+      icon: <ClipboardList className="h-5 w-5" />,
     },
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Latero Control Admin</h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          System overview and operational metrics
-        </p>
+    <div className="space-y-6">
+      <AdminPageHeader
+        eyebrow="Platform overview"
+        title="Platform admin"
+        actions={
+          <>
+            <Link
+              href="/admin/installations"
+              className="rounded-full px-4 py-2.5 text-sm font-semibold"
+              style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
+            >
+              Open installations
+            </Link>
+            <Link
+              href="/admin/users"
+              className="rounded-full px-4 py-2.5 text-sm font-semibold"
+              style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+            >
+              Manage users
+            </Link>
+          </>
+        }
+      />
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <AdminStatCard
+          label="Active installations"
+          value={healthLoading ? "—" : health?.active_installations || 0}
+          meta="Tenants visible in the operational product"
+        />
+        <AdminStatCard
+          label="Inactive installations"
+          value={healthLoading ? "—" : health?.inactive_installations || 0}
+          meta="Archived tenants hidden from the tenant-facing UX"
+        />
+        <AdminStatCard
+          label="Messages in 24h"
+          value={healthLoading ? "—" : (health?.total_messages_24h || 0).toLocaleString()}
+          meta="Recent ingest activity across all tenants"
+        />
+        <AdminStatCard
+          label="Average error rate"
+          value={healthLoading ? "—" : `${(health?.avg_error_rate || 0).toFixed(2)}%`}
+          meta="Cross-tenant error percentage"
+        />
       </div>
 
-      {/* Key Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {/* Active Sites */}
-        <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Active Sites
-              </p>
-              <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
-                {healthLoading ? "—" : health?.active_installations || 0}
-              </p>
-            </div>
-            <Building2 className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <AdminSurface className="p-5 md:p-6">
+          <AdminSectionTitle title="Operator flows" />
+          <div className="grid gap-3 md:grid-cols-2">
+            {actionFlows.map((flow) => (
+              <AdminActionCard key={flow.href} {...flow} />
+            ))}
           </div>
-        </div>
+        </AdminSurface>
 
-        {/* Inactive Sites */}
-        <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Inactive Sites
-              </p>
-              <p className="mt-2 text-3xl font-bold text-slate-700 dark:text-slate-300">
-                {healthLoading ? "—" : health?.inactive_installations || 0}
-              </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Archived and hidden from tenant UX
-              </p>
-            </div>
-            <ActivitySquare className="h-8 w-8 text-slate-400 dark:text-slate-500" />
-          </div>
-        </div>
-
-        {/* Messages 24h */}
-        <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Messages (24h)
-              </p>
-              <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
-                {healthLoading ? "—" : (health?.total_messages_24h || 0).toLocaleString()}
-              </p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-slate-400 dark:text-slate-600" />
-          </div>
-        </div>
-      </div>
-
-
-      {/* System Health Panel */}
-      <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
-          <Database className="h-5 w-5" />
-          System Health
-        </h2>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          {/* PostgreSQL */}
-          <div className="rounded border border-slate-100 p-4 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                PostgreSQL Connection
-              </p>
-              {health?.postgres_connection_ok ? (
-                <span className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-semibold" style={{backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success-text)'}}>
-                  <span className="h-2 w-2 rounded-full bg-current" />
-                  OK
+        <AdminSurface className="p-5 md:p-6">
+          <AdminSectionTitle title="Infrastructure health" />
+          <div className="grid gap-3">
+            <div
+              className="rounded-2xl border p-4"
+              style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                    PostgreSQL connection
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
+                    Latency {healthLoading ? "—" : `${health?.postgres_latency_ms ?? "—"}ms`}
+                  </p>
+                </div>
+                <span
+                  className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                  style={
+                    health?.postgres_connection_ok
+                      ? { background: "var(--color-success-bg)", color: "var(--color-success-text)" }
+                      : { background: "var(--color-error-bg)", color: "var(--color-error-text)" }
+                  }
+                >
+                  <Database className="mr-1.5 h-3.5 w-3.5" />
+                  {health?.postgres_connection_ok ? "Connected" : "Error"}
                 </span>
-              ) : (
-                <span className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-semibold" style={{backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)'}}>
-                  <span className="h-2 w-2 rounded-full bg-current" />
-                  ERROR
-                </span>
-              )}
+              </div>
             </div>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Latency: {health?.postgres_latency_ms}ms
-            </p>
-          </div>
 
-          {/* Error Rate */}
-          <div className="rounded border border-slate-100 p-4 dark:border-slate-800">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-              Average Error Rate
-            </p>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {healthLoading ? "—" : `${(health?.avg_error_rate || 0).toFixed(2)}%`}
-            </p>
+            <div
+              className="rounded-2xl border p-4"
+              style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                    Control posture
+                  </p>
+                </div>
+                <span
+                  className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                  style={{ background: "var(--color-brand-subtle)", color: "var(--color-brand)" }}
+                >
+                  <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+                  Admin plane
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
+        </AdminSurface>
       </div>
 
-      {/* Recent Audit Activity */}
-      <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
-          <Clock className="h-5 w-5" />
-          Recent Activity
-        </h2>
+      <AdminSurface className="p-5 md:p-6">
+        <AdminSectionTitle
+          title="Recent activity"
+          action={
+            <Link href="/admin/audit" className="text-sm font-semibold" style={{ color: "var(--color-brand)" }}>
+              Open full audit log
+            </Link>
+          }
+        />
 
-        <div className="mt-4 space-y-3">
+        <div className="space-y-3">
           {auditLoading ? (
-            <p className="text-sm text-slate-500">Loading...</p>
-          ) : auditData?.logs && auditData.logs.length > 0 ? (
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Loading activity…</p>
+          ) : auditData?.logs?.length ? (
             auditData.logs.slice(0, 5).map((log) => (
               <div
                 key={log.id}
-                className="flex items-center justify-between rounded border border-slate-100 p-3 dark:border-slate-800"
+                className="flex flex-col gap-3 rounded-2xl border p-4 md:flex-row md:items-center md:justify-between"
+                style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
               >
-                <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
                     {log.action}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {log.resource_type}: {log.resource_id}
                   </p>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                  <TrendingUp className="h-3.5 w-3.5" />
                   {formatRelativeTime(log.created_at)}
-                </p>
+                </div>
               </div>
             ))
           ) : (
-            <p className="text-sm text-slate-500">No recent activity</p>
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No recent activity yet.</p>
           )}
         </div>
-      </div>
+      </AdminSurface>
     </div>
   );
 }

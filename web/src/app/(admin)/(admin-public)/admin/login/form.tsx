@@ -94,7 +94,10 @@ export function AdminLoginForm() {
   });
 
   return (
-    <div className="w-full max-w-sm rounded-2xl p-8 shadow-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+    <div
+      className="w-full max-w-sm rounded-[28px] p-8"
+      style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-card)" }}
+    >
       {/* Header */}
       <div className="mb-8 flex flex-col items-center gap-2">
         {/* Logo: CSS-only theme switching via data-theme — geen JS, geen hydration mismatch */}
@@ -102,13 +105,13 @@ export function AdminLoginForm() {
         <img src="/logo/latero-mark-light.svg" alt="Latero" width={40} height={40} className="mb-1 block [html[data-theme=dark]_&]:hidden" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo/latero-mark-dark.svg" alt="" width={40} height={40} className="mb-1 hidden [html[data-theme=dark]_&]:block" aria-hidden="true" />
-        <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
-          Latero Control
+        <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
+          Admin sign-in
         </h1>
         <p className="text-sm text-center" style={{ color: "var(--color-text-muted)" }}>
           {step === "totp"
             ? "Enter the 6-digit code from your authenticator app."
-            : "Platform operator access. Authorised personnel only."}
+            : "Operator access."}
         </p>
       </div>
 

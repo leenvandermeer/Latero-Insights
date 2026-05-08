@@ -253,5 +253,20 @@
     "id": "52d7e88b-b51a-4a93-85dd-01a36af8a67d",
     "installation_id": "prod_ko5o09uj9",
     "publishedAt": "2026-05-08T13:07:22.949Z"
+  },
+  {
+    "label": "DQ Check Results1",
+    "description": "Table of latest data quality check results per check ID",
+    "templateType": "dq-checks-table",
+    "category": "tables",
+    "defaultSize": {
+      "w": 8,
+      "h": 3,
+      "minW": 4,
+      "minH": 2
+    },
+    "id": "0f0309cc-0aa9-48d9-9054-2bfab90396b6",
+    "installation_id": "prod_ko5o09uj9",
+    "publishedAt": "2026-05-08T14:01:57.705Z"
   }
 ]

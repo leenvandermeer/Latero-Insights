@@ -61,16 +61,50 @@ export async function GET(request: NextRequest) {
         SELECT ui.installation_id, COUNT(DISTINCT ui.user_id)::int AS user_count
         FROM insights_user_installations ui
         GROUP BY ui.installation_id
+      ),
+      catalog_installations AS (
+        SELECT
+          i.installation_id,
+          i.label,
+          i.environment,
+          i.tier,
+          i.contact_email,
+          i.active,
+          i.last_synced_at
+        FROM insights_installations i
+        UNION
+        SELECT
+          ids.installation_id,
+          NULL::text AS label,
+          NULL::text AS environment,
+          NULL::text AS tier,
+          NULL::text AS contact_email,
+          TRUE AS active,
+          NULL::timestamptz AS last_synced_at
+        FROM (
+          SELECT installation_id FROM run_metrics
+          UNION
+          SELECT installation_id FROM dq_metrics
+          UNION
+          SELECT installation_id FROM dataset_metrics
+          UNION
+          SELECT installation_id FROM user_counts
+        ) ids
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM insights_installations base
+          WHERE base.installation_id = ids.installation_id
+        )
       )
       SELECT
         i.installation_id,
-        i.label,
-        i.environment,
-        i.tier,
+        COALESCE(i.label, i.installation_id) AS label,
+        COALESCE(NULLIF(i.environment, ''), split_part(i.installation_id, '_', 1), 'tenant') AS environment,
+        COALESCE(NULLIF(i.tier, ''), 'unknown') AS tier,
         i.contact_email,
-        i.active,
+        COALESCE(i.active, TRUE) AS active,
         CASE
-          WHEN i.active = FALSE THEN 'inactive'
+          WHEN COALESCE(i.active, TRUE) = FALSE THEN 'inactive'
           WHEN lh.status IN ('connected', 'healthy') THEN 'connected'
           WHEN lh.status IN ('degraded', 'offline') THEN lh.status
           WHEN COALESCE(rm.runs_total, 0) > 0 OR COALESCE(dq.dq_total, 0) > 0 OR COALESCE(dm.datasets_total, 0) > 0 THEN 'connected'
@@ -94,7 +128,7 @@ export async function GET(request: NextRequest) {
         END as error_rate_pct,
         i.last_synced_at,
         COALESCE(uc.user_count, 0) as user_count
-      FROM insights_installations i
+      FROM catalog_installations i
       LEFT JOIN latest_health lh ON lh.installation_id = i.installation_id
       LEFT JOIN run_metrics rm ON rm.installation_id = i.installation_id
       LEFT JOIN dq_metrics dq ON dq.installation_id = i.installation_id
@@ -108,7 +142,7 @@ export async function GET(request: NextRequest) {
     if (statusFilter) {
       query += ` AND (
         CASE
-          WHEN i.active = FALSE THEN 'inactive'
+          WHEN COALESCE(i.active, TRUE) = FALSE THEN 'inactive'
           WHEN lh.status IN ('connected', 'healthy') THEN 'connected'
           WHEN lh.status IN ('degraded', 'offline') THEN lh.status
           WHEN COALESCE(rm.runs_total, 0) > 0 OR COALESCE(dq.dq_total, 0) > 0 OR COALESCE(dm.datasets_total, 0) > 0 THEN 'connected'

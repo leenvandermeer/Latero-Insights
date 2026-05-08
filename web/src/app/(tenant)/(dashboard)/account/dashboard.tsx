@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { KeyRound, ShieldCheck, ShieldOff, Copy, Check, AlertTriangle, Mail, Building2, Users, Star } from "lucide-react";
+import { useState, useRef, type FormEvent } from "react";
+import { KeyRound, ShieldCheck, ShieldOff, Copy, Check, AlertTriangle, Mail, Building2, Users, Star, Lock, Eye, EyeOff } from "lucide-react";
 import { PageHeader } from "@/components/ui";
 import { useInstallation } from "@/contexts/installation-context";
 
@@ -53,6 +53,7 @@ function SummaryCard({
 export function AccountDashboard() {
   const { user, installation, installations, defaultInstallationId } = useInstallation();
 
+  // 2FA state
   const [step, setStep] = useState<SetupStep>("idle");
   const [setupState, setSetupState] = useState<SetupState | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
@@ -63,6 +64,15 @@ export function AccountDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showDisable, setShowDisable] = useState(false);
+
+  // Change password state
+  const [cpCurrentPassword, setCpCurrentPassword] = useState("");
+  const [cpNewPassword, setCpNewPassword] = useState("");
+  const [cpConfirm, setCpConfirm] = useState("");
+  const [cpShowPass, setCpShowPass] = useState(false);
+  const [cpLoading, setCpLoading] = useState(false);
+  const [cpError, setCpError] = useState<string | null>(null);
+  const [cpSuccess, setCpSuccess] = useState(false);
 
   const codeInputRef = useRef<HTMLInputElement>(null);
 
@@ -170,6 +180,42 @@ export function AccountDashboard() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  async function handleChangePassword(e: FormEvent) {
+    e.preventDefault();
+    if (cpNewPassword.length < 8) {
+      setCpError("New password must be at least 8 characters.");
+      return;
+    }
+    if (cpNewPassword !== cpConfirm) {
+      setCpError("Passwords do not match.");
+      return;
+    }
+    setCpLoading(true);
+    setCpError(null);
+    setCpSuccess(false);
+    try {
+      const res = await fetch("/api/account/change-password", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: cpCurrentPassword, newPassword: cpNewPassword }),
+      });
+      const data = await res.json() as { message?: string; error?: string };
+      if (!res.ok) {
+        setCpError(data.error ?? "Could not change password. Please try again.");
+        return;
+      }
+      setCpSuccess(true);
+      setCpCurrentPassword("");
+      setCpNewPassword("");
+      setCpConfirm("");
+    } catch {
+      setCpError("Network error. Please try again.");
+    } finally {
+      setCpLoading(false);
+    }
   }
 
   return (
@@ -516,6 +562,91 @@ export function AccountDashboard() {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-xl p-5" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+            <div className="flex items-center gap-2 mb-4">
+              <Lock className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+              <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                Change password
+              </p>
+            </div>
+            {cpSuccess ? (
+              <div
+                className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm"
+                style={{ background: "var(--color-success-subtle, #d1fae5)", color: "var(--color-success, #10b981)" }}
+              >
+                <Check className="h-4 w-4 shrink-0" />
+                Password updated successfully.
+              </div>
+            ) : (
+              <form onSubmit={(e) => void handleChangePassword(e)} className="space-y-3">
+                {cpError && (
+                  <div
+                    className="flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs"
+                    style={{ background: "var(--color-error-subtle, #fee2e2)", color: "var(--color-error, #ef4444)", border: "1px solid rgba(239,68,68,0.18)" }}
+                  >
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>{cpError}</span>
+                  </div>
+                )}
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--color-text)" }}>Current password</label>
+                  <input
+                    type="password"
+                    value={cpCurrentPassword}
+                    onChange={(e) => setCpCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                    className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+                    style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                    placeholder="Your current password"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--color-text)" }}>New password</label>
+                  <div className="relative">
+                    <input
+                      type={cpShowPass ? "text" : "password"}
+                      value={cpNewPassword}
+                      onChange={(e) => setCpNewPassword(e.target.value)}
+                      autoComplete="new-password"
+                      className="w-full rounded-lg px-3 py-2 pr-9 text-sm outline-none"
+                      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                      placeholder="At least 8 characters"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setCpShowPass((v) => !v)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                      style={{ color: "var(--color-text-muted)" }}
+                    >
+                      {cpShowPass ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--color-text)" }}>Confirm new password</label>
+                  <input
+                    type={cpShowPass ? "text" : "password"}
+                    value={cpConfirm}
+                    onChange={(e) => setCpConfirm(e.target.value)}
+                    autoComplete="new-password"
+                    className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+                    style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                    placeholder="Repeat new password"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={cpLoading || !cpCurrentPassword || !cpNewPassword || !cpConfirm}
+                  className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-50"
+                  style={{ background: "var(--color-brand, #1b3b6b)", color: "#fff" }}
+                >
+                  {cpLoading ? "Updating…" : "Update password"}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>

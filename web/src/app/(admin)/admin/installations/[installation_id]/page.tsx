@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Building2, Copy, Save, ShieldCheck, Trash2 } from "lucide-react";
 import { useAdminInstallation, useUpdateInstallation } from "@/hooks/use-admin";
+import { AdminPageHeader, AdminSectionTitle, AdminSurface } from "@/components/admin/admin-ui";
 
 export default function AdminInstallationDetailPage() {
   const params = useParams<{ installation_id: string }>();
@@ -94,7 +95,7 @@ export default function AdminInstallationDetailPage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-slate-500 dark:text-slate-400">Loading installation...</p>
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Loading installation...</p>
       </div>
     );
   }
@@ -102,8 +103,8 @@ export default function AdminInstallationDetailPage() {
   if (!installation) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Installation not found</h1>
-        <Link href="/admin/installations" className="text-sm text-slate-700 underline dark:text-slate-300">
+        <h1 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>Installation not found</h1>
+        <Link href="/admin/installations" className="text-sm underline" style={{ color: "var(--color-brand)" }}>
           Back to installations
         </Link>
       </div>
@@ -111,36 +112,34 @@ export default function AdminInstallationDetailPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <Link
-            href="/admin/installations"
-            className="mb-2 inline-flex items-center gap-1 text-sm"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to installations
-          </Link>
-          <h1 className="flex items-center gap-3 text-3xl font-bold" style={{ color: "var(--color-text)" }}>
-            <Building2 className="h-8 w-8" />
-            {installation.label ?? installation.installation_id}
-          </h1>
-          <p style={{ color: "var(--color-text-muted)" }}>
-            {installation.installation_id}
-          </p>
-        </div>
-        <Link
-          href={`/admin/installations/${installation.installation_id}/auth`}
-          className="inline-flex items-center gap-2 rounded px-4 py-2 text-sm font-medium"
-          style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-        >
-          <ShieldCheck className="h-4 w-4" />
-          Auth configuration
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <AdminPageHeader
+        eyebrow="Installation detail"
+        title={installation.label ?? installation.installation_id}
+        actions={
+          <>
+            <Link
+              href="/admin/installations"
+              className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold"
+              style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to installations
+            </Link>
+            <Link
+              href={`/admin/installations/${installation.installation_id}/auth`}
+              className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold"
+              style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Auth configuration
+            </Link>
+          </>
+        }
+      />
 
-      <div className="rounded-lg p-6" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
+      <AdminSurface className="p-6">
+        <AdminSectionTitle title="Installation settings" />
         <div className="mb-6">
           <button
             type="button"
@@ -155,22 +154,22 @@ export default function AdminInstallationDetailPage() {
 
         {showRotateConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-sm rounded-xl p-6 shadow-xl" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
-              <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>Rotate API key?</h3>
-              <p className="text-xs mb-5" style={{ color: "var(--color-text-muted)" }}>
+            <div className="w-full max-w-sm rounded-[28px] p-5" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-card)" }}>
+              <h3 className="mb-1 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Rotate API key?</h3>
+              <p className="mb-5 text-xs" style={{ color: "var(--color-text-muted)" }}>
                 The current key will be immediately invalidated. Any client using it will stop working until the new key is configured.
               </p>
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setShowRotateConfirm(false)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium"
+                  className="rounded-full px-3 py-1.5 text-xs font-medium"
                   style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={doRotateKey}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-white"
+                  className="rounded-full px-3 py-1.5 text-xs font-medium text-white"
                   style={{ background: "var(--color-error, #dc2626)" }}
                 >
                   Rotate key
@@ -181,7 +180,7 @@ export default function AdminInstallationDetailPage() {
         )}
 
         {newApiKey && (
-          <div className="rounded-lg border p-5 my-4" style={{borderColor: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)'}}>
+          <div className="my-4 rounded-3xl border p-5" style={{borderColor: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)'}}>
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold" style={{color: 'var(--color-warning-text)'}}>API key rotated</p>
@@ -189,19 +188,19 @@ export default function AdminInstallationDetailPage() {
               </div>
               <button
                 onClick={() => setNewApiKey(null)}
-                className="rounded border px-3 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
+                className="rounded-full border px-3 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
                 style={{borderColor: 'var(--color-warning-text)', color: 'var(--color-warning-text)'}}
               >
                 Dismiss
               </button>
             </div>
-            <div className="mt-4 rounded border p-3" style={{ background: "var(--color-surface)", borderColor: "var(--color-warning)" }}>
+            <div className="mt-4 rounded-2xl border p-3" style={{ background: "var(--color-card)", borderColor: "var(--color-warning)" }}>
               <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>API key (one-time share)</p>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <p className="truncate font-mono text-sm" style={{ color: "var(--color-text)" }}>{newApiKey}</p>
                 <button
                   onClick={() => navigator.clipboard.writeText(newApiKey)}
-                  className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium"
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-medium"
                   style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
                 >
                   <Copy className="h-3.5 w-3.5" />
@@ -211,7 +210,6 @@ export default function AdminInstallationDetailPage() {
             </div>
           </div>
         )}
-        <h2 className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>Installation settings</h2>
         <form onSubmit={handleSave} className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>Label</label>
@@ -263,7 +261,7 @@ export default function AdminInstallationDetailPage() {
             )}
           </div>
         </form>
-      </div>
+      </AdminSurface>
 
       {/* LINS-018: Danger Zone */}
       <div id="danger-zone" className="rounded-lg border-2 p-6 space-y-4" style={{ borderColor: "var(--color-error, #dc2626)" }}>
@@ -278,8 +276,7 @@ export default function AdminInstallationDetailPage() {
           <div>
             <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>Clear operational data</p>
             <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-              Permanently removes all runs, entities, lineage and DQ results for this installation.
-              The installation definition, users and API key are preserved. This action is irreversible.
+              Removes runs, entities, lineage, and DQ results. This cannot be undone.
             </p>
           </div>
           <button
@@ -302,13 +299,13 @@ export default function AdminInstallationDetailPage() {
       {/* Clear data confirmation modal */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl p-6 shadow-xl space-y-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+          <div className="w-full max-w-sm rounded-[28px] p-5 shadow-xl space-y-3" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-card)" }}>
             <div className="flex items-center gap-2">
               <Trash2 className="h-4 w-4 shrink-0" style={{ color: "var(--color-error)" }} />
               <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Clear installation data?</h3>
             </div>
             <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              This will permanently delete all operational data for <strong>{installationId}</strong>. Runs, entities, lineage and DQ results will be erased. This cannot be undone.
+              Permanently delete operational data for <strong>{installationId}</strong>.
             </p>
             <div className="space-y-1.5">
               <label className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>

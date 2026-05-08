@@ -45,7 +45,7 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   // Step 1: email input; Step 2: policy-driven login; Step 3: 2FA
-  const [step, setStep] = useState<"email" | "login" | "2fa">("email");
+  const [step, setStep] = useState<"email" | "login" | "2fa" | "forgot">("email");
   const [email, setEmail] = useState("");
   const [emailFocused, setEmailFocused] = useState(false);
   const [password, setPassword] = useState("");
@@ -57,6 +57,9 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
   const [totpCode, setTotpCode] = useState("");
   const [totpError, setTotpError] = useState<string | null>(null);
   const [totpLoading, setTotpLoading] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotDevToken, setForgotDevToken] = useState<string | null>(null);
   const totpInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -146,6 +149,27 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // ── Forgot password ──
+  async function handleForgotSubmit(e: FormEvent) {
+    e.preventDefault();
+    setForgotLoading(true);
+    try {
+      const res = await fetch("/api/auth/password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      const data = await res.json() as { message?: string; _dev_reset_token?: string };
+      setForgotSent(true);
+      if (data._dev_reset_token) setForgotDevToken(data._dev_reset_token);
+    } catch {
+      // Still show sent state to avoid info leakage
+      setForgotSent(true);
+    } finally {
+      setForgotLoading(false);
+    }
+  }
+
   // ── SSO-redirect ──
   function handleSsoClick() {
     const domain = email.trim().toLowerCase().split("@")[1] ?? "";
@@ -154,14 +178,17 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
   }
 
   const isSsoAvailable = policy?.sso_available && policy.auth_mode !== "local_only";
+  const canResetPassword = !isSsoAvailable || policy?.auth_mode === "sso_with_local_fallback" || policy?.auth_mode === "sso_with_break_glass";
   const subtitle =
     step === "2fa"
       ? "Enter the 6-digit code from your authenticator app."
-      : step === "email"
-        ? "Enter your work email to continue."
-        : isSsoAvailable
-          ? "Your organisation uses single sign-on (SSO)."
-          : "Sign in with your email and password.";
+      : step === "forgot"
+        ? "We'll send a reset link to your email address."
+        : step === "email"
+          ? "Enter your work email to continue."
+          : isSsoAvailable
+            ? "Your organisation uses single sign-on (SSO)."
+            : "Sign in with your email and password.";
 
   return (
     <div
@@ -348,6 +375,16 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
                     <><Building2 className="h-4 w-4" /> Sign in</>
                   )}
                 </button>
+                {canResetPassword && (
+                  <button
+                    type="button"
+                    onClick={() => { setForgotSent(false); setForgotDevToken(null); setStep("forgot"); }}
+                    className="w-full text-center text-xs"
+                    style={{ color: "var(--color-text-muted)" }}
+                  >
+                    Forgot password?
+                  </button>
+                )}
               </form>
             )}
 
@@ -403,6 +440,78 @@ export function InstallationGate({ children }: { children: React.ReactNode }) {
                 Use a backup code
               </button>
             </p>
+          </form>
+        )}
+
+        {step === "forgot" && (
+          <form onSubmit={handleForgotSubmit} className="space-y-4">
+            {forgotSent ? (
+              <>
+                <div
+                  className="flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm"
+                  style={{ background: "var(--color-success-subtle, #d1fae5)", color: "var(--color-success, #10b981)" }}
+                >
+                  <span>
+                    If <strong>{email}</strong> is registered, a reset link has been sent. Check your inbox.
+                  </span>
+                </div>
+                {forgotDevToken && (
+                  <div
+                    className="rounded-lg px-3 py-2.5 text-xs font-mono break-all"
+                    style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                  >
+                    <p className="mb-1 font-sans font-semibold" style={{ color: "var(--color-warning, #d97706)" }}>
+                      Dev only — reset token:
+                    </p>
+                    <a
+                      href={`/reset-password?token=${encodeURIComponent(forgotDevToken)}`}
+                      className="underline"
+                      style={{ color: "var(--color-brand, #1B3B6B)" }}
+                    >
+                      Open reset page
+                    </a>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setStep("login"); setForgotSent(false); setForgotDevToken(null); }}
+                  className="w-full text-center text-xs underline"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
+                  Back to sign in
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <Mail className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
+                  <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>{email}</span>
+                </div>
+                <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                  A reset link will be sent to this address if an account exists.
+                </p>
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+                  style={{ background: "var(--color-brand, #1B3B6B)", color: "#fff", borderRadius: 100 }}
+                >
+                  {forgotLoading ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>
+                  ) : (
+                    "Send reset link"
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep("login")}
+                  className="w-full text-center text-xs underline"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
+                  Back to sign in
+                </button>
+              </>
+            )}
           </form>
         )}
       </div>
