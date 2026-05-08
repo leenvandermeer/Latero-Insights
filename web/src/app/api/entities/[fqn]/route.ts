@@ -51,11 +51,6 @@ export async function GET(
          JOIN meta.jobs j USING (job_id)
          WHERE j.dataset_id = d.dataset_id
            AND rn.installation_id = d.installation_id
-           AND d.layer = CASE
-             WHEN split_part(rn.step, '_to_', 2) IN ('landing','raw','bronze','silver','gold')
-               THEN split_part(rn.step, '_to_', 2)
-             ELSE regexp_replace(split_part(rn.step, '_to_', 2), '_.*$', '')
-           END
          ORDER BY rn.started_at DESC
          LIMIT 1
        ) r ON true
