@@ -11,10 +11,10 @@ import { DatasetTab } from "./dataset-tab";
 type Tab = "overview" | "products" | "entities" | "datasets";
 
 const TABS: { id: Tab; label: string; Icon: React.ElementType }[] = [
-  { id: "overview",  label: "Overview", Icon: LayoutDashboard },
+  { id: "overview",  label: "Overview",      Icon: LayoutDashboard },
+  { id: "datasets",  label: "Datasets",      Icon: Database },
+  { id: "entities",  label: "Entities",      Icon: Boxes },
   { id: "products",  label: "Data Products", Icon: Package },
-  { id: "entities",  label: "Entities",       Icon: Boxes },
-  { id: "datasets",  label: "Datasets",       Icon: Database },
 ];
 
 export function CatalogHub() {
