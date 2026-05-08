@@ -196,7 +196,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     return getDashboard(store, def.id) ?? def;
   });
   const userDashboards = mounted
-    ? store.dashboards.filter((d) => !d.id.startsWith("system:"))
+    ? store.dashboards.filter((d) => !d.id.startsWith("system:") && !d.isSystem)
     : [];
 
   const value: DashboardContextValue = {

@@ -143,7 +143,19 @@ function load(installationId?: string): DashboardStoreData {
     const raw = window.localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw) as DashboardStoreData;
-      if (parsed.dashboards?.length) return parsed;
+      if (parsed.dashboards?.length) {
+        // Migration: remove ghost entries — dashboards with isSystem:true but without
+        // a "system:" id prefix are stale artefacts from previous storage layouts.
+        const cleaned = parsed.dashboards.filter(
+          (d) => !(d.isSystem && !d.id.startsWith("system:"))
+        );
+        if (cleaned.length !== parsed.dashboards.length) {
+          const migrated = { ...parsed, dashboards: cleaned };
+          try { window.localStorage.setItem(key, JSON.stringify(migrated)); } catch { /* ignore */ }
+          return migrated;
+        }
+        return parsed;
+      }
     }
   } catch {
     // ignore
