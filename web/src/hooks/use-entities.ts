@@ -8,6 +8,7 @@ export interface EntitiesFilter {
   product_id?: string;
   status?: string;
   q?: string;
+  layer?: string;
 }
 
 export function useEntities(filter: EntitiesFilter = {}) {

@@ -122,10 +122,10 @@ export function CatalogOverview({ onOpenTab, onOpenEntitiesWithFilter }: Catalog
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>
-              Catalog home
+              Catalog
             </p>
             <h2 className="mt-2 text-lg font-medium leading-snug" style={{ color: "var(--color-text)" }}>
-              Browse products, inspect business entities, and move into traceable datasets from one landing page.
+              Open products, entities, or datasets.
             </h2>
             <div className="mt-4 flex flex-wrap gap-2">
               <button
@@ -161,17 +161,17 @@ export function CatalogOverview({ onOpenTab, onOpenEntitiesWithFilter }: Catalog
             style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
           >
             <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
-              Estate pulse
+              Activity
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div>
-                <p className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>Last successful sync</p>
+                <p className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>Last sync</p>
                 <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
                   {formatTime(estate?.last_sync_at)}
                 </p>
               </div>
               <div>
-                <p className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>Latest run activity</p>
+                <p className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>Latest run</p>
                 <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
                   {formatTime(estate?.last_run_at)}
                 </p>
@@ -196,25 +196,25 @@ export function CatalogOverview({ onOpenTab, onOpenEntitiesWithFilter }: Catalog
         <SummaryCard
           label="Data products"
           value={estate?.data_product_count ?? productRows.length}
-          detail="Reusable product groupings for business-facing assets."
+          detail="Business-facing groupings."
           Icon={Package}
         />
         <SummaryCard
           label="Entities"
           value={estate?.entity_count ?? entityRows.length}
-          detail="Business entities available for ownership, trace, and health review."
+          detail="Business entities in scope."
           Icon={Boxes}
         />
         <SummaryCard
           label="Datasets"
           value={datasetRows.length}
-          detail="Physical datasets discovered across all medallion layers."
+          detail="Datasets across all layers."
           Icon={Database}
         />
         <SummaryCard
           label="DQ pass rate"
           value={estate?.dq_pass_rate != null ? `${estate.dq_pass_rate}%` : "—"}
-          detail={`${estate?.issue_count ?? 0} recent failed checks need review.`}
+          detail={`${estate?.issue_count ?? 0} recent failed checks.`}
           Icon={ShieldCheck}
           tone={estate?.dq_pass_rate == null ? "neutral" : estate.dq_pass_rate >= 90 ? "success" : estate.dq_pass_rate >= 70 ? "warning" : "error"}
         />

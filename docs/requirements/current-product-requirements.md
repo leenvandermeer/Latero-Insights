@@ -320,6 +320,51 @@ Requirements:
    last updated date, a pin toggle (for personal dashboards), and an "Open" button.
 5. No hero banner, stat cards, or template sections.
 
+---
+
+### LINS-025 — Entity vs Dataset: conceptual definition (LADR-064) ✓ IMPLEMENTED
+
+The product MUST treat **Entity** and **Dataset** as distinct concepts with a
+clear semantic boundary. This boundary MUST be reflected in the data model, the
+API surface, and the Catalog UX.
+
+**Definitions:**
+
+| Concept | Definition | Layers |
+|---------|-----------|--------|
+| **Dataset** | A physical data object tied to a specific layer and namespace. One dataset per `(name, layer)` pair. | landing, raw, bronze |
+| **Entity** | A business concept that aggregates one or more datasets across layers. An entity may span multiple layers and be fed by multiple source datasets. | silver, gold (may reference all layers) |
+
+**Normative rules:**
+1. `dataset_id` MUST be a composed key: `{dataset_name}::{layer}`.
+2. `entity_id` MUST be a stable business identifier (e.g. `gemeente_arbeid`).
+3. An entity MAY have `layer_statuses` — an array of per-layer run statuses across all datasets linked to that entity.
+4. A dataset MUST belong to exactly one layer. An entity MAY span multiple layers.
+5. The Catalog `/catalog?tab=entities` view MUST show entities. The
+   `/catalog?tab=datasets` view MUST show datasets.
+6. The distinction MUST be documented in LADR-064.
+
+---
+
+### LINS-026 — Aligned catalog filters: entity and dataset tabs (LADR-064) ✓ IMPLEMENTED
+
+The Catalog entity and dataset tabs MUST offer equivalent filter capabilities
+so operators can navigate both views consistently.
+
+Requirements:
+1. Both tabs MUST provide a **text search** input (filters by name/id).
+2. Both tabs MUST provide **layer filter** buttons (All, landing, raw, bronze, silver, gold).
+   - For entities: filters to entities that have at least one dataset in the selected layer.
+   - For datasets: filters to datasets in the selected layer (direct layer field match).
+3. The entity tab MUST additionally provide a **health status filter**
+   (All, Success, Failed, Warning, Running) — because entities aggregate
+   per-layer run statuses into a health status.
+4. All active filters MUST be reflected in the page URL as query parameters
+   (`entity_layer`, `entity_status`, `entity_q`, `dataset_layer`, `dataset_q`)
+   so filter state is shareable and bookmarkable.
+5. The empty state message MUST differentiate between "no data" and
+   "no results for current filters".
+
 ## Implemented (was Deferred Backlog)
 
 ### B-001 — Full Session Auth ✓ IMPLEMENTED

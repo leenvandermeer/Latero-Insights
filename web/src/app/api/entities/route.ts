@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
   const product_id = params.get("product_id");
   const status = params.get("status");
   const q = params.get("q");
+  const layer = params.get("layer");
 
   const pool = getPgPool();
   const values: (string)[] = [installationId!];
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
   let filters = "";
   if (product_id) { filters += ` AND e.entity_id = ANY(SELECT entity_id FROM meta.entities WHERE installation_id = $1 AND data_product_id = $${idx++})`; values.push(product_id); }
   if (q) { filters += ` AND (e.entity_id ILIKE $${idx} OR e.display_name ILIKE $${idx++})`; values.push(`%${q}%`); }
+  if (layer) { filters += ` AND EXISTS (SELECT 1 FROM meta.datasets dl WHERE dl.installation_id = e.installation_id AND dl.entity_id = e.entity_id AND dl.layer = $${idx++})`; values.push(layer); }
 
   try {
     // All entities with per-layer status

@@ -33,10 +33,10 @@ const HEALTH_COLORS: Record<HealthStatus, { border: string; dot: string; statusB
 };
 
 const LAYER_ACCENT: Record<string, string> = {
-  landing: "#6B7280",
-  raw:     "#6B7280",
+  landing: "#4E7496",
+  raw:     "#2F5D50",
   bronze:  "#B45309",
-  silver:  "#0891B2",
+  silver:  "#B8C0CC",
   gold:    "#D97706",
   file:    "#6B7280",
 };

@@ -9,11 +9,20 @@ import {
   useNodesState,
   type Edge,
   type Node,
-  type NodeTypes,
   MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ArrowDownToLine, ArrowUpFromLine, Columns3, Download, GitBranch, Network, RotateCcw } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Columns3,
+  Download,
+  GitBranch,
+  Network,
+  PanelLeftClose,
+  PanelLeftOpen,
+  RotateCcw,
+} from "lucide-react";
 import type { LineageAttribute, LineageEntity } from "@/lib/adapters/types";
 import { EntityNode } from "./entity-node";
 import { EntityDetailPanel } from "./entity-detail-panel";
@@ -61,14 +70,13 @@ interface GraphNodeData {
 }
 
 const X_SPACING = 320;
-const Y_SPACING = 210;
-const SLOT_OFFSET = 152;
+const Y_SPACING = 148;
 const DEFAULT_DEPTH = 2;
 const LAYER_ACCENT: Record<string, string> = {
-  landing: "#6B7280",
-  raw: "#6B7280",
+  landing: "#4E7496",
+  raw: "#2F5D50",
   bronze: "#B45309",
-  silver: "#0891B2",
+  silver: "#B8C0CC",
   gold: "#D97706",
 };
 const STATUS_EDGE_COLOR: Record<string, string> = {
@@ -80,25 +88,8 @@ const STATUS_EDGE_COLOR: Record<string, string> = {
   UNKNOWN: "var(--color-border)",
 };
 
-function LayerHeaderNode({ data }: { data: { label: string; accent: string } }) {
-  return (
-    <div
-      className="flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-bold uppercase tracking-widest"
-      style={{
-        border: "1px solid var(--color-border)",
-        borderLeft: `3px solid ${data.accent}`,
-        color: data.accent,
-        background: "var(--color-surface)",
-      }}
-    >
-      {data.label}
-    </div>
-  );
-}
-
-const nodeTypes: NodeTypes = {
+const nodeTypes = {
   entity: EntityNode,
-  layerHeader: LayerHeaderNode as unknown as NodeTypes["layerHeader"],
 };
 
 function statusToHealth(status: string): HealthStatus {
@@ -242,87 +233,130 @@ function buildTraceGraph(
 ) {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
-  const slotCounts = new Map<string, number>();
+  const entityByKey = new Map(entities.map((entity) => [lineageNodeKey(entity), entity]));
+  const columnByKey = new Map<string, number>();
+  const columns = new Map<number, string[]>();
 
-  for (const layer of LINEAGE_LAYER_ORDER) {
-    const idx = lineageLayerIndex(layer);
-    const y = idx * Y_SPACING;
-    nodes.push({
-      id: `__layer_header__${layer}`,
-      type: "layerHeader",
-      position: { x: -240, y: y - 46 },
-      data: { label: layer, accent: LAYER_ACCENT[layer] ?? "var(--color-border)" },
-      selectable: false,
-      draggable: false,
-      connectable: false,
-    });
-  }
-
-  const sorted = [...entities].sort((a, b) => {
-    const dirA = directions.get(lineageNodeKey(a)) ?? 0;
-    const dirB = directions.get(lineageNodeKey(b)) ?? 0;
-    const distA = distances.get(lineageNodeKey(a)) ?? 0;
-    const distB = distances.get(lineageNodeKey(b)) ?? 0;
-    return dirA - dirB || distA - distB || lineageLayerIndex(a) - lineageLayerIndex(b) || a.name.localeCompare(b.name);
-  });
-
-  for (const entity of sorted) {
+  for (const entity of entities) {
     const key = lineageNodeKey(entity);
-    const layer = entity.layer.toLowerCase();
     const distance = distances.get(key) ?? 0;
     const direction = directions.get(key) ?? 0;
     const col = direction === 0 ? 0 : direction === -1 ? -distance : distance;
-    const slotKey = `${layer}:${col}`;
-    slotCounts.set(slotKey, (slotCounts.get(slotKey) ?? 0) + 1);
+    columnByKey.set(key, col);
+    if (!columns.has(col)) columns.set(col, []);
+    columns.get(col)!.push(key);
   }
 
-  const layerSlots = new Map<string, number>();
-  for (const entity of sorted) {
-    const key = lineageNodeKey(entity);
-    const layer = entity.layer.toLowerCase();
-    const distance = distances.get(key) ?? 0;
-    const direction = directions.get(key) ?? 0;
-    const col = direction === 0 ? 0 : direction === -1 ? -distance : distance;
-    const slotKey = `${layer}:${col}`;
-    const slot = layerSlots.get(slotKey) ?? 0;
-    const slotCount = slotCounts.get(slotKey) ?? 1;
-    layerSlots.set(slotKey, slot + 1);
-    const x = col * X_SPACING;
-    const y = lineageLayerIndex(entity) * Y_SPACING + (slot - (slotCount - 1) / 2) * SLOT_OFFSET;
-
-    const data: GraphNodeData = {
-      label: lineageNodeLabel(entity),
-      nodeId: key,
-      fullFqn: entity.name,
-      type: "table",
-      ref: entity.name,
-      attributes: [],
-      hopCount: entity.upstream_keys.length + entity.downstream_keys.length,
-      health: statusToHealth(entity.latest_status),
-      layer: entity.layer,
-      latest_status: entity.latest_status,
-      end_to_end_status: entity.end_to_end_status,
-      latest_success_at: entity.latest_success_at,
-      upstream_entity_fqns: entity.upstream_keys,
-      downstream_entity_fqns: entity.downstream_keys,
-      lineage_group_id: entity.lineage_group_id,
-      nodeKind: entity.node_kind ?? (["silver", "gold"].includes(layer) ? "entity" : "dataset"),
-      sourceDatasetsCount: entity.source_datasets?.length ?? 0,
-      traceRole:
-        key === anchorKey ? "anchor"
-        : direction === -1 ? "upstream"
-        : direction === 1 ? "downstream"
-        : "neutral",
-      hopDistance: distance,
-    };
-
-    nodes.push({
-      id: key,
-      type: "entity",
-      position: { x, y },
-      draggable: true,
-      data: data as unknown as Record<string, unknown>,
+  const sortedColumns = [...columns.keys()].sort((a, b) => a - b);
+  for (const col of sortedColumns) {
+    const keys = columns.get(col)!;
+    keys.sort((a, b) => {
+      const entityA = entityByKey.get(a)!;
+      const entityB = entityByKey.get(b)!;
+      return (
+        lineageLayerIndex(entityA) - lineageLayerIndex(entityB) ||
+        lineageNodeLabel(entityA).localeCompare(lineageNodeLabel(entityB))
+      );
     });
+  }
+
+  const edgesByNode = new Map<string, string[]>();
+  for (const { source, target } of scopedEdges) {
+    if (!edgesByNode.has(source)) edgesByNode.set(source, []);
+    if (!edgesByNode.has(target)) edgesByNode.set(target, []);
+    edgesByNode.get(source)!.push(target);
+    edgesByNode.get(target)!.push(source);
+  }
+
+  const getNeighborTowardAnchor = (col: number) => {
+    if (col < 0) return col + 1;
+    if (col > 0) return col - 1;
+    return 0;
+  };
+
+  const orderMapForColumn = (keys: string[]) =>
+    new Map(keys.map((key, index) => [key, index]));
+
+  for (const col of sortedColumns) {
+    if (col === 0) continue;
+    const keys = columns.get(col)!;
+    const neighborCol = getNeighborTowardAnchor(col);
+    const neighborKeys = columns.get(neighborCol) ?? [];
+    const neighborOrder = orderMapForColumn(neighborKeys);
+
+    keys.sort((a, b) => {
+      const scoreFor = (key: string) => {
+        const neighbors = (edgesByNode.get(key) ?? []).filter(
+          (neighbor) => columnByKey.get(neighbor) === neighborCol,
+        );
+        if (neighbors.length === 0) {
+          const entity = entityByKey.get(key)!;
+          return lineageLayerIndex(entity) * 1000;
+        }
+        const total = neighbors.reduce(
+          (sum, neighbor) => sum + (neighborOrder.get(neighbor) ?? 0),
+          0,
+        );
+        return total / neighbors.length;
+      };
+
+      const scoreA = scoreFor(a);
+      const scoreB = scoreFor(b);
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      const entityA = entityByKey.get(a)!;
+      const entityB = entityByKey.get(b)!;
+      return (
+        lineageLayerIndex(entityA) - lineageLayerIndex(entityB) ||
+        lineageNodeLabel(entityA).localeCompare(lineageNodeLabel(entityB))
+      );
+    });
+  }
+
+  for (const col of sortedColumns) {
+    const keys = columns.get(col)!;
+    const count = keys.length;
+    for (let index = 0; index < count; index += 1) {
+      const key = keys[index]!;
+      const entity = entityByKey.get(key)!;
+      const distance = distances.get(key) ?? 0;
+      const direction = directions.get(key) ?? 0;
+      const x = col * X_SPACING;
+      const y = (index - (count - 1) / 2) * Y_SPACING;
+
+      const data: GraphNodeData = {
+        label: lineageNodeLabel(entity),
+        nodeId: key,
+        fullFqn: entity.name,
+        type: "table",
+        ref: entity.name,
+        attributes: [],
+        hopCount: entity.upstream_keys.length + entity.downstream_keys.length,
+        health: statusToHealth(entity.latest_status),
+        layer: entity.layer,
+        latest_status: entity.latest_status,
+        end_to_end_status: entity.end_to_end_status,
+        latest_success_at: entity.latest_success_at,
+        upstream_entity_fqns: entity.upstream_keys,
+        downstream_entity_fqns: entity.downstream_keys,
+        lineage_group_id: entity.lineage_group_id,
+        nodeKind: entity.node_kind ?? (["silver", "gold"].includes(entity.layer.toLowerCase()) ? "entity" : "dataset"),
+        sourceDatasetsCount: entity.source_datasets?.length ?? 0,
+        traceRole:
+          key === anchorKey ? "anchor"
+          : direction === -1 ? "upstream"
+          : direction === 1 ? "downstream"
+          : "neutral",
+        hopDistance: distance,
+      };
+
+      nodes.push({
+        id: key,
+        type: "entity",
+        position: { x, y },
+        draggable: true,
+        data: data as unknown as Record<string, unknown>,
+      });
+    }
   }
 
   for (const edge of scopedEdges) {
@@ -385,6 +419,21 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<TraceDisplayMode>("graph");
   const [includedLayers, setIncludedLayers] = useState<string[]>([...LINEAGE_LAYER_ORDER]);
+  const [controlsCollapsed, setControlsCollapsed] = useState(false);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem("lineage-trace-controls-collapsed");
+    if (stored === "true") {
+      setControlsCollapsed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      "lineage-trace-controls-collapsed",
+      String(controlsCollapsed),
+    );
+  }, [controlsCollapsed]);
 
   useEffect(() => {
     if (anchorKey) return;
@@ -493,189 +542,259 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
     : "Choose an anchor entity to start tracing.";
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className="relative flex h-full min-h-0">
       <aside
-        className="w-[236px] shrink-0 overflow-auto border-r px-4 py-4"
+        className={`shrink-0 overflow-auto border-r transition-[width] duration-200 ${
+          controlsCollapsed ? "w-[56px]" : "w-[236px]"
+        }`}
         style={{ borderColor: "var(--color-border)", background: "var(--color-card)" }}
       >
-        <div className="space-y-4">
-          {anchorEntity && (
+        {controlsCollapsed ? (
+          <div className="flex h-full flex-col items-center gap-3 px-2 py-3">
+            <button
+              type="button"
+              onClick={() => setControlsCollapsed(false)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+              title="Expand trace controls"
+              aria-label="Expand trace controls"
+            >
+              <PanelLeftOpen className="h-4 w-4" />
+            </button>
             <div
-              className="rounded-xl px-4 py-3"
+              className="w-full rounded-2xl px-2 py-3 text-center"
               style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
             >
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Current anchor</p>
-              <p className="mt-1 text-sm font-semibold" style={{ color: "var(--color-text)" }}>{lineageNodeLabel(anchorEntity)}</p>
-              <p className="mt-1 truncate text-[11px]" style={{ color: "var(--color-text-muted)" }}>{anchorKey}</p>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{trace.nodes.length}</p>
-                  <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>entities</p>
+              <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{trace.nodes.length}</p>
+              <p className="mt-1 text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Nodes</p>
+            </div>
+            <div
+              className="w-full rounded-2xl px-2 py-3 text-center"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+            >
+              <p className="text-[11px] font-semibold uppercase" style={{ color: "var(--color-text)" }}>{direction}</p>
+              <p className="mt-1 text-[10px]" style={{ color: "var(--color-text-muted)" }}>
+                {Number.isFinite(depth) ? `${depth} hop${depth === 1 ? "" : "s"}` : "All"}
+              </p>
+            </div>
+            <div
+              className="w-full rounded-2xl px-2 py-3 text-center"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+              title={anchorEntity ? lineageNodeLabel(anchorEntity) : "No anchor selected"}
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Anchor</p>
+              <p className="mt-1 line-clamp-3 text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
+                {anchorEntity ? lineageNodeLabel(anchorEntity) : "None"}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 px-4 py-4">
+            {anchorEntity && (
+              <div
+                className="rounded-xl px-4 py-3"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Current anchor</p>
+                  <button
+                    type="button"
+                    onClick={() => setControlsCollapsed(true)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg"
+                    style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                    title="Collapse trace controls"
+                    aria-label="Collapse trace controls"
+                  >
+                    <PanelLeftClose className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <div>
-                  <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{anchorEntity.upstream_keys.length}</p>
-                  <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>upstream</p>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{anchorEntity.downstream_keys.length}</p>
-                  <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>downstream</p>
+                <p className="mt-1 text-sm font-semibold" style={{ color: "var(--color-text)" }}>{lineageNodeLabel(anchorEntity)}</p>
+                <p className="mt-1 truncate text-[11px]" style={{ color: "var(--color-text-muted)" }}>{anchorKey}</p>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{trace.nodes.length}</p>
+                    <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>entities</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{anchorEntity.upstream_keys.length}</p>
+                    <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>upstream</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{anchorEntity.downstream_keys.length}</p>
+                    <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>downstream</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Anchor entity</p>
-            <select
-              value={anchorKey ?? ""}
-              onChange={(event) => {
-                const next = event.target.value || null;
-                setAnchorKey(next);
-                setSelectedNodeId(null);
-              }}
-              className="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
-              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
-            >
-              {entityOptions.map((option) => (
-                <option key={option.key} value={option.key}>{option.label} ({option.layer})</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Direction</p>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {([
-                { id: "upstream", label: "Upstream", Icon: ArrowUpFromLine },
-                { id: "downstream", label: "Downstream", Icon: ArrowDownToLine },
-                { id: "both", label: "Both", Icon: GitBranch },
-              ] as const).map(({ id, label, Icon }) => (
+            {!anchorEntity && (
+              <div className="flex justify-end">
                 <button
-                  key={id}
                   type="button"
-                  onClick={() => setDirection(id)}
-                  className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold"
-                  style={{
-                    background: direction === id ? "var(--color-accent)" : "var(--color-surface)",
-                    color: direction === id ? "#fff" : "var(--color-text-muted)",
-                    border: `1px solid ${direction === id ? "var(--color-accent)" : "var(--color-border)"}`,
-                  }}
+                  onClick={() => setControlsCollapsed(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg"
+                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                  title="Collapse trace controls"
+                  aria-label="Collapse trace controls"
                 >
-                  <Icon className="h-3 w-3" />
-                  {label}
+                  <PanelLeftClose className="h-3.5 w-3.5" />
                 </button>
-              ))}
-            </div>
-          </div>
+              </div>
+            )}
 
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Depth</p>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {[1, 2, 3, Number.POSITIVE_INFINITY].map((value) => (
-                <button
-                  key={Number.isFinite(value) ? value : "all"}
-                  type="button"
-                  onClick={() => setDepth(value)}
-                  className="rounded-lg px-2.5 py-1.5 text-xs font-semibold"
-                  style={{
-                    background: depth === value ? "var(--color-brand)" : "var(--color-surface)",
-                    color: depth === value ? "#fff" : "var(--color-text-muted)",
-                    border: `1px solid ${depth === value ? "var(--color-brand)" : "var(--color-border)"}`,
-                  }}
-                >
-                  {Number.isFinite(value) ? `${value} hop${value === 1 ? "" : "s"}` : "All"}
-                </button>
-              ))}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Anchor entity</p>
+              <select
+                value={anchorKey ?? ""}
+                onChange={(event) => {
+                  const next = event.target.value || null;
+                  setAnchorKey(next);
+                  setSelectedNodeId(null);
+                }}
+                className="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+              >
+                {entityOptions.map((option) => (
+                  <option key={option.key} value={option.key}>{option.label} ({option.layer})</option>
+                ))}
+              </select>
             </div>
-          </div>
 
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Layers</p>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {LINEAGE_LAYER_ORDER.map((layer) => {
-                const active = includedLayerSet.has(layer);
-                return (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Direction</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {([
+                  { id: "upstream", label: "Upstream", Icon: ArrowUpFromLine },
+                  { id: "downstream", label: "Downstream", Icon: ArrowDownToLine },
+                  { id: "both", label: "Both", Icon: GitBranch },
+                ] as const).map(({ id, label, Icon }) => (
                   <button
-                    key={layer}
+                    key={id}
                     type="button"
-                    onClick={() => setIncludedLayers((current) =>
-                      current.includes(layer)
-                        ? current.filter((item) => item !== layer)
-                        : [...current, layer]
-                    )}
-                    className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold uppercase"
+                    onClick={() => setDirection(id)}
+                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold"
                     style={{
-                      background: active ? (LAYER_ACCENT[layer] ?? "var(--color-brand)") : "var(--color-surface)",
-                      color: active ? "#fff" : "var(--color-text-muted)",
-                      border: `1px solid ${active ? (LAYER_ACCENT[layer] ?? "var(--color-brand)") : "var(--color-border)"}`,
+                      background: direction === id ? "var(--color-accent)" : "var(--color-surface)",
+                      color: direction === id ? "#fff" : "var(--color-text-muted)",
+                      border: `1px solid ${direction === id ? "var(--color-accent)" : "var(--color-border)"}`,
                     }}
                   >
-                    {layer}
+                    <Icon className="h-3 w-3" />
+                    {label}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-            <div className="mt-2 flex gap-1">
-              <button
-                type="button"
-                onClick={() => setIncludedLayers([...LINEAGE_LAYER_ORDER])}
-                className="rounded-lg px-2 py-1 text-[10px] font-semibold uppercase"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-              >
-                All layers
-              </button>
-              <button
-                type="button"
-                onClick={() => setIncludedLayers(["bronze", "silver", "gold"])}
-                className="rounded-lg px-2 py-1 text-[10px] font-semibold uppercase"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-              >
-                Core flow
-              </button>
-            </div>
-          </div>
 
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>View</p>
-            <div className="mt-1 flex gap-1">
-              {([
-                { id: "graph", label: "Graph", Icon: Network },
-                { id: "list", label: "List", Icon: Columns3 },
-              ] as const).map(({ id, label, Icon }) => (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Depth</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {[1, 2, 3, Number.POSITIVE_INFINITY].map((value) => (
+                  <button
+                    key={Number.isFinite(value) ? value : "all"}
+                    type="button"
+                    onClick={() => setDepth(value)}
+                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold"
+                    style={{
+                      background: depth === value ? "var(--color-brand)" : "var(--color-surface)",
+                      color: depth === value ? "#fff" : "var(--color-text-muted)",
+                      border: `1px solid ${depth === value ? "var(--color-brand)" : "var(--color-border)"}`,
+                    }}
+                  >
+                    {Number.isFinite(value) ? `${value} hop${value === 1 ? "" : "s"}` : "All"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Layers</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {LINEAGE_LAYER_ORDER.map((layer) => {
+                  const active = includedLayerSet.has(layer);
+                  return (
+                    <button
+                      key={layer}
+                      type="button"
+                      onClick={() => setIncludedLayers((current) =>
+                        current.includes(layer)
+                          ? current.filter((item) => item !== layer)
+                          : [...current, layer]
+                      )}
+                      className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold uppercase"
+                      style={{
+                        background: active ? (LAYER_ACCENT[layer] ?? "var(--color-brand)") : "var(--color-surface)",
+                        color: active ? "#fff" : "var(--color-text-muted)",
+                        border: `1px solid ${active ? (LAYER_ACCENT[layer] ?? "var(--color-brand)") : "var(--color-border)"}`,
+                      }}
+                    >
+                      {layer}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex gap-1">
                 <button
-                  key={id}
                   type="button"
-                  onClick={() => setDisplayMode(id)}
-                  className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold"
-                  style={{
-                    background: displayMode === id ? "var(--color-accent)" : "var(--color-surface)",
-                    color: displayMode === id ? "#fff" : "var(--color-text-muted)",
-                    border: `1px solid ${displayMode === id ? "var(--color-accent)" : "var(--color-border)"}`,
-                  }}
+                  onClick={() => setIncludedLayers([...LINEAGE_LAYER_ORDER])}
+                  className="rounded-lg px-2 py-1 text-[10px] font-semibold uppercase"
+                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
                 >
-                  <Icon className="h-3 w-3" />
-                  {label}
+                  All layers
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setIncludedLayers(["bronze", "silver", "gold"])}
+                  className="rounded-lg px-2 py-1 text-[10px] font-semibold uppercase"
+                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                >
+                  Core flow
+                </button>
+              </div>
             </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setDirection("both");
-              setDepth(DEFAULT_DEPTH);
-              setIncludedLayers([...LINEAGE_LAYER_ORDER]);
-              setDisplayMode("graph");
-              setSelectedNodeId(null);
-            }}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset trace
-          </button>
-        </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>View</p>
+              <div className="mt-1 flex gap-1">
+                {([
+                  { id: "graph", label: "Graph", Icon: Network },
+                  { id: "list", label: "List", Icon: Columns3 },
+                ] as const).map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setDisplayMode(id)}
+                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold"
+                    style={{
+                      background: displayMode === id ? "var(--color-accent)" : "var(--color-surface)",
+                      color: displayMode === id ? "#fff" : "var(--color-text-muted)",
+                      border: `1px solid ${displayMode === id ? "var(--color-accent)" : "var(--color-border)"}`,
+                    }}
+                  >
+                    <Icon className="h-3 w-3" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDirection("both");
+                setDepth(DEFAULT_DEPTH);
+                setIncludedLayers([...LINEAGE_LAYER_ORDER]);
+                setDisplayMode("graph");
+                setSelectedNodeId(null);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset trace
+            </button>
+          </div>
+        )}
       </aside>
 
       <div className="flex min-h-0 flex-1 flex-col">

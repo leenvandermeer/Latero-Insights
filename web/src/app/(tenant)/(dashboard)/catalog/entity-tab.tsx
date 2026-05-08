@@ -128,34 +128,115 @@ function EntityRow({ entity, onOpenTrace }: { entity: Entity; onOpenTrace: (enti
 
 // ── Tab ───────────────────────────────────────────────────────────────────────
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const LAYERS = ["landing", "raw", "bronze", "silver", "gold"] as const;
+const STATUSES = ["SUCCESS", "FAILED", "WARNING", "RUNNING"] as const;
+
+const STATUS_LABEL: Record<string, string> = {
+  SUCCESS: "Success",
+  FAILED: "Failed",
+  WARNING: "Warning",
+  RUNNING: "Running",
+};
+
+// ── Tab ───────────────────────────────────────────────────────────────────────
+
 export function EntityTab({
   q,
+  layer,
+  status,
   onChangeQ,
+  onChangeLayer,
+  onChangeStatus,
 }: {
   q: string;
+  layer: string;
+  status: string;
   onChangeQ: (value: string) => void;
+  onChangeLayer: (value: string) => void;
+  onChangeStatus: (value: string) => void;
 }) {
   const router = useRouter();
   const deferredQ = useDeferredValue(q);
-  const { data, isLoading, isError } = useEntities({ q: deferredQ || undefined });
+  const { data, isLoading, isError } = useEntities({
+    q: deferredQ || undefined,
+    layer: layer || undefined,
+    status: status || undefined,
+  });
   const entities = (data?.data ?? []) as Entity[];
+
+  function FilterPill({
+    active,
+    label,
+    onClick,
+  }: {
+    active: boolean;
+    label: string;
+    onClick: () => void;
+  }) {
+    return (
+      <button
+        onClick={onClick}
+        className="px-2.5 py-1 rounded text-xs font-medium"
+        style={{
+          background: active ? "var(--color-brand)" : "var(--color-surface)",
+          color: active ? "white" : "var(--color-text-muted)",
+          border: active ? "none" : "1px solid var(--color-border)",
+        }}
+      >
+        {label}
+      </button>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Search */}
-      <div
-        className="flex items-center gap-2 rounded-lg px-3 py-2"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", maxWidth: 320 }}
-      >
-        <Search className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--color-text-muted)" }} />
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => onChangeQ(e.target.value)}
-          placeholder="Search entities…"
-          className="text-sm bg-transparent outline-none w-full"
-          style={{ color: "var(--color-text)" }}
-        />
+      {/* Filters */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Search */}
+          <div
+            className="flex items-center gap-2 rounded-lg px-3 py-2"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", maxWidth: 280 }}
+          >
+            <Search className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--color-text-muted)" }} />
+            <input
+              type="text"
+              value={q}
+              onChange={(e) => onChangeQ(e.target.value)}
+              placeholder="Search entities…"
+              className="text-sm bg-transparent outline-none w-full"
+              style={{ color: "var(--color-text)" }}
+            />
+          </div>
+
+          {/* Layer filter */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <FilterPill active={layer === ""} label="All layers" onClick={() => onChangeLayer("")} />
+            {LAYERS.map((l) => (
+              <FilterPill
+                key={l}
+                active={layer === l}
+                label={l}
+                onClick={() => onChangeLayer(layer === l ? "" : l)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Status filter */}
+        <div className="flex items-center gap-1 flex-wrap">
+          <FilterPill active={status === ""} label="All statuses" onClick={() => onChangeStatus("")} />
+          {STATUSES.map((s) => (
+            <FilterPill
+              key={s}
+              active={status === s}
+              label={STATUS_LABEL[s] ?? s}
+              onClick={() => onChangeStatus(status === s ? "" : s)}
+            />
+          ))}
+        </div>
       </div>
 
       {isLoading && (
@@ -180,7 +261,7 @@ export function EntityTab({
         <div className="flex flex-col items-center gap-3 py-16">
           <Boxes className="h-10 w-10 opacity-20" style={{ color: "var(--color-text-muted)" }} />
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-            {q ? "No entities match your search." : "No entities registered yet."}
+            {q || layer || status ? "No entities match your filters." : "No entities registered yet."}
           </p>
         </div>
       )}

@@ -167,12 +167,13 @@ export function fetchRunDetail(runId: string): Promise<{ data: unknown; source: 
 }
 
 export function fetchEntities(params?: {
-  product_id?: string; status?: string; q?: string;
+  product_id?: string; status?: string; q?: string; layer?: string;
 }): Promise<{ data: unknown[]; source: string }> {
   const p = new URLSearchParams();
   if (params?.product_id) p.set("product_id", params.product_id);
   if (params?.status) p.set("status", params.status);
   if (params?.q) p.set("q", params.q);
+  if (params?.layer) p.set("layer", params.layer);
   const qs = p.toString();
   return request(`/entities${qs ? `?${qs}` : ""}`);
 }

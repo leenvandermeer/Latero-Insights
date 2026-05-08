@@ -26,6 +26,8 @@ export function CatalogHub() {
     return value === "products" || value === "entities" || value === "datasets" ? value : "overview";
   }, [searchParams]);
   const entityQuery = searchParams.get("entity_q") ?? "";
+  const entityLayer = searchParams.get("entity_layer") ?? "";
+  const entityStatus = searchParams.get("entity_status") ?? "";
   const datasetQuery = searchParams.get("dataset_q") ?? "";
   const datasetLayer = searchParams.get("dataset_layer") ?? "";
 
@@ -81,7 +83,11 @@ export function CatalogHub() {
         {tab === "entities"  && (
           <EntityTab
             q={entityQuery}
+            layer={entityLayer}
+            status={entityStatus}
             onChangeQ={(value) => updateParams({ tab: "entities", entity_q: value || null })}
+            onChangeLayer={(value) => updateParams({ tab: "entities", entity_layer: value || null })}
+            onChangeStatus={(value) => updateParams({ tab: "entities", entity_status: value || null })}
           />
         )}
         {tab === "datasets"  && (

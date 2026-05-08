@@ -475,14 +475,11 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>
-                Lineage control room
+                Lineage
               </p>
               <h1 className="mt-2 text-lg font-medium leading-snug" style={{ color: "var(--color-text)" }}>
-                Start with the path that needs attention, then move into Trace or Columns.
+                Open trace or review column evidence.
               </h1>
-              <p className="mt-2 max-w-3xl text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-                Overview is now the launch surface for investigation. Use it to jump into the most urgent entity path or verify whether column evidence exists.
-              </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -515,7 +512,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
               style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
             >
               <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
-                Recommended next step
+                Recommended
               </p>
               {model.recommendedEntity ? (
                 <>
@@ -530,17 +527,17 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
                     </div>
                     <StatusPill status={worstEntityStatus(model.recommendedEntity)} />
                   </div>
-                  <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                  <p className="mt-3 text-sm" style={{ color: "var(--color-text-muted)" }}>
                     {model.failed > 0
-                      ? "There is an active failure path. Start upstream to see what is feeding this entity."
+                      ? "Start upstream."
                       : model.warning > 0
-                      ? "Warnings are present. Start from the most exposed entity path before scanning wider impact."
-                      : "No urgent failures detected. Start from the most connected entity to understand impact."}
+                      ? "Check the exposed path."
+                      : "Start from the most connected entity."}
                   </p>
                 </>
               ) : (
                 <p className="mt-3 text-sm" style={{ color: "var(--color-text-muted)" }}>
-                  No lineage entities are available for a recommended trace yet.
+                  No recommended trace yet.
                 </p>
               )}
             </div>
@@ -551,28 +548,28 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
           <MetricCard
             label="Health score"
             value={`${model.healthScore}%`}
-            detail={`${model.success} of ${model.total} entities are fully successful.`}
+            detail={`${model.success} of ${model.total} entities successful.`}
             Icon={CheckCircle2}
             tone={model.healthScore >= 85 ? "success" : model.healthScore >= 60 ? "warning" : "error"}
           />
           <MetricCard
             label="Open risk"
             value={model.failed + model.warning}
-            detail={`${model.failed} failed and ${model.warning} warning/partial signals.`}
+            detail={`${model.failed} failed, ${model.warning} warning or partial.`}
             Icon={ShieldAlert}
             tone={model.failed > 0 ? "error" : model.warning > 0 ? "warning" : "success"}
           />
           <MetricCard
             label="Lineage coverage"
             value={`${model.lineageCoverage}%`}
-            detail={`${model.chains.length} chains across ${model.total} unique layer entities.`}
+            detail={`${model.chains.length} chains across ${model.total} entities.`}
             Icon={Layers3}
             tone={model.lineageCoverage >= 80 ? "success" : "warning"}
           />
           <MetricCard
             label="Column flows"
             value={model.currentAttributes.length}
-            detail={`${model.uniqueSourceColumns} source columns mapped into ${model.uniqueTargetColumns} target columns.`}
+            detail={`${model.uniqueSourceColumns} source to ${model.uniqueTargetColumns} target columns.`}
             Icon={Columns3}
             tone="neutral"
           />

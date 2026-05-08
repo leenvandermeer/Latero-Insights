@@ -1,7 +1,7 @@
 # LADR-064 — Dataset vs Entity: conceptueel model en structurele scheiding
 
 **Datum:** 2026-05-06  
-**Status:** PROPOSED  
+**Status:** ACCEPTED  
 **Raakt:** `infra/sql/`, `web/src/lib/`, Databricks `lineage_projector`, `lineage_entities_current`
 
 ---
