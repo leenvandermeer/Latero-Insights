@@ -213,7 +213,7 @@ export function EntityTab({
 
           {/* Layer filter */}
           <div className="flex items-center gap-1 flex-wrap">
-            <FilterPill active={layer === ""} label="All layers" onClick={() => onChangeLayer("")} />
+            <FilterPill active={layer === ""} label="All" onClick={() => onChangeLayer("")} />
             {LAYERS.map((l) => (
               <FilterPill
                 key={l}
@@ -227,7 +227,7 @@ export function EntityTab({
 
         {/* Status filter */}
         <div className="flex items-center gap-1 flex-wrap">
-          <FilterPill active={status === ""} label="All statuses" onClick={() => onChangeStatus("")} />
+          <FilterPill active={status === ""} label="All" onClick={() => onChangeStatus("")} />
           {STATUSES.map((s) => (
             <FilterPill
               key={s}

@@ -175,7 +175,6 @@ export function DatasetTab({
           >
             All
           </button>
-          {LAYERS.map((l) => (
             <button
               key={l}
               onClick={() => onChangeLayer(layer === l ? "" : l)}
