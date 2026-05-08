@@ -44,7 +44,6 @@ export async function POST(request: NextRequest) {
     const timestampUtc = parseTimestamp(body.timestamp_utc);
     const datasetId = requireString(body.dataset_id, "dataset_id");
     const runId = requireString(body.run_id, "run_id");
-    const step = requireString(body.step, "step");
     const runStatus = normalizeStatus(body.status);
     const environment = requireString(body.environment, "environment");
 
@@ -59,7 +58,6 @@ export async function POST(request: NextRequest) {
       datasetId,
       sourceSystem: optionalString(body.source_system),
       runId,
-      step,
       status: runStatus,
       environment,
       timestampUtc,

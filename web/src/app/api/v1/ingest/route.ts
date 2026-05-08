@@ -33,7 +33,6 @@ async function ingestPipelineRun(event: AdapterEvent, pool: ReturnType<typeof ge
   const installationId = requireString(event.installation_id, "installation_id");
   const datasetId      = requireString(event.dataset_id,      "dataset_id");
   const runId          = requireString(event.run_id,          "run_id");
-  const step           = requireString(event.step,            "step");
   const status         = normalizeStatus(event.status);
   const environment    = requireString(event.environment,     "environment");
 
@@ -49,7 +48,6 @@ async function ingestPipelineRun(event: AdapterEvent, pool: ReturnType<typeof ge
     layer:        optionalString(event.source_layer),
     targetLayer:  optionalString(event.target_layer),
     runId,
-    step,
     status,
     environment,
     timestampUtc: finishedAt.toISOString(),
@@ -92,7 +90,6 @@ async function ingestLineage(event: AdapterEvent, pool: ReturnType<typeof getPgP
   validateSchemaVersion(event.schema_version);
   const installationId = requireString(event.installation_id, "installation_id");
   const runId          = requireString(event.run_id,          "run_id");
-  requireString(event.step,        "step");
   requireString(event.environment, "environment");
 
   const sourceRef = String(event.source_ref  ?? event.source_entity ?? "").trim();

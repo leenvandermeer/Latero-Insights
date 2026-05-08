@@ -51,7 +51,6 @@ export interface MetaPipelineRunParams {
   layer?: string | null;
   targetLayer?: string | null; // LADR-058: laag van de output-dataset (voor layer-scoped ID)
   runId: string;
-  step: string;
   status: string;
   environment: string;
   timestampUtc: string;
@@ -135,8 +134,7 @@ export async function writeMetaPipelineRun(
             duration_ms = $3
         WHERE installation_id = $4
           AND external_run_id = $5
-          AND step            = $6
-          AND run_date        = $7
+          AND run_date        = $6
         RETURNING run_id
       `,
       [
@@ -145,7 +143,6 @@ export async function writeMetaPipelineRun(
         params.durationMs,
         params.installationId,
         params.runId,
-        params.step,
         runDate,
       ],
     );
@@ -157,16 +154,16 @@ export async function writeMetaPipelineRun(
       const insertResult = await client.query(
         `
           INSERT INTO meta.runs (
-            job_id, installation_id, external_run_id, step,
+            job_id, installation_id, external_run_id,
             status, environment, started_at, ended_at, duration_ms
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          ON CONFLICT DO NOTHING
           RETURNING run_id
         `,
         [
           jobId,
           params.installationId,
           params.runId,
-          params.step,
           params.status,
           params.environment,
           params.timestampUtc,

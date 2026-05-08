@@ -69,7 +69,6 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       sourceSystem: run.source_system || null,
       targetLayer: run.target_layer || null,
       runId: run.run_id,
-      step: run.step,
       status: run.run_status,
       environment: run.environment || "unknown",
       timestampUtc: run.timestamp_utc,
