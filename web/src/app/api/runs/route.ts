@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
   const from = rawFrom && /^\d{4}-\d{2}-\d{2}$/.test(rawFrom) ? rawFrom : defaultFrom;
   const to   = rawTo   && /^\d{4}-\d{2}-\d{2}$/.test(rawTo)   ? rawTo   : defaultTo;
 
-  const step = params.get("step");
   const status = params.get("status");
   const product_id = params.get("product_id");
   const entity = params.get("entity");
@@ -37,7 +36,6 @@ export async function GET(request: NextRequest) {
   let idx = 4;
 
   let filters = "";
-  if (step) { filters += ` AND r.step ILIKE $${idx++}`; values.push(`%${step}%`); }
   if (status) { filters += ` AND r.status = $${idx++}`; values.push(status.toUpperCase()); }
   if (entity) { filters += ` AND j.dataset_id = $${idx++}`; values.push(entity); }
   if (product_id) { filters += ` AND j.dataset_id = $${idx++}`; values.push(product_id); }
@@ -52,7 +50,6 @@ export async function GET(request: NextRequest) {
          r.external_run_id,
          j.job_name,
          j.dataset_id,
-         r.step,
          r.status,
          r.environment,
          r.started_at,

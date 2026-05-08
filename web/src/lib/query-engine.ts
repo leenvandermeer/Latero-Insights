@@ -9,14 +9,13 @@ export const DATA_SOURCE_LABELS: Record<string, string> = {
 };
 
 export const DATA_SOURCE_FIELDS: Record<string, string[]> = {
-  pipeline_runs: ["dataset_id", "step", "run_status", "source_system", "event_date"],
-  data_quality_checks: ["dataset_id", "check_id", "check_category", "check_status", "step", "event_date"],
-  data_lineage: ["dataset_id", "source_ref", "target_ref", "source_type", "target_type", "hop_kind", "step", "event_date"],
+  pipeline_runs: ["dataset_id", "run_status", "source_system", "event_date"],
+  data_quality_checks: ["dataset_id", "check_id", "check_category", "check_status", "event_date"],
+  data_lineage: ["dataset_id", "source_ref", "target_ref", "source_type", "target_type", "hop_kind", "event_date"],
 };
 
 export const FIELD_LABELS: Record<string, string> = {
   dataset_id: "Dataset",
-  step: "Step",
   run_status: "Run Status",
   source_system: "Source System",
   event_date: "Date",

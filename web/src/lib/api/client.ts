@@ -147,14 +147,13 @@ export function seedDemoData(): Promise<{ seeded: { pipelines: number; quality: 
 // ── V2 endpoints ────────────────────────────────────────────────
 
 export function fetchRuns(params: {
-  from?: string; to?: string; status?: string; step?: string;
+  from?: string; to?: string; status?: string;
   product_id?: string; entity?: string; cursor?: string; limit?: number;
 }): Promise<{ data: unknown[]; source: string; next_cursor?: string }> {
   const p = new URLSearchParams();
   if (params.from) p.set("from", params.from);
   if (params.to) p.set("to", params.to);
   if (params.status) p.set("status", params.status);
-  if (params.step) p.set("step", params.step);
   if (params.product_id) p.set("product_id", params.product_id);
   if (params.entity) p.set("entity", params.entity);
   if (params.cursor) p.set("cursor", params.cursor);

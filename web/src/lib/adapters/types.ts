@@ -4,7 +4,6 @@ export interface PipelineRun {
   event_date: string;
   dataset_id: string;
   source_system: string;
-  step: string;
   run_id: string;
   run_status: string;
   duration_ms: number | null;
@@ -21,7 +20,6 @@ export interface DataQualityCheck {
   timestamp_utc: string;
   event_date: string;
   dataset_id: string;
-  step: string;
   run_id: string;
   result_id?: string | null;
   check_id: string;
@@ -44,7 +42,6 @@ export interface LineageHop {
   timestamp_utc: string;
   event_date: string;
   dataset_id: string;
-  step: string;
   run_id: string;
   source_entity: string;
   source_type: string;
