@@ -1,5 +1,5 @@
-import { DashboardCanvas } from "@/app/(tenant)/(dashboard)/dashboard/dashboard";
+import { redirect } from "next/navigation";
 
 export default function Bcbs239Page() {
-  return <DashboardCanvas dashboardId="system:bcbs239" />;
+  redirect("/dashboard/system:quality");
 }

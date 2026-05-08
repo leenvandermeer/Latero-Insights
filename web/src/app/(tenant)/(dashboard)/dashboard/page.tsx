@@ -16,13 +16,11 @@ import type { Dashboard } from "@/types/dashboard";
 const SYSTEM_ROUTE: Record<string, string> = {
   "system:pipelines": "/dashboard/system:pipelines",
   "system:quality":   "/dashboard/system:quality",
-  "system:bcbs239":   "/dashboard/system:bcbs239",
 };
 
 const SYSTEM_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   "system:pipelines": BarChart3,
   "system:quality":   ShieldCheck,
-  "system:bcbs239":   LayoutDashboard,
 };
 
 type TabId = "all" | "system" | "mine" | "pinned";

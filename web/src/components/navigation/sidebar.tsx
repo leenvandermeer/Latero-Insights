@@ -41,7 +41,6 @@ const EXPLORE_NAV = [
 const SYSTEM_DASHBOARDS = [
   { id: "system:pipelines", label: "Pipelines", href: "/dashboard/system:pipelines", icon: BarChart3 },
   { id: "system:quality",   label: "Data Quality", href: "/dashboard/system:quality",   icon: ShieldCheck },
-  { id: "system:bcbs239",  label: "BCBS 239",     href: "/dashboard/system:bcbs239",  icon: LayoutDashboard },
 ];
 
 const MAX_PINNED_IN_NAV = 3;
