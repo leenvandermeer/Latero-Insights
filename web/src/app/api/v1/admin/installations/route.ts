@@ -25,7 +25,44 @@ export async function GET(request: NextRequest) {
     const statusFilter = url.searchParams.get("status");
 
     let query = `
-      SELECT 
+      WITH latest_health AS (
+        SELECT DISTINCT ON (h.installation_id)
+          h.installation_id,
+          h.status,
+          h.message_count_24h,
+          h.error_rate_pct
+        FROM insights_installation_health h
+        ORDER BY h.installation_id, h.created_at DESC, h.id DESC
+      ),
+      run_metrics AS (
+        SELECT
+          r.installation_id,
+          COUNT(*) FILTER (WHERE r.started_at >= NOW() - INTERVAL '24 hours')::int AS runs_24h,
+          COUNT(*)::int AS runs_total,
+          COUNT(*) FILTER (WHERE r.status IN ('FAILED', 'WARNING', 'RUNNING'))::int AS runs_non_success
+        FROM meta.runs r
+        GROUP BY r.installation_id
+      ),
+      dq_metrics AS (
+        SELECT
+          q.installation_id,
+          COUNT(*) FILTER (WHERE q.executed_at >= NOW() - INTERVAL '24 hours')::int AS dq_24h,
+          COUNT(*)::int AS dq_total,
+          COUNT(*) FILTER (WHERE q.status IN ('FAILED', 'WARNING'))::int AS dq_non_success
+        FROM meta.quality_results q
+        GROUP BY q.installation_id
+      ),
+      dataset_metrics AS (
+        SELECT d.installation_id, COUNT(*)::int AS datasets_total
+        FROM meta.datasets d
+        GROUP BY d.installation_id
+      ),
+      user_counts AS (
+        SELECT ui.installation_id, COUNT(DISTINCT ui.user_id)::int AS user_count
+        FROM insights_user_installations ui
+        GROUP BY ui.installation_id
+      )
+      SELECT
         i.installation_id,
         i.label,
         i.environment,
@@ -34,39 +71,69 @@ export async function GET(request: NextRequest) {
         i.active,
         CASE
           WHEN i.active = FALSE THEN 'inactive'
-          ELSE COALESCE(lh.status, 'unknown')
+          WHEN lh.status IN ('connected', 'healthy') THEN 'connected'
+          WHEN lh.status IN ('degraded', 'offline') THEN lh.status
+          WHEN COALESCE(rm.runs_total, 0) > 0 OR COALESCE(dq.dq_total, 0) > 0 OR COALESCE(dm.datasets_total, 0) > 0 THEN 'connected'
+          ELSE 'unknown'
         END as status,
-        COALESCE(lh.message_count_24h, 0) as message_count_24h,
-        COALESCE(lh.error_rate_pct, 0) as error_rate_pct,
+        CASE
+          WHEN lh.installation_id IS NOT NULL THEN COALESCE(lh.message_count_24h, 0)
+          ELSE COALESCE(rm.runs_24h, 0) + COALESCE(dq.dq_24h, 0)
+        END as message_count_24h,
+        CASE
+          WHEN lh.installation_id IS NOT NULL THEN COALESCE(lh.error_rate_pct, 0)
+          WHEN COALESCE(rm.runs_total, 0) + COALESCE(dq.dq_total, 0) > 0 THEN
+            ROUND(
+              (
+                (COALESCE(rm.runs_non_success, 0) + COALESCE(dq.dq_non_success, 0))::numeric
+                / NULLIF((COALESCE(rm.runs_total, 0) + COALESCE(dq.dq_total, 0))::numeric, 0)
+              ) * 100,
+              2
+            )
+          ELSE 0
+        END as error_rate_pct,
         i.last_synced_at,
-        COUNT(DISTINCT ui.user_id) as user_count
+        COALESCE(uc.user_count, 0) as user_count
       FROM insights_installations i
-      LEFT JOIN LATERAL (
-        SELECT status, message_count_24h, error_rate_pct
-        FROM insights_installation_health h
-        WHERE h.installation_id = i.installation_id
-        ORDER BY h.created_at DESC, h.id DESC
-        LIMIT 1
-      ) lh ON TRUE
-      LEFT JOIN insights_user_installations ui ON i.installation_id = ui.installation_id
+      LEFT JOIN latest_health lh ON lh.installation_id = i.installation_id
+      LEFT JOIN run_metrics rm ON rm.installation_id = i.installation_id
+      LEFT JOIN dq_metrics dq ON dq.installation_id = i.installation_id
+      LEFT JOIN dataset_metrics dm ON dm.installation_id = i.installation_id
+      LEFT JOIN user_counts uc ON uc.installation_id = i.installation_id
       WHERE 1=1
     `;
 
     const params: any[] = [];
 
     if (statusFilter) {
-      query += ` AND (CASE WHEN i.active = FALSE THEN 'inactive' ELSE COALESCE(lh.status, 'unknown') END) = $${params.length + 1}`;
+      query += ` AND (
+        CASE
+          WHEN i.active = FALSE THEN 'inactive'
+          WHEN lh.status IN ('connected', 'healthy') THEN 'connected'
+          WHEN lh.status IN ('degraded', 'offline') THEN lh.status
+          WHEN COALESCE(rm.runs_total, 0) > 0 OR COALESCE(dq.dq_total, 0) > 0 OR COALESCE(dm.datasets_total, 0) > 0 THEN 'connected'
+          ELSE 'unknown'
+        END
+      ) = $${params.length + 1}`;
       params.push(statusFilter);
     }
 
-    query += ` GROUP BY i.installation_id, i.label, i.environment, i.tier, i.contact_email, i.active, i.last_synced_at, lh.status, lh.message_count_24h, lh.error_rate_pct LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    query += ` ORDER BY i.installation_id
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(take, skip);
 
     const result = await pool.query(query, params);
 
+    const installations = result.rows.map((row) => ({
+      ...row,
+      message_count_24h: Number(row.message_count_24h ?? 0),
+      error_rate_pct: Number(row.error_rate_pct ?? 0),
+      user_count: Number(row.user_count ?? 0),
+    }));
+
     return NextResponse.json({
-      installations: result.rows,
-      count: result.rows.length,
+      installations,
+      count: installations.length,
     });
   } catch (error) {
     console.error("[admin] GET /api/v1/admin/installations:", error);
