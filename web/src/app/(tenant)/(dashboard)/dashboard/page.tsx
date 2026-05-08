@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Plus, BarChart3, ShieldCheck, Star,
+  LayoutDashboard, Plus, Star,
   ArrowRight, Search, Sparkles,
 } from "lucide-react";
 import { useDashboards } from "@/contexts/dashboard-context";
@@ -12,11 +12,6 @@ import { useInstallation } from "@/contexts/installation-context";
 import { usePinnedDashboards } from "@/hooks/use-pinned-dashboards";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
 import type { Dashboard } from "@/types/dashboard";
-
-const SYSTEM_ITEMS = [
-  { id: "system:pipelines", label: "Pipelines",    description: "Pipeline execution health & run log", href: "/dashboard/system:pipelines", icon: BarChart3 },
-  { id: "system:quality",   label: "Data Quality", description: "DQ check results & pass rate trends",  href: "/dashboard/system:quality",   icon: ShieldCheck },
-];
 
 type TabId = "all" | "pinned";
 
@@ -152,36 +147,6 @@ export default function DashboardListPage() {
             <Plus className="h-4 w-4" />
             New dashboard
           </button>
-        </div>
-      </div>
-
-      {/* System dashboards — compact quick access */}
-      <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
-          System
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {SYSTEM_ITEMS.map(({ id, label, description, href, icon: Icon }) => (
-            <Link
-              key={id}
-              href={href}
-              prefetch={false}
-              className="group flex items-center gap-3 rounded-xl px-4 py-3 transition-colors hover:opacity-80"
-              style={{ border: "1px solid var(--color-border)", background: "var(--color-card)", minWidth: 220 }}
-            >
-              <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-              >
-                <Icon className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>{label}</p>
-                <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>{description}</p>
-              </div>
-              <ArrowRight className="h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" style={{ color: "var(--color-text-muted)" }} />
-            </Link>
-          ))}
         </div>
       </div>
 

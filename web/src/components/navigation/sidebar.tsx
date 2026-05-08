@@ -17,7 +17,6 @@ import {
   LogOut,
   UserCircle,
   Star,
-  BarChart3,
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,11 +35,6 @@ const MONITOR_NAV = [
 const EXPLORE_NAV = [
   { label: "Catalog", href: "/catalog", icon: Package },
   { label: "Lineage", href: "/lineage", icon: GitBranch },
-];
-
-const SYSTEM_DASHBOARDS = [
-  { id: "system:pipelines", label: "Pipelines", href: "/dashboard/system:pipelines", icon: BarChart3 },
-  { id: "system:quality",   label: "Data Quality", href: "/dashboard/system:quality",   icon: ShieldCheck },
 ];
 
 const MAX_PINNED_IN_NAV = 3;
@@ -205,7 +199,7 @@ export function Sidebar() {
 
           {collapsed ? (
             <>
-              {[...MONITOR_NAV, ...EXPLORE_NAV, ...SYSTEM_DASHBOARDS].map((item) => {
+              {[...MONITOR_NAV, ...EXPLORE_NAV].map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
                   <NavItem
@@ -285,21 +279,6 @@ export function Sidebar() {
                   </button>
                 </div>
                 <div className="space-y-0.5">
-                  {/* System dashboards — always visible */}
-                  {SYSTEM_DASHBOARDS.map((item) => {
-                    const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                    return (
-                      <NavItem
-                        key={item.href}
-                        href={item.href}
-                        label={item.label}
-                        Icon={item.icon}
-                        active={active}
-                        collapsed={false}
-                      />
-                    );
-                  })}
-
                   {/* Pinned user dashboards */}
                   {pinnedDashboards.map((dash) => {
                     const href = `/dashboard/${dash.id}`;
