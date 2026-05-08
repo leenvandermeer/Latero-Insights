@@ -13,17 +13,12 @@ import { usePinnedDashboards } from "@/hooks/use-pinned-dashboards";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
 import type { Dashboard } from "@/types/dashboard";
 
-const SYSTEM_ROUTE: Record<string, string> = {
-  "system:pipelines": "/dashboard/system:pipelines",
-  "system:quality":   "/dashboard/system:quality",
-};
+const SYSTEM_ITEMS = [
+  { id: "system:pipelines", label: "Pipelines",    description: "Pipeline execution health & run log", href: "/dashboard/system:pipelines", icon: BarChart3 },
+  { id: "system:quality",   label: "Data Quality", description: "DQ check results & pass rate trends",  href: "/dashboard/system:quality",   icon: ShieldCheck },
+];
 
-const SYSTEM_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
-  "system:pipelines": BarChart3,
-  "system:quality":   ShieldCheck,
-};
-
-type TabId = "all" | "system" | "mine" | "pinned";
+type TabId = "all" | "pinned";
 
 function formatDate(iso: string) {
   try {
@@ -36,17 +31,13 @@ function formatDate(iso: string) {
 function DashboardRow({
   dashboard,
   href,
-  icon: Icon,
   isPinned,
   onTogglePin,
-  showPin,
 }: {
   dashboard: Dashboard;
   href: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>,
   isPinned?: boolean;
   onTogglePin?: () => void;
-  showPin: boolean;
 }) {
   return (
     <div
@@ -57,7 +48,7 @@ function DashboardRow({
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
-        <Icon className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
+        <LayoutDashboard className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
       </div>
 
       <div className="min-w-0 flex-1">
@@ -76,7 +67,7 @@ function DashboardRow({
         <span>{formatDate(dashboard.updatedAt)}</span>
       </div>
 
-      {showPin && onTogglePin && (
+      {onTogglePin && (
         <button
           onClick={(e) => { e.preventDefault(); onTogglePin(); }}
           className="shrink-0 rounded-md p-1.5 transition-colors"
@@ -101,61 +92,49 @@ function DashboardRow({
     </div>
   );
 }
+    </div>
+  );
+}
 
 export default function DashboardListPage() {
   const router = useRouter();
   const { installation } = useInstallation();
-  const { userDashboards, systemDashboards, createDash } = useDashboards();
+  const { userDashboards, createDash } = useDashboards();
   const { pinnedIds, toggle: togglePin, isPinned } = usePinnedDashboards(installation?.installation_id);
   const [newDashOpen, setNewDashOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("all");
   const [search, setSearch] = useState("");
 
-  const allDashboards: { dashboard: Dashboard; href: string; isSystem: boolean }[] = useMemo(() => {
-    const sys = systemDashboards.map((d) => ({
-      dashboard: d,
-      href: SYSTEM_ROUTE[d.id] ?? `/dashboard/${d.id}`,
-      isSystem: true,
-    }));
-    const user = [...userDashboards]
-      .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
-      .map((d) => ({
-        dashboard: d,
-        href: `/dashboard/${d.id}`,
-        isSystem: false,
-      }));
-    return [...sys, ...user];
-  }, [systemDashboards, userDashboards]);
+  const sortedUser = useMemo(
+    () => [...userDashboards].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)),
+    [userDashboards]
+  );
 
   const filtered = useMemo(() => {
-    let list = allDashboards;
-    if (activeTab === "system") list = list.filter((d) => d.isSystem);
-    else if (activeTab === "mine") list = list.filter((d) => !d.isSystem);
-    else if (activeTab === "pinned") list = list.filter((d) => !d.isSystem && pinnedIds.includes(d.dashboard.id));
+    let list = sortedUser;
+    if (activeTab === "pinned") list = list.filter((d) => pinnedIds.includes(d.id));
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      list = list.filter((d) => d.dashboard.name.toLowerCase().includes(q));
+      list = list.filter((d) => d.name.toLowerCase().includes(q));
     }
     return list;
-  }, [allDashboards, activeTab, pinnedIds, search]);
+  }, [sortedUser, activeTab, pinnedIds, search]);
 
   const tabs: { id: TabId; label: string; count: number }[] = [
-    { id: "all",    label: "All",    count: allDashboards.length },
-    { id: "system", label: "System", count: systemDashboards.length },
-    { id: "mine",   label: "Mine",   count: userDashboards.length },
+    { id: "all",    label: "All",    count: sortedUser.length },
     { id: "pinned", label: "Pinned", count: pinnedIds.length },
   ];
 
   return (
-    <div className="space-y-5 fade-in-up">
+    <div className="space-y-6 fade-in-up">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold" style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}>
-            Dashboards
+            My Dashboards
           </h1>
           <p className="mt-0.5 text-sm" style={{ color: "var(--color-text-muted)" }}>
-            {allDashboards.length} dashboard{allDashboards.length !== 1 ? "s" : ""}
+            Dashboards you created
             {pinnedIds.length > 0 ? ` · ${pinnedIds.length} pinned` : ""}
           </p>
         </div>
@@ -179,81 +158,114 @@ export default function DashboardListPage() {
         </div>
       </div>
 
-      {/* Search + tabs */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[200px] flex-1 max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: "var(--color-text-muted)" }} />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search dashboards…"
-            className="w-full rounded-xl py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2"
-            style={{
-              background: "var(--color-card)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
-            }}
-          />
-        </div>
-        <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
-              style={
-                activeTab === tab.id
-                  ? { background: "var(--color-card)", color: "var(--color-text)", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }
-                  : { color: "var(--color-text-muted)" }
-              }
+      {/* System dashboards — compact quick access */}
+      <div>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+          System
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {SYSTEM_ITEMS.map(({ id, label, description, href, icon: Icon }) => (
+            <Link
+              key={id}
+              href={href}
+              prefetch={false}
+              className="group flex items-center gap-3 rounded-xl px-4 py-3 transition-colors hover:opacity-80"
+              style={{ border: "1px solid var(--color-border)", background: "var(--color-card)", minWidth: 220 }}
             >
-              {tab.label}
-              <span
-                className="ml-1.5 rounded-full px-1.5 py-0.5 text-[10px]"
-                style={{ background: activeTab === tab.id ? "var(--color-sidebar-hover)" : "transparent" }}
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
               >
-                {tab.count}
-              </span>
-            </button>
+                <Icon className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>{label}</p>
+                <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>{description}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" style={{ color: "var(--color-text-muted)" }} />
+            </Link>
           ))}
         </div>
       </div>
 
-      {/* Dashboard list */}
-      <div className="space-y-2">
-        {filtered.length === 0 ? (
-          <div className="rounded-2xl py-12 text-center" style={{ border: "1px dashed var(--color-border)" }}>
-            <p className="text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
-              {search ? "No dashboards match your search." : activeTab === "pinned" ? "No pinned dashboards yet. Star a dashboard to pin it to the sidebar." : "No dashboards."}
-            </p>
-            {!search && activeTab === "mine" && (
-              <button
-                onClick={() => setNewDashOpen(true)}
-                className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium"
-                style={{ background: "var(--color-accent)", color: "#fff" }}
-              >
-                <Plus className="h-4 w-4" />
-                New dashboard
-              </button>
-            )}
+      {/* Search + tabs for user dashboards */}
+      <div>
+        <p className="mb-3 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+          Yours
+        </p>
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[200px] flex-1 max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: "var(--color-text-muted)" }} />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search your dashboards…"
+              className="w-full rounded-xl py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2"
+              style={{
+                background: "var(--color-card)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+              }}
+            />
           </div>
-        ) : (
-          filtered.map(({ dashboard, href, isSystem }) => {
-            const Icon = isSystem ? (SYSTEM_ICONS[dashboard.id] ?? LayoutDashboard) : LayoutDashboard;
-            return (
+          <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                style={
+                  activeTab === tab.id
+                    ? { background: "var(--color-card)", color: "var(--color-text)", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }
+                    : { color: "var(--color-text-muted)" }
+                }
+              >
+                {tab.label}
+                <span
+                  className="ml-1.5 rounded-full px-1.5 py-0.5 text-[10px]"
+                  style={{ background: activeTab === tab.id ? "var(--color-sidebar-hover)" : "transparent" }}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {filtered.length === 0 ? (
+            <div className="rounded-2xl py-12 text-center" style={{ border: "1px dashed var(--color-border)" }}>
+              <p className="text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
+                {search
+                  ? "No dashboards match your search."
+                  : activeTab === "pinned"
+                    ? "No pinned dashboards yet. Star a dashboard to pin it to the sidebar."
+                    : "You haven't created any dashboards yet."}
+              </p>
+              {!search && activeTab === "all" && (
+                <button
+                  onClick={() => setNewDashOpen(true)}
+                  className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium"
+                  style={{ background: "var(--color-accent)", color: "#fff" }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Create your first dashboard
+                </button>
+              )}
+            </div>
+          ) : (
+            filtered.map((dashboard) => (
               <DashboardRow
                 key={dashboard.id}
                 dashboard={dashboard}
-                href={href}
-                icon={Icon}
-                isPinned={!isSystem && isPinned(dashboard.id)}
-                onTogglePin={!isSystem ? () => togglePin(dashboard.id) : undefined}
-                showPin={!isSystem}
+                href={`/dashboard/${dashboard.id}`}
+                isPinned={isPinned(dashboard.id)}
+                onTogglePin={() => togglePin(dashboard.id)}
               />
-            );
-          })
-        )}
+            ))
+          )}
+        </div>
       </div>
 
       <NewDashboardModal open={newDashOpen} onClose={() => setNewDashOpen(false)} />
