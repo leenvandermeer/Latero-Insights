@@ -3,90 +3,43 @@
     "id": "system:pipelines",
     "widgets": [
       {
-        "instanceId": "sys-runs-table",
-        "type": "pipeline-runs-table"
-      },
-      {
-        "instanceId": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
-        "type": "failed-runs",
-        "titleOverride": "Run failed"
-      },
-      {
-        "instanceId": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
-        "type": "success-runs"
-      },
-      {
-        "instanceId": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
-        "type": "warning-runs"
-      },
-      {
-        "instanceId": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
-        "type": "pass-rate"
-      },
-      {
-        "instanceId": "total-runs-d390ae53-67b2-4726-a492-3e6e8dd83f63",
+        "instanceId": "sys-p-1",
         "type": "total-runs"
+      },
+      {
+        "instanceId": "sys-p-2",
+        "type": "failed-runs"
+      },
+      {
+        "instanceId": "sys-p-3",
+        "type": "avg-run-duration"
+      },
+      {
+        "instanceId": "sys-p-4",
+        "type": "pipeline-status"
+      },
+      {
+        "instanceId": "sys-p-5",
+        "type": "runs-by-pipeline"
+      },
+      {
+        "instanceId": "sys-p-6",
+        "type": "pipeline-runs-table"
       }
     ],
     "layout": {
       "lg": [
         {
-          "i": "sys-runs-table",
-          "x": 0,
-          "y": 2,
-          "w": 12,
-          "h": 5,
-          "minW": 6,
-          "minH": 3,
-          "moved": false,
-          "static": false
-        },
-        {
-          "i": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
-          "x": 2,
-          "y": 0,
-          "w": 2,
-          "h": 2,
-          "minW": 2,
-          "minH": 2,
-          "moved": false,
-          "static": false
-        },
-        {
-          "i": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
-          "x": 8,
-          "y": 0,
-          "w": 4,
-          "h": 2,
-          "minW": 2,
-          "minH": 2,
-          "moved": false,
-          "static": false
-        },
-        {
-          "i": "total-runs-d390ae53-67b2-4726-a492-3e6e8dd83f63",
+          "i": "sys-p-1",
           "x": 0,
           "y": 0,
-          "w": 2,
+          "w": 3,
           "h": 2,
           "minW": 2,
-          "minH": 2,
-          "moved": false,
-          "static": false
-        }
-      ],
-      "md": [
-        {
-          "i": "sys-runs-table",
-          "x": 0,
-          "y": 15,
-          "w": 8,
-          "h": 5,
-          "minW": 6,
-          "minH": 3
+          "minH": 2
         },
         {
-          "i": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
+          "i": "sys-p-2",
           "x": 3,
           "y": 0,
           "w": 3,
@@ -95,145 +48,586 @@
           "minH": 2
         },
         {
-          "i": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
-          "x": 0,
-          "y": 2,
-          "w": 3,
-          "h": 2,
-          "minW": 2,
-          "minH": 2
-        },
-        {
-          "i": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
-          "x": 3,
-          "y": 2,
-          "w": 3,
-          "h": 2,
-          "minW": 2,
-          "minH": 2
-        },
-        {
-          "i": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
-          "x": 3,
-          "y": 4,
-          "w": 3,
-          "h": 2,
-          "minW": 2,
-          "minH": 2
-        },
-        {
-          "i": "total-runs-d390ae53-67b2-4726-a492-3e6e8dd83f63",
-          "x": 0,
+          "i": "sys-p-3",
+          "x": 6,
           "y": 0,
           "w": 3,
           "h": 2,
           "minW": 2,
           "minH": 2
-        }
-      ],
-      "sm": [
+        },
         {
-          "i": "sys-runs-table",
+          "i": "sys-p-4",
           "x": 0,
-          "y": 21,
-          "w": 4,
-          "h": 5,
+          "y": 2,
+          "w": 6,
+          "h": 4,
           "minW": 4,
           "minH": 3
         },
         {
-          "i": "failed-runs-c5daef86-8d58-4bb3-9550-cf463b2850bf",
-          "x": 0,
+          "i": "sys-p-5",
+          "x": 6,
           "y": 2,
-          "w": 3,
-          "h": 2,
-          "minW": 2,
-          "minH": 2
+          "w": 6,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
         },
         {
-          "i": "success-runs-419ce7ea-5134-4df9-8c2f-be025e2d71d8",
-          "x": 0,
-          "y": 4,
-          "w": 3,
-          "h": 2,
-          "minW": 2,
-          "minH": 2
-        },
-        {
-          "i": "warning-runs-7e81586d-4407-4832-8e1f-3fa2dfd4af73",
+          "i": "sys-p-6",
           "x": 0,
           "y": 6,
-          "w": 3,
-          "h": 2,
-          "minW": 2,
-          "minH": 2
-        },
+          "w": 12,
+          "h": 4,
+          "minW": 6,
+          "minH": 3
+        }
+      ],
+      "md": [
         {
-          "i": "pass-rate-8fc3e374-0397-47cc-b153-6f554d730fbc",
-          "x": 0,
-          "y": 18,
-          "w": 3,
-          "h": 2,
-          "minW": 2,
-          "minH": 2
-        },
-        {
-          "i": "total-runs-d390ae53-67b2-4726-a492-3e6e8dd83f63",
+          "i": "sys-p-1",
           "x": 0,
           "y": 0,
-          "w": 3,
+          "w": 4,
           "h": 2,
           "minW": 2,
           "minH": 2
+        },
+        {
+          "i": "sys-p-2",
+          "x": 4,
+          "y": 0,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-p-3",
+          "x": 0,
+          "y": 2,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-p-4",
+          "x": 0,
+          "y": 4,
+          "w": 8,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-p-5",
+          "x": 0,
+          "y": 8,
+          "w": 8,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-p-6",
+          "x": 0,
+          "y": 12,
+          "w": 8,
+          "h": 4,
+          "minW": 6,
+          "minH": 3
+        }
+      ],
+      "sm": [
+        {
+          "i": "sys-p-1",
+          "x": 0,
+          "y": 0,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-p-2",
+          "x": 0,
+          "y": 2,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-p-3",
+          "x": 0,
+          "y": 4,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-p-4",
+          "x": 0,
+          "y": 6,
+          "w": 4,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-p-5",
+          "x": 0,
+          "y": 10,
+          "w": 4,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-p-6",
+          "x": 0,
+          "y": 14,
+          "w": 4,
+          "h": 4,
+          "minW": 6,
+          "minH": 3
         }
       ]
     },
-    "updatedAt": "2026-04-25T19:10:07.528Z"
+    "updatedAt": "2026-05-08T00:00:00.000Z"
   },
   "system:quality": {
     "id": "system:quality",
     "widgets": [
       {
-        "instanceId": "shared-d8a9efca-460c-4a59-96cc-2bf78e4739eb",
-        "type": "shared",
-        "customWidgetId": "e7f36088-2a89-4df3-a8e7-b912397b61ca"
+        "instanceId": "sys-q-1",
+        "type": "pass-rate"
+      },
+      {
+        "instanceId": "sys-q-2",
+        "type": "failed-dq-checks"
+      },
+      {
+        "instanceId": "sys-q-3",
+        "type": "warning-dq-checks"
+      },
+      {
+        "instanceId": "sys-q-4",
+        "type": "dq-trend"
+      },
+      {
+        "instanceId": "sys-q-5",
+        "type": "severity-category"
+      },
+      {
+        "instanceId": "sys-q-6",
+        "type": "dq-by-category"
+      },
+      {
+        "instanceId": "sys-q-7",
+        "type": "dq-checks-table"
       }
     ],
     "layout": {
       "lg": [
         {
-          "i": "shared-d8a9efca-460c-4a59-96cc-2bf78e4739eb",
+          "i": "sys-q-1",
           "x": 0,
           "y": 0,
-          "w": 8,
-          "h": 3,
-          "minW": 4,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
           "minH": 2
+        },
+        {
+          "i": "sys-q-2",
+          "x": 3,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-q-3",
+          "x": 6,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-q-4",
+          "x": 0,
+          "y": 2,
+          "w": 6,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-q-5",
+          "x": 6,
+          "y": 2,
+          "w": 6,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-q-6",
+          "x": 0,
+          "y": 6,
+          "w": 4,
+          "h": 4,
+          "minW": 3,
+          "minH": 3
+        },
+        {
+          "i": "sys-q-7",
+          "x": 4,
+          "y": 6,
+          "w": 8,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
         }
       ],
       "md": [
         {
-          "i": "shared-d8a9efca-460c-4a59-96cc-2bf78e4739eb",
+          "i": "sys-q-1",
           "x": 0,
           "y": 0,
-          "w": 8,
-          "h": 3,
-          "minW": 4,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
           "minH": 2
+        },
+        {
+          "i": "sys-q-2",
+          "x": 4,
+          "y": 0,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-q-3",
+          "x": 0,
+          "y": 2,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-q-4",
+          "x": 0,
+          "y": 4,
+          "w": 8,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-q-5",
+          "x": 0,
+          "y": 8,
+          "w": 8,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-q-6",
+          "x": 0,
+          "y": 12,
+          "w": 4,
+          "h": 4,
+          "minW": 3,
+          "minH": 3
+        },
+        {
+          "i": "sys-q-7",
+          "x": 4,
+          "y": 12,
+          "w": 4,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
         }
       ],
       "sm": [
         {
-          "i": "shared-d8a9efca-460c-4a59-96cc-2bf78e4739eb",
+          "i": "sys-q-1",
           "x": 0,
           "y": 0,
           "w": 4,
-          "h": 3,
-          "minW": 4,
+          "h": 2,
+          "minW": 2,
           "minH": 2
+        },
+        {
+          "i": "sys-q-2",
+          "x": 0,
+          "y": 2,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-q-3",
+          "x": 0,
+          "y": 4,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-q-4",
+          "x": 0,
+          "y": 6,
+          "w": 4,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-q-5",
+          "x": 0,
+          "y": 10,
+          "w": 4,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-q-6",
+          "x": 0,
+          "y": 14,
+          "w": 4,
+          "h": 4,
+          "minW": 3,
+          "minH": 3
+        },
+        {
+          "i": "sys-q-7",
+          "x": 0,
+          "y": 18,
+          "w": 4,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
         }
       ]
     },
-    "updatedAt": "2026-05-04T18:57:13.321Z"
+    "updatedAt": "2026-05-08T00:00:00.000Z"
+  },
+  "system:bcbs239": {
+    "id": "system:bcbs239",
+    "widgets": [
+      {
+        "instanceId": "sys-b-1",
+        "type": "bcbs239-score"
+      },
+      {
+        "instanceId": "sys-b-2",
+        "type": "pass-rate"
+      },
+      {
+        "instanceId": "sys-b-3",
+        "type": "failed-dq-checks"
+      },
+      {
+        "instanceId": "sys-b-4",
+        "type": "dq-trend"
+      },
+      {
+        "instanceId": "sys-b-5",
+        "type": "severity-category"
+      },
+      {
+        "instanceId": "sys-b-6",
+        "type": "dq-checks-table"
+      }
+    ],
+    "layout": {
+      "lg": [
+        {
+          "i": "sys-b-1",
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-b-2",
+          "x": 3,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-b-3",
+          "x": 6,
+          "y": 0,
+          "w": 3,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-b-4",
+          "x": 0,
+          "y": 2,
+          "w": 6,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-b-5",
+          "x": 6,
+          "y": 2,
+          "w": 6,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-b-6",
+          "x": 0,
+          "y": 6,
+          "w": 12,
+          "h": 4,
+          "minW": 6,
+          "minH": 3
+        }
+      ],
+      "md": [
+        {
+          "i": "sys-b-1",
+          "x": 0,
+          "y": 0,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-b-2",
+          "x": 4,
+          "y": 0,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-b-3",
+          "x": 0,
+          "y": 2,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-b-4",
+          "x": 0,
+          "y": 4,
+          "w": 8,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-b-5",
+          "x": 0,
+          "y": 8,
+          "w": 8,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-b-6",
+          "x": 0,
+          "y": 12,
+          "w": 8,
+          "h": 4,
+          "minW": 6,
+          "minH": 3
+        }
+      ],
+      "sm": [
+        {
+          "i": "sys-b-1",
+          "x": 0,
+          "y": 0,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-b-2",
+          "x": 0,
+          "y": 2,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-b-3",
+          "x": 0,
+          "y": 4,
+          "w": 4,
+          "h": 2,
+          "minW": 2,
+          "minH": 2
+        },
+        {
+          "i": "sys-b-4",
+          "x": 0,
+          "y": 6,
+          "w": 4,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-b-5",
+          "x": 0,
+          "y": 10,
+          "w": 4,
+          "h": 4,
+          "minW": 4,
+          "minH": 3
+        },
+        {
+          "i": "sys-b-6",
+          "x": 0,
+          "y": 14,
+          "w": 4,
+          "h": 4,
+          "minW": 6,
+          "minH": 3
+        }
+      ]
+    },
+    "updatedAt": "2026-05-08T00:00:00.000Z"
   }
 }
