@@ -62,20 +62,21 @@ export function InstallationPicker({ collapsed }: Props) {
 
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center gap-1 px-2 py-2">
+      <div
+        className="flex items-center justify-center px-2 py-2 mb-1"
+        style={{ borderBottom: "1px solid var(--color-sidebar-border)" }}
+      >
         <div
           className="relative w-8 h-8 rounded-md flex items-center justify-center"
           style={{ background: "var(--color-brand-subtle, rgba(27,59,107,0.1))" }}
-          title={`${label} (${installation.environment})`}
+          title={`${label} · ${installation.environment}`}
         >
           <Building2 className="h-4 w-4" style={{ color: "var(--color-brand, #1B3B6B)" }} />
-          {/* env dot */}
           <span
             className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-white"
             style={{ background: envDotColor(installation.environment) }}
           />
         </div>
-
       </div>
     );
   }

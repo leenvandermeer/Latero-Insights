@@ -194,35 +194,42 @@ export function Sidebar() {
           )}
         </div>
 
-        <nav className="flex-1 space-y-3 overflow-y-auto px-2 py-3">
-          {!collapsed && <InstallationPicker collapsed={false} />}
+        <nav className="flex-1 overflow-y-auto py-2">
+          <InstallationPicker collapsed={collapsed} />
 
           {collapsed ? (
-            <>
-              {[...MONITOR_NAV, ...EXPLORE_NAV].map((item) => {
+            <div className="flex flex-col items-center gap-0.5 px-2">
+              {/* Monitor */}
+              {MONITOR_NAV.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
-                  <NavItem
-                    key={item.href}
-                    href={item.href}
-                    label={item.label}
-                    Icon={item.icon}
-                    active={active}
-                    collapsed
-                  />
+                  <NavItem key={item.href} href={item.href} label={item.label} Icon={item.icon} active={active} collapsed />
                 );
               })}
+              {/* Divider */}
+              <div className="my-1 w-8" style={{ borderTop: "1px solid var(--color-sidebar-border)" }} />
+              {/* Explore */}
+              {EXPLORE_NAV.map((item) => {
+                const active = pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <NavItem key={item.href} href={item.href} label={item.label} Icon={item.icon} active={active} collapsed />
+                );
+              })}
+              {/* Divider */}
+              <div className="my-1 w-8" style={{ borderTop: "1px solid var(--color-sidebar-border)" }} />
+              {/* Dashboards */}
+              <NavItem href="/dashboard" label="Dashboards" Icon={LayoutDashboard} active={pathname.startsWith("/dashboard")} collapsed />
               <button
                 onClick={() => { setCollapsed(false); setNewDashOpen(true); }}
-                className="mt-1 flex w-full items-center justify-center rounded-lg px-2 py-2.5 transition-colors"
+                className="flex w-full items-center justify-center rounded-lg px-2 py-2.5 transition-colors"
                 style={{ color: "var(--color-sidebar-muted)" }}
-                title="New personal dashboard"
+                title="New dashboard"
                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
               >
                 <Plus className="h-4 w-4" />
               </button>
-            </>
+            </div>
           ) : (
             <>
               <div>
@@ -332,7 +339,7 @@ export function Sidebar() {
           )}
         </nav>
 
-        <div className="space-y-0.5 px-2 pb-3" style={{ borderTop: "1px solid var(--color-sidebar-border)", paddingTop: 12 }}>
+        <div className="space-y-0.5 px-2 pb-3 pt-3" style={{ borderTop: "1px solid var(--color-sidebar-border)" }}>
           <Link
             href="/account"
             className={cn("text-sm font-medium transition-colors", collapsed ? "flex items-center justify-center rounded-lg px-2 py-2.5" : "flex items-center gap-3 rounded-lg px-3 py-2.5")}
