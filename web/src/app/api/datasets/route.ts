@@ -3,7 +3,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { requireSession } from "@/lib/session-auth";
 import { getPgPool } from "@/lib/insights-saas-db";
 
-const VALID_LAYERS = ["landing", "raw", "bronze", "silver", "gold"] as const;
+const VALID_LAYERS = ["landing", "raw", "bronze"] as const;
 
 export async function GET(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
          ) AS latest_run_at
        FROM meta.datasets d
        WHERE d.installation_id = $1
-         AND d.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
+         AND d.layer IN ('landing', 'raw', 'bronze')
          AND (d.source_system IS NULL OR d.dataset_id != d.source_system)
          ${filters}
        ORDER BY d.layer, d.object_name`,
