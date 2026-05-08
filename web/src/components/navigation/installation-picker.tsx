@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { LogOut, Building2, Mail, ChevronDown, Check, Star } from "lucide-react";
+import { Building2, Mail, ChevronDown, Check, Star } from "lucide-react";
 import { useInstallation } from "@/contexts/installation-context";
 import { cn } from "@/lib/utils";
 import type { Installation } from "@/contexts/installation-context";
@@ -27,7 +27,7 @@ function envDotColor(env: string): string {
 }
 
 export function InstallationPicker({ collapsed }: Props) {
-  const { installation, installations, logout, user, defaultInstallationId, switchInstallation, setDefaultInstallation, validating } = useInstallation();
+  const { installation, installations, user, defaultInstallationId, switchInstallation, setDefaultInstallation, validating } = useInstallation();
   const [open, setOpen] = useState(false);
   const [settingDefault, setSettingDefault] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -75,16 +75,7 @@ export function InstallationPicker({ collapsed }: Props) {
             style={{ background: envDotColor(installation.environment) }}
           />
         </div>
-        <button
-          onClick={logout}
-          className="flex items-center justify-center w-8 h-8 rounded-md transition-colors"
-          style={{ color: "var(--color-sidebar-muted)" }}
-          title="Sign out"
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-        >
-          <LogOut className="h-3.5 w-3.5" />
-        </button>
+
       </div>
     );
   }
@@ -109,8 +100,8 @@ export function InstallationPicker({ collapsed }: Props) {
               <p className="text-xs font-semibold truncate leading-none" style={{ color: "var(--color-brand, #1B3B6B)" }}>
                 {label}
               </p>
-              <p className="text-[10px] mt-0.5 truncate leading-none" style={{ color: "var(--color-sidebar-muted)" }}>
-                {installation.installation_id}
+              <p className="text-[10px] mt-0.5 truncate leading-none capitalize" style={{ color: "var(--color-sidebar-muted)" }}>
+                {installation.environment}
               </p>
             </div>
           </div>
@@ -124,16 +115,6 @@ export function InstallationPicker({ collapsed }: Props) {
                 style={{ color: "var(--color-sidebar-muted)" }}
               />
             )}
-            <button
-              onClick={(e) => { e.stopPropagation(); logout(); }}
-              className="p-1 rounded-md transition-colors"
-              style={{ color: "var(--color-sidebar-muted)" }}
-              title="Sign out"
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-sidebar-foreground)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-sidebar-muted)"; }}
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </button>
           </div>
         </div>
 
