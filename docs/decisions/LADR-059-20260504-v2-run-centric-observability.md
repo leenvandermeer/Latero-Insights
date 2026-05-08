@@ -32,7 +32,7 @@ Er is geen coherente "run-scoped view" die alle relevante informatie samenbrengt
 
 ### Huidige beperkingen
 
-- `meta.runs` heeft alle benodigde kolommen (`run_id`, `status`, `step`,
+- `meta.runs` heeft alle benodigde kolommen (`run_id`, `status`,
   `environment`, `duration_ms`, `parent_run_id`), maar wordt nooit als
   navigatie-object gepresenteerd.
 - `meta.run_io` legt vast welke datasets een run heeft gelezen en geschreven,
@@ -59,7 +59,7 @@ Een run-detailpagina bevat:
 
 | Sectie | Bron | Inhoud |
 |--------|------|--------|
-| Header | `meta.runs` | run_id, job, status, step, environment, duration, tijdstip |
+| Header | `meta.runs` | run_id, job, status, environment, duration, tijdstip |
 | I/O Datasets | `meta.run_io` | Gelezen en geschreven datasets met layer en status |
 | DQ Checks | `meta.quality_results WHERE run_id = ?` | Alle checks uitgevoerd in deze run |
 | Lineage activiteit | `meta.lineage_edges WHERE last_observed_run = ?` | Edges die in deze run zijn bevestigd of voor het eerst gezien |
@@ -70,9 +70,9 @@ Een run-detailpagina bevat:
 
 De Run Explorer (`/runs`) toont een chronologische tijdlijn van runs met:
 
-- Timeline-weergave per dag (swimlane per job-naam of step)
+- Timeline-weergave per dag (swimlane per job-naam)
 - Statusindicatie per run (SUCCESS / FAILED / WARNING / RUNNING)
-- Filters: datum range, status, environment, step
+- Filters: datum range, status, environment
 - Zoeken: job-naam, dataset-naam, run_id
 - Groepering: per job, per dataset, per data product (V2 concept)
 

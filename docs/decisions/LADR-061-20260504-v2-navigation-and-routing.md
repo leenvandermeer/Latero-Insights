@@ -170,10 +170,10 @@ terugknop werkt zoals verwacht.
 **Doel:** Chronologische tijdlijn van alle pipeline-uitvoeringen.
 
 **Componenten:**
-- Timeline-weergave per dag, swimlane per job-naam of step
-- Filter: datum, status, environment, step, data product
+- Timeline-weergave per dag, swimlane per job-naam
+- Filter: datum, status, environment, data product
 - Zoekbalk: job-naam, dataset-naam, run_id
-- Kolommen: run_id, job, step, datasets (I/O count), status, duration, tijdstip
+- Kolommen: run_id, job, datasets (I/O count), status, duration, tijdstip
 - Klik op rij → `/runs/[run_id]`
 
 ### `/runs/[run_id]` — Run Detail
@@ -181,7 +181,7 @@ terugknop werkt zoals verwacht.
 **Doel:** Volledig inzicht in één uitvoering.
 
 **Componenten:**
-- Header: run metadata (status, step, environment, duration, started_at)
+- Header: run metadata (status, environment, duration, started_at)
 - I/O Datasets tab: gelezen en geschreven datasets (met layer-badge en status)
 - DQ Checks tab: alle checks uit deze run (check_name, status, severity, result)
 - Lineage Activity tab: edges bevestigd in deze run
