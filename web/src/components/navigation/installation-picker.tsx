@@ -106,9 +106,6 @@ export function InstallationPicker({ collapsed }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none" style={envBadgeStyle(installation.environment)}>
-              {installation.environment}
-            </span>
             {isMulti && (
               <ChevronDown
                 className={cn("h-3 w-3 transition-transform", open && "rotate-180")}
