@@ -92,9 +92,6 @@ function DashboardRow({
     </div>
   );
 }
-    </div>
-  );
-}
 
 export default function DashboardListPage() {
   const router = useRouter();
