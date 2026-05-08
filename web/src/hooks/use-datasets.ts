@@ -24,8 +24,8 @@ export function useDatasets(filter: DatasetsFilter = {}) {
   return useQuery({
     queryKey: ["datasets", installationId, filter],
     queryFn: () => fetchDatasets(filter),
+    enabled: !!installationId,
     staleTime: 60_000,
-    refetchOnMount: "always",
     retry: 1,
   });
 }

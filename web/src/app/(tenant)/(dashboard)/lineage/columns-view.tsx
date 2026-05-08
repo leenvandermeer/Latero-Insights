@@ -9,9 +9,10 @@ interface ColumnsViewProps {
   attributes: LineageAttribute[];
   entities?: LineageEntity[];
   initialSearch?: string;
+  onOpenTrace?: () => void;
 }
 
-export function ColumnsView({ attributes, entities = [], initialSearch = "" }: ColumnsViewProps) {
+export function ColumnsView({ attributes, entities = [], initialSearch = "", onOpenTrace }: ColumnsViewProps) {
   const [search, setSearch] = useState("");
   const [entityFilter, setEntityFilter] = useState("all");
 
@@ -63,6 +64,15 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "" }: C
           {filtered.length} column flow{filtered.length !== 1 ? "s" : ""}
           {current.length !== filtered.length && ` of ${current.length}`}
         </span>
+
+        {current.length === 0 && (
+          <span
+            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+            style={{ background: "rgba(245,158,11,0.12)", color: "#B45309", border: "1px solid rgba(180,83,9,0.18)" }}
+          >
+            Evidence unavailable
+          </span>
+        )}
 
         <div className="flex items-center gap-2 ml-auto flex-wrap">
           {/* Coverage indicator */}
@@ -123,11 +133,30 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "" }: C
                 </p>
               </>
             ) : (
-              <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-                {current.length === 0
-                  ? "No column lineage data available."
-                  : "No results for this filter."}
-              </p>
+              <>
+                <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                  {current.length === 0
+                    ? "No column lineage evidence available"
+                    : "No results for this filter."}
+                </p>
+                <p className="max-w-sm text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
+                  {current.length === 0
+                    ? "Entity and dataset lineage are still available, but this tenant currently has no synced attribute-level mappings."
+                    : "Try broadening the current filters or return to Trace to inspect a different entity path."}
+                </p>
+                {onOpenTrace && (
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onOpenTrace}
+                      className="rounded-lg px-3 py-2 text-xs font-semibold"
+                      style={{ background: "var(--color-brand)", color: "#fff" }}
+                    >
+                      Back to Trace
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         ) : (

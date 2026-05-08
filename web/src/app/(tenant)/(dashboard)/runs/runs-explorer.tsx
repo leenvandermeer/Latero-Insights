@@ -52,10 +52,9 @@ export function RunsExplorer() {
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
-          {/* Step filter */}
           <input
             type="text"
-            placeholder="Filter by step…"
+            placeholder="Filter by job…"
             value={step}
             onChange={(e) => setStep(e.target.value)}
             className="text-sm rounded-md border px-2 py-1.5 w-44"
@@ -82,17 +81,18 @@ export function RunsExplorer() {
             <thead>
               <tr style={{ background: "var(--color-surface-subtle)", borderBottom: "1px solid var(--color-border)" }}>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Status</th>
-                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Step</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Job</th>
+                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Environment</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Started</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Duration</th>
+                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>DQ</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}></th>
               </tr>
             </thead>
             <tbody>
               {runs.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center" style={{ color: "var(--color-text-muted)" }}>
+                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: "var(--color-text-muted)" }}>
                     No runs found
                   </td>
                 </tr>
@@ -116,13 +116,36 @@ export function RunsExplorer() {
                       </span>
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs" style={{ color: "var(--color-text)" }}>{run.step ?? "—"}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>{run.job_name ?? run.dataset_id ?? "—"}</td>
+                  <td className="px-4 py-3 font-mono text-xs" style={{ color: "var(--color-text)" }}>
+                    {run.job_name ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {run.environment ? (
+                      <span
+                        className="px-1.5 py-0.5 rounded text-xs font-medium"
+                        style={{
+                          background: run.environment === "prod" ? "var(--color-danger-subtle, #fee2e2)" : "var(--color-surface-subtle)",
+                          color: run.environment === "prod" ? "var(--color-danger, #dc2626)" : "var(--color-text-muted)",
+                        }}
+                      >
+                        {run.environment}
+                      </span>
+                    ) : "—"}
+                  </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {run.started_at ? new Date(run.started_at).toLocaleString() : "—"}
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {run.duration_ms != null ? `${Math.round(Number(run.duration_ms) / 1000)}s` : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {Number(run.dq_count) > 0 ? (
+                      <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                        {run.dq_count}
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--color-text-muted)" }}>—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs">
                     <Link

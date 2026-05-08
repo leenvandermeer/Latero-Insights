@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Hash, BarChart2, Star, Search, Activity, XCircle, CheckCircle, ClipboardCheck, TrendingUp, PieChart, Timer, Check, Table2, Layers, Trash2, Globe, Upload } from "lucide-react";
+import { ChevronLeft, ChevronRight, Hash, BarChart2, Star, Search, Activity, XCircle, CheckCircle, ClipboardCheck, TrendingUp, PieChart, Timer, Check, Table2, Layers, Trash2, Globe, Upload, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { WIDGET_REGISTRY } from "./registry";
 import { useDashboards } from "@/contexts/dashboard-context";
@@ -218,6 +218,28 @@ export function LeftLibraryPanel({ onAdd, collapsed, onToggleCollapse, onDragSta
 
       {/* Scrollable content — order: System → Shared → Personal (LADR-012) */}
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-5">
+        <section
+          className="rounded-xl px-3 py-3"
+          style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
+        >
+          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>
+            Ownership Model
+          </p>
+          <div className="mt-2 space-y-2 text-[11px] leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+            <p><span style={{ color: "var(--color-text)" }}>Out-of-the-box</span> widgets are built into the product.</p>
+            <p><span style={{ color: "var(--color-text)" }}>Organization</span> widgets are shared across the tenant.</p>
+            <p><span style={{ color: "var(--color-text)" }}>My widgets</span> stay private to your personal workspace.</p>
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-2 flex items-center gap-2 px-1">
+            <Sparkles className="h-3.5 w-3.5" style={{ color: "var(--color-accent)" }} />
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>
+              Out-of-the-box Widgets
+            </p>
+          </div>
+
         {/* Counters */}
           {counters.length > 0 && (
             <section>
@@ -393,12 +415,13 @@ export function LeftLibraryPanel({ onAdd, collapsed, onToggleCollapse, onDragSta
               </div>
             </section>
           )}
+        </section>
 
           {/* Shared */}
           {filteredShared.length > 0 && (
             <section>
               <p className="px-1 pb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>
-                Shared
+                Organization Widgets
               </p>
               <div className="space-y-2">
                 {filteredShared.map((sw) => (
@@ -420,7 +443,7 @@ export function LeftLibraryPanel({ onAdd, collapsed, onToggleCollapse, onDragSta
                           className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0"
                           style={{ background: "rgba(200,137,42,0.12)", color: "var(--color-accent)" }}
                         >
-                          Shared
+                          Organization
                         </span>
                       </div>
                       {sw.description && (

@@ -279,6 +279,47 @@ Forbidden patterns:
 
 Allowed: writing `null` when a field is absent in the source.
 
+### LINS-022 — Out-of-the-box system dashboard widget layouts (LADR-068) ✓ IMPLEMENTED
+
+The three system dashboards (Pipelines, Data Quality, BCBS 239) MUST ship with
+pre-populated widget layouts that are immediately useful to a new user.
+
+Requirements:
+1. Factory defaults are defined in `dashboard-store.ts` and serve as the
+   baseline when no operator-published override is present.
+2. Operators MAY override the factory default by publishing a custom layout via
+   "Publish for everyone" on the dashboard canvas.
+3. "Reset to default" on a system dashboard restores the factory-default layout,
+   not an empty canvas (as was the case before LADR-068).
+4. `SYSTEM_LAYOUT_VERSION` was bumped to 3 to reflect this change.
+
+### LINS-023 — Dashboard favorites/pinning in sidebar navigation (LADR-068) ✓ IMPLEMENTED
+
+Users MUST be able to pin personal dashboards to the sidebar for one-click access.
+
+Requirements:
+1. The sidebar MUST always display the three system dashboards (Pipelines, Data
+   Quality, BCBS 239) directly in a "Dashboards" section — no click-through needed.
+2. A star/pin icon MUST be available on dashboard canvas headers (for personal
+   dashboards) and in the dashboard list page.
+3. Pinned dashboards MUST appear in the sidebar "Dashboards" section (max 3
+   shown, in pin order).
+4. Pin state MUST be stored in localStorage per installation:
+   key `insights-pinned-dashboards-v1:{installationId}`.
+5. System dashboards MUST NOT be pinnable — they are always visible.
+
+### LINS-024 — Simplified dashboard home as searchable list (LADR-068) ✓ IMPLEMENTED
+
+The `/dashboard` home page MUST be a simple, scannable list of all dashboards.
+
+Requirements:
+1. The page MUST show all dashboards (system + personal) in a flat list.
+2. A text search input MUST filter the list by dashboard name.
+3. Tabs (All, System, Mine, Pinned) MUST allow scoped views.
+4. Each row MUST show: dashboard name, description (if present), widget count,
+   last updated date, a pin toggle (for personal dashboards), and an "Open" button.
+5. No hero banner, stat cards, or template sections.
+
 ## Implemented (was Deferred Backlog)
 
 ### B-001 — Full Session Auth ✓ IMPLEMENTED

@@ -25,9 +25,12 @@ import type { Pool, PoolClient } from "pg";
 const KNOWN_LAYERS = new Set(["landing", "raw", "bronze", "silver", "gold"]);
 
 /**
- * Extract bare entity name and layer from an OL namespace/name pair.
+ * Extract entity name and layer from an OL namespace/name pair.
  * Namespace: e.g. "databricks://workspace/meta/bronze"
  * Name:      e.g. "cbs_arbeid" or "workspace.bronze.cbs_arbeid"
+ *
+ * Entity name is taken as-is from the last part of the name — no prefix stripping (LINS-021).
+ * Layer is derived only from the namespace path or FQN structure, never from the entity name itself.
  */
 function parseOLDataset(namespace: string, name: string): { entityName: string; layer: string | null } {
   // Try to extract layer from namespace path segments
@@ -37,7 +40,7 @@ function parseOLDataset(namespace: string, name: string): { entityName: string; 
     if (KNOWN_LAYERS.has(seg)) { layer = seg; break; }
   }
 
-  // Try to extract layer from name (catalog.layer.table or layer.table)
+  // Try to extract layer from FQN structure (catalog.layer.table or layer.table)
   const nameParts = name.split(".").filter(Boolean);
   const tableName = nameParts.at(-1) ?? name;
   if (!layer) {
@@ -45,16 +48,20 @@ function parseOLDataset(namespace: string, name: string): { entityName: string; 
     if (penultimate && KNOWN_LAYERS.has(penultimate)) layer = penultimate;
   }
 
-  // Bare entity name: last part, strip known layer prefix/suffix
-  const entityName = tableName
-    .replace(new RegExp(`^(${[...KNOWN_LAYERS].join("|")})_`, "i"), "")
-    .replace(new RegExp(`_(${[...KNOWN_LAYERS].join("|")})$`, "i"), "");
-
-  return { entityName: entityName || tableName, layer };
+  // Entity name = last part of the name, as-is. No stripping (LINS-021).
+  return { entityName: tableName || name, layer };
 }
 
-function layerScopedId(entityName: string, layer: string | null): string {
-  return layer && KNOWN_LAYERS.has(layer) ? `${entityName}::${layer}` : `${entityName}::unknown`;
+/**
+ * Returns the bare entity name as dataset_id (LINS-021 / WP-NDI-001).
+ * Layer is stored in its own column; composite IDs are no longer used.
+ */
+function bareDatasetId(entityName: string): string {
+  return entityName;
+}
+
+function resolvedLayer(layer: string | null): string {
+  return layer && KNOWN_LAYERS.has(layer) ? layer : "unknown";
 }
 
 function normalizeEventStatus(eventType: string): string {
@@ -107,7 +114,8 @@ async function processOLEvent(
     ? parseOLDataset(String(primaryOutput.namespace ?? ""), String(primaryOutput.name ?? ""))
     : parseOLDataset(jobNamespace, jobName);
 
-  const scopedDatasetId = layerScopedId(jobEntity, jobLayer);
+  const jobDatasetId = bareDatasetId(jobEntity);
+  const jobLayerResolved = resolvedLayer(jobLayer);
 
   // 1. Upsert entity (V2)
   // Context nodes: job namespace IS the entity itself (e.g. "latero" processing "latero")
@@ -120,20 +128,20 @@ async function processOLEvent(
     [jobEntity, installationId, jobIsContextNode]
   );
 
-  // 2. Upsert dataset
+  // 2. Upsert dataset (WP-NDI-001: dataset_id = bare entity name, layer = separate column)
   await pool.query(
-    `INSERT INTO meta.datasets (dataset_id, installation_id, fqn, namespace, object_name,
-       platform, entity_type, layer, group_id, entity_id)
-     VALUES ($1, $2, $3, $4, $5, 'UNKNOWN', 'TABLE', $6, $3, $3)
-     ON CONFLICT (installation_id, dataset_id) DO UPDATE
+    `INSERT INTO meta.datasets (dataset_id, installation_id, namespace, object_name,
+       platform, entity_type, layer, entity_id)
+     VALUES ($1, $2, $3, $4, 'UNKNOWN', 'TABLE', $5, $1)
+     ON CONFLICT (installation_id, dataset_id, layer) DO UPDATE
        SET last_seen_at = now(),
            entity_id = COALESCE(meta.datasets.entity_id, EXCLUDED.entity_id),
-           dataset_facets = COALESCE(meta.datasets.dataset_facets, '{}') || $7`,
-    [scopedDatasetId, installationId, jobEntity, jobNamespace, jobEntity, jobLayer,
+           dataset_facets = COALESCE(meta.datasets.dataset_facets, '{}') || $6`,
+    [jobDatasetId, installationId, jobNamespace, jobEntity, jobLayerResolved,
       JSON.stringify(jobFacets)]
   );
 
-  // 3. Upsert job
+  // 3. Upsert job (dataset_id = bare entity name, not composite)
   const fullJobName = `${jobNamespace}/${jobName}`.replace(/^\//, "");
   const jobResult = await pool.query(
     `INSERT INTO meta.jobs (installation_id, job_name, job_type, dataset_id)
@@ -141,7 +149,7 @@ async function processOLEvent(
      ON CONFLICT (installation_id, job_name) DO UPDATE
        SET dataset_id = COALESCE(EXCLUDED.dataset_id, meta.jobs.dataset_id)
      RETURNING job_id`,
-    [installationId, fullJobName.slice(0, 200), jobEntity]
+    [installationId, fullJobName.slice(0, 200), jobDatasetId]
   );
   const jobId = jobResult.rows[0]?.job_id as string;
   if (!jobId) return;
@@ -180,7 +188,8 @@ async function processOLEvent(
     const { entityName, layer } = parseOLDataset(
       String(ds.namespace ?? ""), String(ds.name ?? "")
     );
-    const dsId = layerScopedId(entityName, layer);
+    const dsId = bareDatasetId(entityName);
+    const dsLayer = resolvedLayer(layer);
     const dsFacets = (ds.facets as Record<string, unknown>) ?? {};
 
     // Ensure entity exists before upserting dataset
@@ -193,23 +202,24 @@ async function processOLEvent(
       [entityName, installationId, dsIsContextNode]
     );
 
+    // WP-NDI-001: dataset_id = bare entity name, layer = separate column
     await pool.query(
-      `INSERT INTO meta.datasets (dataset_id, installation_id, fqn, namespace, object_name,
-         platform, entity_type, layer, group_id, entity_id, dataset_facets)
-       VALUES ($1, $2, $3, $4, $3, 'UNKNOWN', 'TABLE', $5, $3, $3, $6)
-       ON CONFLICT (installation_id, dataset_id) DO UPDATE
+      `INSERT INTO meta.datasets (dataset_id, installation_id, namespace, object_name,
+         platform, entity_type, layer, entity_id, dataset_facets)
+       VALUES ($1, $2, $3, $4, 'UNKNOWN', 'TABLE', $5, $1, $6)
+       ON CONFLICT (installation_id, dataset_id, layer) DO UPDATE
          SET last_seen_at = now(),
              entity_id = COALESCE(meta.datasets.entity_id, EXCLUDED.entity_id),
              dataset_facets = COALESCE(meta.datasets.dataset_facets, '{}') || $6`,
-      [dsId, installationId, entityName, String(ds.namespace ?? ""), layer,
+      [dsId, installationId, String(ds.namespace ?? ""), entityName, dsLayer,
         JSON.stringify(dsFacets)]
     );
 
     await pool.query(
-      `INSERT INTO meta.run_io (run_id, installation_id, dataset_id, role, observed_at)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (run_id, dataset_id, role) DO NOTHING`,
-      [runUuid, installationId, dsId, ds.role, eventTime]
+      `INSERT INTO meta.run_io (run_id, installation_id, dataset_id, layer, role, observed_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (run_id, dataset_id, layer, role) DO NOTHING`,
+      [runUuid, installationId, dsId, dsLayer, ds.role, eventTime]
     );
 
     // Process ColumnLineageFacet
@@ -223,7 +233,8 @@ async function processOLEvent(
           const { entityName: srcEntity, layer: srcLayer } = parseOLDataset(
             String(inp.namespace ?? ""), String(inp.name ?? "")
           );
-          const srcId = layerScopedId(srcEntity, srcLayer);
+          const srcId = bareDatasetId(srcEntity);
+          const srcLayerResolved = resolvedLayer(srcLayer);
           const srcCol = String(inp.field ?? "");
           const transform = (fd.transformationType as string)?.toUpperCase() ?? "UNKNOWN";
           const tr = ["DIRECT", "INDIRECT", "UNKNOWN"].includes(transform) ? transform : "UNKNOWN";
@@ -231,15 +242,15 @@ async function processOLEvent(
           if (srcCol) {
             await pool.query(
               `INSERT INTO meta.lineage_columns
-                 (installation_id, source_dataset_id, source_column,
-                  target_dataset_id, target_column, transformation_type,
+                 (installation_id, source_dataset_id, source_layer, source_column,
+                  target_dataset_id, target_layer, target_column, transformation_type,
                   first_observed_at, last_observed_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
-               ON CONFLICT (installation_id, source_dataset_id, source_column,
-                            target_dataset_id, target_column)
-               DO UPDATE SET last_observed_at = $7,
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+               ON CONFLICT (installation_id, source_dataset_id, source_layer, source_column,
+                            target_dataset_id, target_layer, target_column)
+               DO UPDATE SET last_observed_at = $9,
                              transformation_type = EXCLUDED.transformation_type`,
-              [installationId, srcId, srcCol, dsId, targetCol, tr, eventTime]
+              [installationId, srcId, srcLayerResolved, srcCol, dsId, dsLayer, targetCol, tr, eventTime]
             );
           }
         }
@@ -273,31 +284,34 @@ async function processOLEvent(
     }
   }
 
-  // 6. Build lineage_edges from inputs → outputs
+  // 6. Build lineage_edges from inputs → outputs (WP-NDI-001: bare IDs + layer columns)
   for (const inp of inputs) {
     const { entityName: srcEntity, layer: srcLayer } = parseOLDataset(
       String(inp.namespace ?? ""), String(inp.name ?? "")
     );
-    const srcId = layerScopedId(srcEntity, srcLayer);
+    const srcId = bareDatasetId(srcEntity);
+    const srcLayerResolved = resolvedLayer(srcLayer);
 
     for (const out of outputs) {
       const { entityName: tgtEntity, layer: tgtLayer } = parseOLDataset(
         String(out.namespace ?? ""), String(out.name ?? "")
       );
-      const tgtId = layerScopedId(tgtEntity, tgtLayer);
-      if (srcId === tgtId) continue;
+      const tgtId = bareDatasetId(tgtEntity);
+      const tgtLayerResolved = resolvedLayer(tgtLayer);
+      // Skip self-loops (same dataset_id AND same layer)
+      if (srcId === tgtId && srcLayerResolved === tgtLayerResolved) continue;
 
       await pool.query(
         `INSERT INTO meta.lineage_edges
-           (installation_id, source_dataset_id, target_dataset_id,
+           (installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer,
             first_observed_at, last_observed_at, last_observed_run, observation_count)
-         VALUES ($1, $2, $3, $4, $4, $5, 1)
-         ON CONFLICT (installation_id, source_dataset_id, target_dataset_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $6, $7, 1)
+         ON CONFLICT (installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer)
          DO UPDATE SET
-           last_observed_at  = $4,
-           last_observed_run = $5,
+           last_observed_at  = $6,
+           last_observed_run = $7,
            observation_count = meta.lineage_edges.observation_count + 1`,
-        [installationId, srcId, tgtId, eventTime, runUuid]
+        [installationId, srcId, srcLayerResolved, tgtId, tgtLayerResolved, eventTime, runUuid]
       );
     }
   }

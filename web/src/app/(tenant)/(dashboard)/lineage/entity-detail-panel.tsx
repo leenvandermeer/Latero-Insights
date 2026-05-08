@@ -1,7 +1,8 @@
 "use client";
 
-import { X, Table2, ArrowRight, CheckCircle2, AlertTriangle, XCircle, Clock, Columns3 } from "lucide-react";
+import { X, Table2, ArrowRight, CheckCircle2, AlertTriangle, XCircle, Clock, Columns3, ArrowUpFromLine, ArrowDownToLine, Focus } from "lucide-react";
 import type { LineageEntity, LineageAttribute } from "@/lib/adapters/types";
+import { lineageNodeKey } from "./lineage-utils";
 import { lineageNodeLabel, lineageKeyLabel } from "./lineage-utils";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; Icon: React.ComponentType<{ className?: string }> }> = {
@@ -30,10 +31,21 @@ interface EntityDetailPanelProps {
   onClose: () => void;
   onNavigateTo?: (entityFqn: string, direction: "upstream" | "downstream") => void;
   onOpenColumns?: (query?: string) => void;
+  onSetAnchor?: (entityKey: string) => void;
+  onTraceFromEntity?: (entityKey: string, direction: "upstream" | "downstream") => void;
 }
 
-export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, onOpenColumns }: EntityDetailPanelProps) {
+export function EntityDetailPanel({
+  entity,
+  attributes,
+  onClose,
+  onNavigateTo,
+  onOpenColumns,
+  onSetAnchor,
+  onTraceFromEntity,
+}: EntityDetailPanelProps) {
   const datasetLabel = lineageNodeLabel(entity);
+  const entityKey = lineageNodeKey(entity);
 
   function refMatchesEntity(ref: string): boolean {
     const refLower = ref.toLowerCase();
@@ -69,7 +81,7 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
 
   return (
     <div
-      className="absolute right-0 top-0 bottom-0 w-80 overflow-y-auto z-10"
+      className="h-full w-80 shrink-0 overflow-y-auto"
       style={{ borderLeft: "1px solid var(--color-border)", background: "var(--color-card)" }}
     >
       {/* Header */}
@@ -122,6 +134,44 @@ export function EntityDetailPanel({ entity, attributes, onClose, onNavigateTo, o
               <dd><StatusBadge status={entity.end_to_end_status} /></dd>
             </div>
           </div>
+
+          {(onSetAnchor || onTraceFromEntity) && (
+            <div className="mt-3 flex flex-wrap gap-2 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+              {onSetAnchor && (
+                <button
+                  type="button"
+                  onClick={() => onSetAnchor(entityKey)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-semibold"
+                  style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-brand)" }}
+                >
+                  <Focus className="h-3.5 w-3.5" />
+                  Re-anchor here
+                </button>
+              )}
+              {onTraceFromEntity && (
+                <button
+                  type="button"
+                  onClick={() => onTraceFromEntity(entityKey, "upstream")}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-semibold"
+                  style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "#3B82F6" }}
+                >
+                  <ArrowUpFromLine className="h-3.5 w-3.5" />
+                  Trace upstream
+                </button>
+              )}
+              {onTraceFromEntity && (
+                <button
+                  type="button"
+                  onClick={() => onTraceFromEntity(entityKey, "downstream")}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-semibold"
+                  style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-accent)" }}
+                >
+                  <ArrowDownToLine className="h-3.5 w-3.5" />
+                  Trace downstream
+                </button>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Chain */}

@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     values.push(layer);
   }
   if (q) {
-    filters += ` AND (d.object_name ILIKE $${idx} OR d.fqn ILIKE $${idx} OR d.group_id ILIKE $${idx})`;
+    filters += ` AND (d.dataset_id ILIKE $${idx} OR d.object_name ILIKE $${idx})`;
     idx++;
     values.push(`%${q}%`);
   }
@@ -46,22 +46,20 @@ export async function GET(request: NextRequest) {
     const result = await pool.query(
       `SELECT
          d.dataset_id,
-         d.fqn,
          d.namespace,
          d.object_name,
          d.platform,
          d.entity_type,
          d.source_system,
          d.layer,
-         d.group_id,
+         d.entity_id,
          d.first_seen_at,
          d.last_seen_at,
-         -- Latest run status for this dataset
          (
            SELECT r.status
            FROM meta.runs r
            JOIN meta.jobs j ON j.job_id = r.job_id
-           WHERE j.dataset_id = d.fqn
+           WHERE j.dataset_id = d.dataset_id
              AND r.installation_id = d.installation_id
            ORDER BY r.started_at DESC
            LIMIT 1
@@ -70,17 +68,15 @@ export async function GET(request: NextRequest) {
            SELECT r.started_at
            FROM meta.runs r
            JOIN meta.jobs j ON j.job_id = r.job_id
-           WHERE j.dataset_id = d.fqn
+           WHERE j.dataset_id = d.dataset_id
              AND r.installation_id = d.installation_id
            ORDER BY r.started_at DESC
            LIMIT 1
          ) AS latest_run_at
        FROM meta.datasets d
        WHERE d.installation_id = $1
-         -- Only show properly layered medallion datasets (exclude legacy/unlayered rows)
          AND d.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
-         -- Exclude framework context nodes (e.g. 'latero' where fqn = source_system)
-         AND (d.source_system IS NULL OR d.fqn != d.source_system)
+         AND (d.source_system IS NULL OR d.dataset_id != d.source_system)
          ${filters}
        ORDER BY d.layer, d.object_name`,
       values

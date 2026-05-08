@@ -44,9 +44,11 @@ async function getPipelineRunsFromMetaStore(range: DateRange): Promise<PipelineR
         pr.external_run_id                      AS parent_run_id
       FROM meta.runs r
       JOIN meta.jobs j USING (job_id)
-      LEFT JOIN meta.datasets d
-        ON d.installation_id = r.installation_id
-       AND d.dataset_id = j.dataset_id
+      LEFT JOIN LATERAL (
+        SELECT source_system FROM meta.datasets
+        WHERE installation_id = r.installation_id AND dataset_id = j.dataset_id
+        LIMIT 1
+      ) d ON true
       LEFT JOIN meta.runs pr ON pr.run_id = r.parent_run_id
       WHERE r.run_date BETWEEN $1 AND $2${installationFilter}
       ORDER BY r.started_at DESC
@@ -180,51 +182,45 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
       WITH upstream AS (
         SELECT
           e.target_dataset_id                                                     AS dataset_id,
-          -- layer::name composite keys voor upstream connectie
-          ARRAY_AGG(DISTINCT src.layer || '::' || src.fqn
-                    ORDER BY src.layer || '::' || src.fqn)                        AS upstream_keys
+          e.target_layer                                                          AS layer,
+          ARRAY_AGG(DISTINCT e.source_layer || '::' || e.source_dataset_id
+                    ORDER BY e.source_layer || '::' || e.source_dataset_id)       AS upstream_keys
         FROM meta.lineage_edges e
-        JOIN meta.datasets src
-          ON src.dataset_id      = e.source_dataset_id
-         AND src.installation_id = e.installation_id
-         AND src.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
         WHERE e.installation_id = $1
-        GROUP BY e.target_dataset_id
+        GROUP BY e.target_dataset_id, e.target_layer
       ),
       downstream AS (
         SELECT
           e.source_dataset_id                                                     AS dataset_id,
-          -- layer::name composite keys voor downstream connectie
-          ARRAY_AGG(DISTINCT tgt.layer || '::' || tgt.fqn
-                    ORDER BY tgt.layer || '::' || tgt.fqn)                        AS downstream_keys
+          e.source_layer                                                          AS layer,
+          ARRAY_AGG(DISTINCT e.target_layer || '::' || e.target_dataset_id
+                    ORDER BY e.target_layer || '::' || e.target_dataset_id)       AS downstream_keys
         FROM meta.lineage_edges e
-        JOIN meta.datasets tgt
-          ON tgt.dataset_id      = e.target_dataset_id
-         AND tgt.installation_id = e.installation_id
-         AND tgt.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
         WHERE e.installation_id = $1
-        GROUP BY source_dataset_id
+        GROUP BY e.source_dataset_id, e.source_layer
       ),
-      -- run_io bevat de layer-scoped dataset_id direct (geschreven door sync)
       run_status_base AS (
-        SELECT d.dataset_id, r.status, r.started_at, r.ended_at
+        SELECT d.dataset_id, d.layer, r.status, r.started_at, r.ended_at
         FROM meta.run_io io
         JOIN meta.runs r USING (run_id)
         JOIN meta.datasets d
           ON d.installation_id = io.installation_id
          AND d.dataset_id      = io.dataset_id
+         AND d.layer           = io.layer
         WHERE io.installation_id = $1
       ),
       latest_run AS (
-        SELECT DISTINCT ON (dataset_id)
+        SELECT DISTINCT ON (dataset_id, layer)
           dataset_id,
+          layer,
           status                                                      AS latest_status
         FROM run_status_base
-        ORDER BY dataset_id, started_at DESC
+        ORDER BY dataset_id, layer, started_at DESC
       ),
       status_rollup AS (
         SELECT
           dataset_id,
+          layer,
           MAX(
             CASE status
               WHEN 'FAILED'  THEN 3
@@ -235,12 +231,12 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
           )                                                           AS worst_rank,
           MAX(CASE WHEN status = 'SUCCESS' THEN ended_at END)        AS latest_success_at
         FROM run_status_base
-        GROUP BY dataset_id
+        GROUP BY dataset_id, layer
       ),
       all_edge_datasets AS (
-        SELECT DISTINCT source_dataset_id AS dataset_id FROM meta.lineage_edges WHERE installation_id = $1
+        SELECT DISTINCT source_dataset_id AS dataset_id, source_layer AS layer FROM meta.lineage_edges WHERE installation_id = $1
         UNION
-        SELECT DISTINCT target_dataset_id AS dataset_id FROM meta.lineage_edges WHERE installation_id = $1
+        SELECT DISTINCT target_dataset_id AS dataset_id, target_layer AS layer FROM meta.lineage_edges WHERE installation_id = $1
       ),
       -- LADR-064: source_datasets per silver/gold entiteit (1-to-many bridge)
       entity_source_names AS (
@@ -253,10 +249,9 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
       )
       SELECT
 
-        d.dataset_name                                                AS dataset_id,
-        d.dataset_name                                                AS name,
-        -- Laag staat altijd gevuld na LADR-058 migratie (layer-scoped writes)
-        COALESCE(d.layer, 'UNKNOWN')                                  AS layer,
+        d.dataset_id                                                  AS dataset_id,
+        d.dataset_id                                                  AS name,
+        d.layer                                                       AS layer,
         COALESCE(lr.latest_status, 'UNKNOWN')                         AS latest_status,
         CASE COALESCE(sr.worst_rank, 0)
           WHEN 3 THEN 'FAILED'
@@ -267,26 +262,22 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
         sr.latest_success_at,
         COALESCE(up.upstream_keys,   ARRAY[]::TEXT[])              AS upstream_keys,
         COALESCE(dn.downstream_keys, ARRAY[]::TEXT[])              AS downstream_keys,
-        -- LADR-064: voor silver/gold: welke bronze datasets voeden deze entiteit
         COALESCE(es.source_datasets, ARRAY[]::TEXT[])              AS source_datasets,
-        -- node_kind: dataset voor landing/raw/bronze, entity voor silver/gold
         CASE WHEN d.layer IN ('silver', 'gold') THEN 'entity' ELSE 'dataset' END AS node_kind,
-        COALESCE(ent.entity_name, d.dataset_name)                  AS entity_name
+        COALESCE(ent.entity_name, d.dataset_id)                    AS entity_name
       FROM meta.datasets d
-      JOIN all_edge_datasets aed ON aed.dataset_id = d.dataset_id
-      LEFT JOIN upstream           up  ON up.dataset_id  = d.dataset_id
-      LEFT JOIN downstream         dn  ON dn.dataset_id  = d.dataset_id
-      LEFT JOIN latest_run         lr  ON lr.dataset_id  = d.dataset_id
-      LEFT JOIN status_rollup      sr  ON sr.dataset_id  = d.dataset_id
+      JOIN all_edge_datasets aed ON aed.dataset_id = d.dataset_id AND aed.layer = d.layer
+      LEFT JOIN upstream           up  ON up.dataset_id  = d.dataset_id AND up.layer  = d.layer
+      LEFT JOIN downstream         dn  ON dn.dataset_id  = d.dataset_id AND dn.layer  = d.layer
+      LEFT JOIN latest_run         lr  ON lr.dataset_id  = d.dataset_id AND lr.layer  = d.layer
+      LEFT JOIN status_rollup      sr  ON sr.dataset_id  = d.dataset_id AND sr.layer  = d.layer
       LEFT JOIN entity_source_names es ON es.entity_id   = d.entity_id
       LEFT JOIN meta.entities      ent ON ent.installation_id = d.installation_id
                                        AND ent.entity_id      = d.entity_id
       WHERE d.installation_id = $1
-        -- Exclude external/supplier nodes (unknown layer = not a managed pipeline dataset)
         AND d.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
-        -- Exclude framework context nodes: when fqn = source_system the dataset IS the framework itself (e.g. 'latero')
-        AND (d.source_system IS NULL OR d.fqn != d.source_system)
-      ORDER BY d.fqn
+        AND (d.source_system IS NULL OR d.dataset_id != d.source_system)
+      ORDER BY d.dataset_id
     `,
     [installationId],
   );
@@ -329,19 +320,13 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
       SELECT
         c.source_dataset_id                       AS source_dataset_id,
         c.target_dataset_id                       AS target_dataset_id,
-        COALESCE(src.fqn, c.source_dataset_id)   AS source_name,
+        c.source_dataset_id                       AS source_name,
         c.source_column                           AS source_attribute,
-        COALESCE(tgt.fqn, c.target_dataset_id)   AS target_name,
+        c.target_dataset_id                       AS target_name,
         c.target_column                           AS target_attribute,
-        src.layer                                 AS source_layer,
-        tgt.layer                                 AS target_layer
+        c.source_layer                            AS source_layer,
+        c.target_layer                            AS target_layer
       FROM meta.lineage_columns c
-      LEFT JOIN meta.datasets src
-        ON src.installation_id = c.installation_id
-       AND src.dataset_id      = c.source_dataset_id
-      LEFT JOIN meta.datasets tgt
-        ON tgt.installation_id = c.installation_id
-       AND tgt.dataset_id      = c.target_dataset_id
       WHERE c.installation_id = $1
       ORDER BY source_name, c.source_column
     `,

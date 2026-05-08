@@ -473,7 +473,7 @@ export function WidgetConfigPanel({ widget, editableWidget, isSharedWidget = fal
                         {isSharedWidget && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
                             style={{ background: "rgba(200,137,42,0.12)", color: "var(--color-accent)" }}>
-                            shared
+                            organization
                           </span>
                         )}
                       </div>
@@ -485,7 +485,7 @@ export function WidgetConfigPanel({ widget, editableWidget, isSharedWidget = fal
                     {impactCount > 1 && (
                       <p className="text-xs rounded-md px-2.5 py-2" style={{ background: "rgba(200,137,42,0.12)", color: "var(--color-accent)" }}>
                         {isSharedWidget
-                          ? `Shared widget — saving updates all ${impactCount} dashboards.`
+                          ? `Organization widget — saving updates across ${impactCount} dashboards.`
                           : `Used in ${impactCount} dashboards — saving updates all usages.`}
                       </p>
                     )}
@@ -527,7 +527,7 @@ export function WidgetConfigPanel({ widget, editableWidget, isSharedWidget = fal
                   {impactCount > 1 && (
                     <p className="text-xs rounded-md px-2.5 py-2" style={{ background: "rgba(200,137,42,0.12)", color: "var(--color-accent)" }}>
                       {isSharedWidget
-                        ? `Shared widget — saving updates all ${impactCount} dashboards.`
+                        ? `Organization widget — saving updates across ${impactCount} dashboards.`
                         : `Used in ${impactCount} dashboards — saving updates all usages.`}
                     </p>
                   )}

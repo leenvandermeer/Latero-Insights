@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { DataCatalog } from "./data-catalog";
+import { CatalogHub } from "./catalog-hub";
 
 export const metadata: Metadata = {
   title: "Catalog — Latero Control",
 };
 
 export default function CatalogPage() {
-  return <DataCatalog />;
+  return <CatalogHub />;
 }

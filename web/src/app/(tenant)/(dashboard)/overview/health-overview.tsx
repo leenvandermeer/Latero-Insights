@@ -81,7 +81,7 @@ export function HealthOverview() {
       label: "Entities",
       value: health?.entity_count ?? "—",
       icon: Boxes,
-      href: "/entities",
+      href: "/catalog",
     },
     {
       label: "DQ Pass Rate",
@@ -144,7 +144,7 @@ export function HealthOverview() {
             </Link>
           </div>
           {productsLoading ? (
-            <p className="px-5 py-8 text-sm text-center" style={{ color: "var(--color-text-muted)" }}>Laden…</p>
+            <p className="px-5 py-8 text-sm text-center" style={{ color: "var(--color-text-muted)" }}>Loading…</p>
           ) : products.length === 0 ? (
             <p className="px-5 py-8 text-sm text-center" style={{ color: "var(--color-text-muted)" }}>
               No data products yet. Push events to get started.
@@ -172,7 +172,7 @@ export function HealthOverview() {
                       {ec} {ec === 1 ? "entity" : "entities"}
                     </span>
                     <Link
-                      href={`/entities?product_id=${encodeURIComponent(id)}`}
+                      href="/catalog"
                       className="text-xs hover:underline shrink-0"
                       style={{ color: "var(--color-brand)" }}
                     >
@@ -197,7 +197,7 @@ export function HealthOverview() {
             </Link>
           </div>
           {runsLoading ? (
-            <p className="px-5 py-8 text-sm text-center" style={{ color: "var(--color-text-muted)" }}>Laden…</p>
+            <p className="px-5 py-8 text-sm text-center" style={{ color: "var(--color-text-muted)" }}>Loading…</p>
           ) : runs.length === 0 ? (
             <p className="px-5 py-8 text-sm text-center" style={{ color: "var(--color-text-muted)" }}>
               No runs yet.
@@ -216,8 +216,15 @@ export function HealthOverview() {
                       <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded shrink-0", statusColor(status))}>
                         {statusIcon(status)} {status}
                       </span>
-                      <span className="flex-1 font-mono text-xs truncate" style={{ color: "var(--color-text)" }}>
-                        {String(run.step ?? run.job_id ?? rid)}
+                      <span className="flex-1 min-w-0 flex flex-col">
+                        <span className="font-mono text-xs truncate" style={{ color: "var(--color-text)" }}>
+                          {String(run.job_name ?? run.step ?? rid)}
+                        </span>
+                        {!!(run.job_name && run.step) && (
+                          <span className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
+                            {String(run.step)}
+                          </span>
+                        )}
                       </span>
                       {!!run.started_at && (
                         <span className="text-xs shrink-0" style={{ color: "var(--color-text-muted)" }}>

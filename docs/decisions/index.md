@@ -29,7 +29,7 @@ Naming note:
 | [LADR-021](20260424-widget-scalability-improvements.md) | 2026-04-24 | Widget scalability: paginering, configureerbare drempel en failing datasets ranking | ACCEPTED |
 | [LADR-022](20260424-lineage-graph-entity-labels-and-dataset-focus.md) | 2026-04-24 | Lineage graph: layer-aware entity labels, dataset focus filter en virtual file node deduplicatie | ACCEPTED |
 | [LADR-023](20260424-mdcf-widget-field-values-table.md) | 2026-04-24 | MDCF `widget_field_values` tabel: specificatie en integratie met widget builder | ACCEPTED |
-| [LADR-024](20260424-widget-generator-first-architecture.md) | 2026-04-24 | Widget generator-first architectuur: geen out-of-the-box widgets, alles via shared library | ACCEPTED |
+| [LADR-024](20260424-widget-generator-first-architecture.md) | 2026-04-24 | Widget generator-first architectuur: geen out-of-the-box widgets, alles via shared library | PARTIALLY SUPERSEDED (LADR-068) |
 | [LADR-025](20260424-insights-saas-ingest-backend.md) | 2026-04-24 | Insights SaaS ingest backend in Next.js with Postgres bootstrap | ACCEPTED |
 | [LADR-026](20260424-postgres-as-single-read-store.md) | 2026-04-24 | Postgres als enige read-store voor webapp API routes | ACCEPTED |
 | [LADR-027](20260425-installation-aware-ux.md) | 2026-04-25 | Installation-aware UX: multi-tenancy groundwork (stap 1 & 2) | ACCEPTED |
@@ -54,3 +54,7 @@ Naming note:
 | [LADR-062](LADR-062-20260504-v2-openlineage-compliance.md) | 2026-05-04 | V2: OpenLineage Event Model als primair ingest-formaat (facets, Marquez compat) | PROPOSED |
 | [LADR-063](20260504-datasets-explorer.md) | 2026-05-04 | Datasets Explorer: zichtbaarheid voor alle pipeline-lagen in Explore | ACCEPTED |
 | [LADR-064](20260506-dataset-vs-entity-split.md) | 2026-05-06 | Dataset vs Entity: conceptuele scheiding, `dataset_name`, `entity_name`, `meta.entity_sources` bridge-tabel en 1-to-many support | PROPOSED |
+| [LADR-065](20260507-catalog-hub-data-product-crud.md) | 2026-05-07 | Catalog Hub: data product CRUD, tab-navigatie (Entities / Datasets), navigatiereductie EXPLORE 4→2 | ACCEPTED |
+| [LADR-066](20260507-lineage-entity-focus-and-cross-chain-upstream.md) | 2026-05-07 | Lineage: entiteit-centrische focus selector en cross-chain upstream zichtbaarheid bij viewpoint-trace | ACCEPTED |
+| [LADR-067](20260508-lineage-map-vs-trace-ux.md) | 2026-05-08 | Lineage UX split: Map for topology, Trace for investigation | PROPOSED |
+| [LADR-068](20260508-dashboard-ux-overhaul.md) | 2026-05-08 | Dashboard Navigation & Widget UX Overhaul: OOTB widgets, sidebar nav, pinning, simplified home | ACCEPTED |

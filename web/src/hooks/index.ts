@@ -9,3 +9,4 @@ export { useBreakpoint } from "./use-breakpoint";
 export { useDateRange } from "./use-date-range";
 export { useSharedWidgets, usePublishWidget, useWithdrawWidget, useUpdateSharedWidget } from "./use-shared-widgets";
 export { useFieldValues } from "./use-field-values";
+export { usePinnedDashboards } from "./use-pinned-dashboards";

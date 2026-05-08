@@ -545,19 +545,15 @@ function buildGraph(entities: LineageEntity[], attributes: LineageAttribute[] = 
 
 // ── Chain extraction ──────────────────────────────────────────────────────────
 
-function extractChain(anchor: string, allEntities: LineageEntity[]): LineageEntity[] {
-  const seeds = allEntities.filter((e) => datasetKey(e) === anchor);
-  const groupIds = new Set(seeds.map((e) => e.lineage_group_id).filter(Boolean) as string[]);
-  // LADR-058: upstream/downstream refs zijn layer::fqn keys — index op beide formaten
+/** Bidirectional BFS seeded from a specific layer::name entity key. */
+function extractFromEntityKey(entityKey: string, allEntities: LineageEntity[]): LineageEntity[] {
+  const seed = allEntities.find((e) => lineageNodeKey(e) === entityKey);
+  if (!seed) return allEntities;
+
   const fqnIndex = new Map(allEntities.map((e) => [e.name, e]));
   const keyIndex = new Map(allEntities.map((e) => [lineageNodeKey(e), e]));
-
   const result = new Map<string, LineageEntity>();
-  for (const e of allEntities) {
-    if (datasetKey(e) === anchor || (e.lineage_group_id && groupIds.has(e.lineage_group_id))) {
-      result.set(lineageNodeKey(e), e);
-    }
-  }
+  result.set(entityKey, seed);
 
   let changed = true;
   while (changed) {
@@ -565,21 +561,20 @@ function extractChain(anchor: string, allEntities: LineageEntity[]): LineageEnti
     for (const e of allEntities) {
       const key = lineageNodeKey(e);
       if (result.has(key)) continue;
-      const entityKey = key;
-      const reachableViaUpstream = e.upstream_keys.some((ref) => {
+      const reachableUp = e.upstream_keys.some((ref) => {
         const up = keyIndex.get(ref) ?? fqnIndex.get(ref);
         return up && result.has(lineageNodeKey(up));
       });
-      if (reachableViaUpstream) { result.set(key, e); changed = true; continue; }
-      const reachableViaDownstream = [...result.values()].some((re) =>
-        re.downstream_keys.includes(entityKey) || re.downstream_keys.includes(e.name)
+      if (reachableUp) { result.set(key, e); changed = true; continue; }
+      const reachableDown = [...result.values()].some((re) =>
+        re.downstream_keys.includes(key) || re.downstream_keys.includes(e.name)
       );
-      if (reachableViaDownstream) { result.set(key, e); changed = true; }
+      if (reachableDown) { result.set(key, e); changed = true; }
     }
   }
-
   return [...result.values()];
 }
+
 
 // ── Viewpoint trace helpers ───────────────────────────────────────────────────
 
@@ -613,6 +608,36 @@ function computeDownstreamKeys(anchorKey: string, entityIndex: Map<string, Linea
   return result;
 }
 
+/** BFS upstream with hop distance. Returns Map<key, hopsFromAnchor>. */
+function computeUpstreamDistances(anchorKey: string, entityIndex: Map<string, LineageEntity>): Map<string, number> {
+  const dist = new Map<string, number>([[anchorKey, 0]]);
+  const queue: [string, number][] = [[anchorKey, 0]];
+  while (queue.length > 0) {
+    const [key, d] = queue.shift()!;
+    const entity = entityIndex.get(key);
+    if (!entity) continue;
+    for (const up of entity.upstream_keys) {
+      if (!dist.has(up)) { dist.set(up, d + 1); queue.push([up, d + 1]); }
+    }
+  }
+  return dist;
+}
+
+/** BFS downstream with hop distance. Returns Map<key, hopsFromAnchor>. */
+function computeDownstreamDistances(anchorKey: string, entityIndex: Map<string, LineageEntity>): Map<string, number> {
+  const dist = new Map<string, number>([[anchorKey, 0]]);
+  const queue: [string, number][] = [[anchorKey, 0]];
+  while (queue.length > 0) {
+    const [key, d] = queue.shift()!;
+    const entity = entityIndex.get(key);
+    if (!entity) continue;
+    for (const ds of entity.downstream_keys) {
+      if (!dist.has(ds)) { dist.set(ds, d + 1); queue.push([ds, d + 1]); }
+    }
+  }
+  return dist;
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface GraphViewProps {
@@ -627,53 +652,100 @@ export function GraphView({ entities, attributes, refreshedAt, initialFocus, onO
   const [search, setSearch] = useState("");
   const [layerFilter, setLayerFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [datasetFocus, setDatasetFocus] = useState<string | null>(null);
+  const [entityFocus, setEntityFocus] = useState<string | null>(null); // layer::name key
+  const [focusLayerFilter, setFocusLayerFilter] = useState("all"); // filters entity picker list
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"all" | "upstream" | "downstream">("all");
   const [flow, setFlow] = useState<ReactFlowInstance | null>(null);
 
   const normalizedEntities = useMemo(() => normalizeLineageEntities(entities), [entities]);
 
-  // Resolve initialFocus (entity_fqn from URL) to a datasetKey once entities are loaded
+  // Resolve initialFocus (entity_fqn from URL) to an entity key once entities are loaded
   useEffect(() => {
-    if (!initialFocus || normalizedEntities.length === 0 || datasetFocus) return;
-    // Find the entity whose name or datasetKey contains/matches the initialFocus
+    if (!initialFocus || normalizedEntities.length === 0 || entityFocus) return;
     const fqnLower = initialFocus.toLowerCase();
     const match = normalizedEntities.find(
-      (e) => e.name.toLowerCase().includes(fqnLower) || datasetKey(e).toLowerCase() === fqnLower
+      (e) => e.name.toLowerCase().includes(fqnLower) || lineageNodeKey(e).toLowerCase() === fqnLower
     );
-    if (match) setDatasetFocus(datasetKey(match));
-  // Only run when entities first load or initialFocus changes; datasetFocus intentionally excluded
+    if (match) setEntityFocus(lineageNodeKey(match));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialFocus, normalizedEntities]);
 
-  const datasetOptions = useMemo(() => {
-    const keys = new Set(
-      normalizedEntities
-        .filter((e) => !["silver", "gold"].includes(e.layer.toLowerCase()))
-        .map(datasetKey)
-    );
-    return [...keys].sort();
+  const entityOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return normalizedEntities
+      .filter((e) => {
+        const key = lineageNodeKey(e);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((e) => ({ key: lineageNodeKey(e), label: lineageNodeLabel(e), layer: e.layer.toLowerCase() }))
+      .sort((a, b) => {
+        const li = LAYER_ORDER.indexOf(a.layer) - LAYER_ORDER.indexOf(b.layer);
+        return li !== 0 ? li : a.label.localeCompare(b.label);
+      });
   }, [normalizedEntities]);
 
   const focusedEntities = useMemo(
-    () => datasetFocus ? extractChain(datasetFocus, normalizedEntities) : normalizedEntities,
-    [datasetFocus, normalizedEntities]
+    () => entityFocus ? extractFromEntityKey(entityFocus, normalizedEntities) : normalizedEntities,
+    [entityFocus, normalizedEntities]
   );
 
+  // When user traces upstream/downstream from a selected node, expand to the full entity set
+  // so cross-chain upstream sources (e.g. multiple silver inputs into one gold entity) become visible.
+  const graphEntities = useMemo(() => {
+    if ((viewMode === "all" && !selectedNodeId) || !selectedNodeId) return focusedEntities;
+    if (viewMode === "all") return focusedEntities;
+    const entityIndex = new Map(normalizedEntities.map((e) => [lineageNodeKey(e), e]));
+    const keys = viewMode === "upstream"
+      ? computeUpstreamKeys(selectedNodeId, entityIndex)
+      : computeDownstreamKeys(selectedNodeId, entityIndex);
+    const traced = normalizedEntities.filter((e) => keys.has(lineageNodeKey(e)));
+    return traced.length > 0 ? traced : focusedEntities;
+  }, [viewMode, selectedNodeId, normalizedEntities, focusedEntities]);
+
+  // Stable callback — no deps so reference never changes
+  const handleFocusFromNode = useCallback((nodeId: string, direction: "upstream" | "downstream") => {
+    setSelectedNodeId(nodeId);
+    setViewMode(direction);
+  }, []);
+
+  function injectNavCallbacks(rawNodes: Node[]): Node[] {
+    return rawNodes.map((n) => {
+      if (n.type !== "entity") return n;
+      const d = n.data as unknown as GraphNodeData;
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          upstreamCount: d.upstream_entity_fqns.length,
+          downstreamCount: d.downstream_entity_fqns.length,
+          onFocusUpstream: () => handleFocusFromNode(n.id, "upstream"),
+          onFocusDownstream: () => handleFocusFromNode(n.id, "downstream"),
+        },
+      };
+    });
+  }
+
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () => buildGraph(focusedEntities, attributes),
-    [focusedEntities, attributes]
+    () => {
+      const { nodes: n, edges: e } = buildGraph(graphEntities, attributes);
+      return { nodes: injectNavCallbacks(n), edges: e };
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [graphEntities, attributes]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   useEffect(() => {
-    const { nodes: n, edges: e } = buildGraph(focusedEntities, attributes);
-    setNodes(n);
+    const { nodes: n, edges: e } = buildGraph(graphEntities, attributes);
+    setNodes(injectNavCallbacks(n));
     setEdges(e);
-  }, [attributes, focusedEntities, setNodes, setEdges]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attributes, graphEntities, setNodes, setEdges]);
 
   useEffect(() => {
     if (!flow) return;
@@ -692,12 +764,13 @@ export function GraphView({ entities, attributes, refreshedAt, initialFocus, onO
       localStorage.removeItem(POSITIONS_KEY);
     }
     const { nodes: n, edges: e } = buildGraph(focusedEntities, attributes);
-    setNodes(n);
+    setNodes(injectNavCallbacks(n));
     setEdges(e);
     setSearch("");
     setLayerFilter("all");
     setStatusFilter("all");
-    setDatasetFocus(null);
+    setEntityFocus(null);
+    setFocusLayerFilter("all");
     setSelectedNodeId(null);
     setViewMode("all");
     window.requestAnimationFrame(() => {
@@ -749,34 +822,57 @@ export function GraphView({ entities, attributes, refreshedAt, initialFocus, onO
   // Viewpoint trace: full upstream or downstream path from selected node
   const viewpointNodeIds = useMemo(() => {
     if (viewMode === "all" || !selectedNodeId) return null;
-    const entityIndex = new Map(focusedEntities.map((e) => [lineageNodeKey(e), e]));
+    const entityIndex = new Map(graphEntities.map((e) => [lineageNodeKey(e), e]));
     if (viewMode === "upstream") return computeUpstreamKeys(selectedNodeId, entityIndex);
     return computeDownstreamKeys(selectedNodeId, entityIndex);
-  }, [viewMode, selectedNodeId, focusedEntities]);
+  }, [viewMode, selectedNodeId, graphEntities]);
 
   // Active highlight set: viewpoint takes precedence over neighbor
   const highlightedNodeIds = viewpointNodeIds ?? neighborNodeIds;
 
-  // Merge filter opacity with highlight dimming
+  // Trace role + hop distance per node (for rich node-level rendering)
+  const traceData = useMemo(() => {
+    if (!selectedNodeId) return null;
+    const entityIndex = new Map(graphEntities.map((e) => [lineageNodeKey(e), e]));
+    const upDist = computeUpstreamDistances(selectedNodeId, entityIndex);
+    const downDist = computeDownstreamDistances(selectedNodeId, entityIndex);
+    const map = new Map<string, { role: "anchor" | "upstream" | "downstream" | "both" | "neutral"; hopDistance: number }>();
+    const allKeys = new Set([...upDist.keys(), ...downDist.keys()]);
+    for (const key of allKeys) {
+      const isUp = upDist.has(key) && key !== selectedNodeId;
+      const isDown = downDist.has(key) && key !== selectedNodeId;
+      if (key === selectedNodeId) {
+        map.set(key, { role: "anchor", hopDistance: 0 });
+      } else if (isUp && isDown) {
+        map.set(key, { role: "both", hopDistance: Math.min(upDist.get(key)!, downDist.get(key)!) });
+      } else if (isUp) {
+        map.set(key, { role: "upstream", hopDistance: upDist.get(key)! });
+      } else if (isDown) {
+        map.set(key, { role: "downstream", hopDistance: downDist.get(key)! });
+      }
+    }
+    return map;
+  }, [selectedNodeId, graphEntities]);
+
+  // Merge filter opacity + trace role data into display nodes
   const displayNodes = useMemo(() => {
-    if (!highlightedNodeIds) return filteredNodes;
     return filteredNodes.map((n) => {
       if (n.type === "layerHeader") return n;
-      const inFocus = highlightedNodeIds.has(n.id);
-      const isSelected = n.id === selectedNodeId;
+      const trace = traceData?.get(n.id);
+      const inFocus = highlightedNodeIds ? highlightedNodeIds.has(n.id) : true;
       const base = (n.style?.opacity as number) ?? 1;
-      const dim = inFocus ? base : Math.min(base, 0.12);
+      const opacity = highlightedNodeIds ? (inFocus ? base : Math.min(base, 0.12)) : base;
       return {
         ...n,
-        style: {
-          ...n.style,
-          opacity: dim,
-          outline: isSelected ? "2px solid var(--color-accent)" : undefined,
-          outlineOffset: "2px",
+        style: { ...n.style, opacity },
+        data: {
+          ...n.data,
+          traceRole: trace?.role ?? (traceData ? "neutral" : undefined),
+          hopDistance: trace?.hopDistance,
         },
       };
     });
-  }, [filteredNodes, highlightedNodeIds, selectedNodeId]);
+  }, [filteredNodes, highlightedNodeIds, traceData]);
 
   // Edge highlight: dim edges not connected to highlighted nodes
   const displayEdges = useMemo(() => {
@@ -797,7 +893,7 @@ export function GraphView({ entities, attributes, refreshedAt, initialFocus, onO
 
   const selectedEntity = useMemo(
     () => {
-      const matchedEntity = focusedEntities.find((e) => lineageNodeKey(e) === selectedNodeId);
+      const matchedEntity = graphEntities.find((e) => lineageNodeKey(e) === selectedNodeId);
       if (matchedEntity) return matchedEntity;
 
       const selectedNode = nodes.find((node) => node.id === selectedNodeId && node.type !== "layerHeader");
@@ -823,36 +919,102 @@ export function GraphView({ entities, attributes, refreshedAt, initialFocus, onO
   // Navigate-to: selecteer de node waarvan de ref de layer::fqn key is.
   // upstream_entity_fqns/downstream_entity_fqns zijn na LADR-058 exacte layer::fqn keys.
   const handleNavigateTo = useCallback((fqn: string, direction: "upstream" | "downstream") => {
-    // Probeer directe key lookup (primary path: fqn IS een layer::fqn key)
-    const byKey = focusedEntities.find((e) => lineageNodeKey(e) === fqn);
-    if (byKey) { setSelectedNodeId(lineageNodeKey(byKey)); return; }
-    // Fallback: fqn is een bare entity_fqn (bijv. vanuit detail panel legacy data)
-    const byFqn = focusedEntities.find((e) => e.name === fqn);
-    if (byFqn) { setSelectedNodeId(lineageNodeKey(byFqn)); return; }
+    const byKey = normalizedEntities.find((e) => lineageNodeKey(e) === fqn);
+    if (byKey) { setSelectedNodeId(lineageNodeKey(byKey)); setViewMode(direction); return; }
+    const byFqn = normalizedEntities.find((e) => e.name === fqn);
+    if (byFqn) { setSelectedNodeId(lineageNodeKey(byFqn)); setViewMode(direction); return; }
     setSelectedNodeId(null);
-  }, [focusedEntities]);
+  }, [normalizedEntities]);
+
+  const mapSummary = selectedNodeId
+    ? viewMode === "all"
+      ? "Selected node with direct neighborhood emphasis."
+      : `Showing ${viewMode} path from the selected node across the wider estate.`
+    : entityFocus
+      ? "Scoped to one entity-centered slice of the estate."
+      : "Broad topology view across the active installation.";
 
   return (
     <div className="flex flex-col h-full">
+      <div
+        className="grid gap-3 px-4 py-3 shrink-0 md:grid-cols-[minmax(0,1fr)_220px]"
+        style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}
+      >
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>
+            Map
+          </p>
+          <p className="mt-1 text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Estate topology and relationship orientation
+          </p>
+          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
+            {mapSummary}
+          </p>
+        </div>
+        <div
+          className="rounded-xl px-3 py-2"
+          style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+            Current scope
+          </p>
+          <p className="mt-1 text-lg font-semibold" style={{ color: "var(--color-text)" }}>
+            {graphEntities.length}{(entityFocus || (selectedNodeId && viewMode !== "all")) ? ` / ${normalizedEntities.length}` : ""}
+          </p>
+          <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+            entities visible{refreshedAt ? ` · refreshed ${(() => { try { return new Date(refreshedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); } catch { return refreshedAt; } })()}` : ""}
+          </p>
+        </div>
+      </div>
+
       {/* Toolbar */}
       <div
         className="flex items-center gap-2 px-4 py-2 shrink-0 flex-wrap"
         style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-card)" }}
       >
-        {/* Dataset focus */}
+        {/* Entity focus — layer filter + entity selector */}
+        <div className="flex items-center gap-1">
+          {(["all", ...LAYER_ORDER] as string[]).map((l) => {
+            const accent = LAYER_ACCENT[l] ?? "var(--color-text-muted)";
+            const active = focusLayerFilter === l;
+            const count = l === "all" ? entityOptions.length : entityOptions.filter((e) => e.layer === l).length;
+            if (l !== "all" && count === 0) return null;
+            return (
+              <button
+                key={l}
+                onClick={() => setFocusLayerFilter(l)}
+                className="text-[10px] font-bold uppercase tracking-wide rounded px-2 py-1 transition-colors"
+                style={{
+                  background: active ? (LAYER_ACCENT[l] ?? "var(--color-brand)") : "transparent",
+                  color: active ? "#fff" : "var(--color-text-muted)",
+                  border: `1px solid ${active ? (LAYER_ACCENT[l] ?? "var(--color-brand)") : "var(--color-border)"}`,
+                }}
+              >
+                {l === "all" ? "All" : l}
+              </button>
+            );
+          })}
+        </div>
+
         <select
-          value={datasetFocus ?? ""}
-          onChange={(e) => { setDatasetFocus(e.target.value || null); setSelectedNodeId(null); }}
-          className="text-xs rounded-lg px-2.5 py-1.5 outline-none max-w-[160px] cursor-pointer"
+          value={entityFocus ?? ""}
+          onChange={(e) => { setEntityFocus(e.target.value || null); setSelectedNodeId(null); setViewMode("all"); }}
+          className="text-xs rounded-lg px-2.5 py-1.5 outline-none max-w-[200px] cursor-pointer"
           style={{
             background: "var(--color-surface)",
-            border: `1.5px solid ${datasetFocus ? "var(--color-primary)" : "var(--color-border)"}`,
-            color: datasetFocus ? "var(--color-primary)" : "var(--color-text)",
-            fontWeight: datasetFocus ? 600 : undefined,
+            border: `1.5px solid ${entityFocus ? "var(--color-primary, var(--color-brand))" : "var(--color-border)"}`,
+            color: entityFocus ? "var(--color-primary, var(--color-brand))" : "var(--color-text)",
+            fontWeight: entityFocus ? 600 : undefined,
           }}
         >
-          <option value="">All datasets</option>
-          {datasetOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+          <option value="">Full estate</option>
+          {entityOptions
+            .filter((opt) => focusLayerFilter === "all" || opt.layer === focusLayerFilter)
+            .map((opt) => (
+              <option key={opt.key} value={opt.key}>
+                {opt.label} ({opt.layer})
+              </option>
+            ))}
         </select>
 
         {/* Divider */}
@@ -865,7 +1027,7 @@ export function GraphView({ entities, attributes, refreshedAt, initialFocus, onO
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search…"
+            placeholder="Search map…"
             className="text-xs rounded-lg pl-7 pr-3 py-1.5 w-36 outline-none"
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
           />
@@ -914,10 +1076,10 @@ export function GraphView({ entities, attributes, refreshedAt, initialFocus, onO
           onClick={handleResetLayout}
           className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
           style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-          title="Reset node positions"
+          title="Reset map positions and scope"
         >
           <RotateCcw className="h-3.5 w-3.5" />
-          Reset
+          Reset map
         </button>
 
         {/* Viewpoint toggle — only shown when a node is selected */}
@@ -940,7 +1102,7 @@ export function GraphView({ entities, attributes, refreshedAt, initialFocus, onO
                     border: `1px solid ${viewMode === mode ? "var(--color-accent)" : "var(--color-border)"}`,
                   }}
                   title={`Show ${label} path`}
-                >
+                  >
                   <Icon className="h-3 w-3" />
                   {label}
                 </button>
@@ -948,13 +1110,6 @@ export function GraphView({ entities, attributes, refreshedAt, initialFocus, onO
             </div>
           </>
         )}
-
-        <span className="ml-auto text-xs" style={{ color: "var(--color-text-muted)" }}>
-          {focusedEntities.length}{datasetFocus ? ` of ${normalizedEntities.length}` : ""} entit{focusedEntities.length === 1 ? "y" : "ies"}
-          {refreshedAt && (
-            <span> · {(() => { try { return new Date(refreshedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); } catch { return refreshedAt; } })()}</span>
-          )}
-        </span>
       </div>
 
       {/* Canvas + detail panel */}
@@ -1007,6 +1162,11 @@ export function GraphView({ entities, attributes, refreshedAt, initialFocus, onO
             attributes={attributes}
             onClose={() => setSelectedNodeId(null)}
             onNavigateTo={handleNavigateTo}
+            onSetAnchor={(entityKey) => {
+              setEntityFocus(entityKey);
+              setSelectedNodeId(entityKey);
+              setViewMode("all");
+            }}
             onOpenColumns={onOpenColumns}
           />
         )}

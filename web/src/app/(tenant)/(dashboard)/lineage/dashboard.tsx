@@ -6,19 +6,24 @@ import { useLineageEntities, useLineageAttributes } from "@/hooks";
 import { SourceIndicator, ErrorMessage, PageHeader } from "@/components/ui";
 import { Skeleton } from "@/components/ui/loading-skeleton";
 import { isNoDataError } from "@/lib/api";
-import { GraphView } from "./graph-view";
-import { ChainsView } from "./chains-view";
+import { TraceView } from "./trace-view";
 import { ColumnsView } from "./columns-view";
 import { LineageOverview } from "./overview-view";
 import type { LineageEntity } from "@/lib/adapters/types";
-import { GitFork, Link2, Columns3, LayoutDashboard, RefreshCw, Loader2, GitBranch, Download, Settings } from "lucide-react";
+import { Columns3, LayoutDashboard, RefreshCw, Loader2, GitBranch, Download, Settings, Route } from "lucide-react";
 
-type Tab = "overview" | "graph" | "chains" | "columns";
+type Tab = "overview" | "trace" | "columns";
+type TraceDirection = "upstream" | "downstream" | "both";
+
+interface TraceRequest {
+  anchorKey?: string | null;
+  direction?: TraceDirection;
+  depth?: number;
+}
 
 const TABS: { id: Tab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "overview", label: "Overview", Icon: LayoutDashboard },
-  { id: "graph",   label: "Graph",   Icon: GitFork },
-  { id: "chains",  label: "Chains",  Icon: Link2 },
+  { id: "trace", label: "Trace", Icon: Route },
   { id: "columns", label: "Columns", Icon: Columns3 },
 ];
 
@@ -37,12 +42,13 @@ export function LineageDashboard() {
   const searchParams = useSearchParams();
   const initialEntityFqn = searchParams.get("entity_fqn") ?? undefined;
 
-  const [activeTab, setActiveTab] = useState<Tab>(initialEntityFqn ? "graph" : "overview");
+  const [activeTab, setActiveTab] = useState<Tab>(initialEntityFqn ? "trace" : "overview");
   const [columnsSearch, setColumnsSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [traceRequest, setTraceRequest] = useState<TraceRequest | null>(null);
 
   useEffect(() => {
-    if (initialEntityFqn) setActiveTab("graph");
+    if (initialEntityFqn) setActiveTab("trace");
   }, [initialEntityFqn]);
 
   const {
@@ -69,6 +75,7 @@ export function LineageDashboard() {
 
   const entities = entitiesRes?.data ?? [];
   const attributes = attributesRes?.data ?? [];
+  const currentAttributeCount = attributes.filter((attribute) => attribute.is_current).length;
 
   const isLoading = entitiesLoading || (activeTab === "columns" && attributesLoading);
 
@@ -189,6 +196,25 @@ export function LineageDashboard() {
           >
             <Icon className="h-3.5 w-3.5" />
             {label}
+            {id === "columns" && (
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                style={{
+                  background: activeTab === id
+                    ? "rgba(255,255,255,0.18)"
+                    : currentAttributeCount > 0
+                    ? "rgba(16,185,129,0.12)"
+                    : "rgba(245,158,11,0.12)",
+                  color: activeTab === id
+                    ? "#fff"
+                    : currentAttributeCount > 0
+                    ? "#047857"
+                    : "#B45309",
+                }}
+              >
+                {currentAttributeCount > 0 ? currentAttributeCount : "0"}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -203,22 +229,33 @@ export function LineageDashboard() {
             attributes={attributes}
             refreshedAt={refreshedAt}
             onOpenTab={setActiveTab}
+            onOpenTrace={(anchorKey, options) => {
+              setTraceRequest({
+                anchorKey,
+                direction: options?.direction,
+                depth: options?.depth,
+              });
+              setActiveTab("trace");
+            }}
           />
-        ) : activeTab === "graph" ? (
-          <GraphView
+        ) : activeTab === "trace" ? (
+          <TraceView
             entities={entities}
             attributes={attributes}
-            refreshedAt={refreshedAt}
             initialFocus={initialEntityFqn}
+            request={traceRequest}
             onOpenColumns={(query) => {
               setColumnsSearch(query ?? "");
               setActiveTab("columns");
             }}
           />
-        ) : activeTab === "chains" ? (
-          <ChainsView entities={entities} />
         ) : (
-          <ColumnsView attributes={attributes} entities={entities} initialSearch={columnsSearch} />
+          <ColumnsView
+            attributes={attributes}
+            entities={entities}
+            initialSearch={columnsSearch}
+            onOpenTrace={() => setActiveTab("trace")}
+          />
         )}
       </div>
     </div>

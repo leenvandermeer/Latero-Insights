@@ -87,15 +87,15 @@ export function PublishWidgetDialog({ widget, onClose, onPublished }: PublishWid
                 <Globe className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
               </div>
               <h2 className="font-display font-semibold text-base flex-1" style={{ color: "var(--color-text)" }}>
-                Publish to library
+                Publish to organization library
               </h2>
             </div>
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
               <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-                This widget will appear in the <strong style={{ color: "var(--color-text)" }}>Shared</strong> section
-                of the widget library and be available to all dashboards in this deployment.
+                This widget will appear in the <strong style={{ color: "var(--color-text)" }}>Organization Widgets</strong> section
+                of the widget library and be available across this tenant.
               </p>
 
               <div className="space-y-1.5">
@@ -160,7 +160,7 @@ export function PublishWidgetDialog({ widget, onClose, onPublished }: PublishWid
                 className="flex-1 rounded-lg py-2 text-sm font-medium transition-opacity disabled:opacity-40"
                 style={{ background: "var(--color-accent)", color: "#fff" }}
               >
-                {isPending ? "Publishing…" : "Publish"}
+                {isPending ? "Publishing…" : "Publish widget"}
               </button>
             </div>
           </>

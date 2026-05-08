@@ -1,10 +1,5 @@
-import type { Metadata } from "next";
-import { AboutDashboard } from "./dashboard";
-
-export const metadata: Metadata = {
-  title: "About — Latero Control",
-};
+import { redirect } from "next/navigation";
 
 export default function AboutPage() {
-  return <AboutDashboard />;
+  redirect("/dashboard");
 }

@@ -348,9 +348,10 @@ function ChainCard({ chain }: { chain: ChainGroup }) {
 
 interface ChainsViewProps {
   entities: LineageEntity[];
+  onOpenTrace?: () => void;
 }
 
-export function ChainsView({ entities }: ChainsViewProps) {
+export function ChainsView({ entities, onOpenTrace }: ChainsViewProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -450,6 +451,36 @@ export function ChainsView({ entities }: ChainsViewProps) {
             <option value="success">Success</option>
             <option value="unknown">Unknown</option>
           </select>
+        </div>
+      </div>
+
+      <div
+        className="mx-4 mt-4 rounded-xl px-4 py-3"
+        style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
+      >
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+              Supporting view
+            </p>
+            <p className="mt-1 text-sm font-medium" style={{ color: "var(--color-text)" }}>
+              Chains stays available for grouped review, but Trace is now the primary investigation flow.
+            </p>
+            <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Use Trace when you want to start from one entity and inspect exact upstream or downstream depth.
+            </p>
+          </div>
+          {onOpenTrace && (
+            <button
+              type="button"
+              onClick={onOpenTrace}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
+              style={{ color: "var(--color-brand)", border: "1px solid var(--color-border)" }}
+            >
+              Open Trace
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

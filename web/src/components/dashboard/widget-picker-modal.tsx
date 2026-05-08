@@ -148,7 +148,7 @@ export function WidgetPickerModal({ onAdd, onCreateCustom, onClose }: Props) {
 
           {/* Show all shared when on "all" tab and no category active */}
           {showSharedAll && !CATEGORIES.some(showCat) && (
-            <Section label="Shared" icon={<Globe className="h-3.5 w-3.5" />}>
+            <Section label="Organization Widgets" icon={<Globe className="h-3.5 w-3.5" />}>
               <WidgetGrid cols={2}>
                 {filteredShared.map((sw) => (
                   <WidgetCard key={sw.id} label={sw.label} description={sw.description ?? ""}
@@ -190,13 +190,13 @@ export function WidgetPickerModal({ onAdd, onCreateCustom, onClose }: Props) {
         <div className="shrink-0 px-5 py-4 flex items-center justify-between gap-3"
           style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-            Create widgets with the builder and publish them to the shared library when they are ready.
+            Create widgets with the builder and publish them to the organization library when they are ready.
           </p>
           <button onClick={onCreateCustom}
             className="shrink-0 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
             style={{ background: "var(--color-accent)", color: "#fff" }}>
             <Sparkles className="h-4 w-4" />
-            Create widget
+            Create personal widget
           </button>
         </div>
       </div>
@@ -482,7 +482,7 @@ export function WidgetPickerDrawer({ open, onAdd, onCreateCustom, onClose }: Dra
             ) : (
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Create and place a custom widget</p>
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Create and place a personal widget</p>
                   <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
                     Build the widget on the right, then place it directly on the dashboard without leaving this page.
                   </p>

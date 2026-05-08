@@ -238,5 +238,20 @@
     "id": "4a0e60bc-7872-4aca-b0a7-05f05d3951ec",
     "installation_id": "prod_ko5o09uj9",
     "publishedAt": "2026-05-06T11:27:06.996Z"
+  },
+  {
+    "label": "Dataset Health",
+    "description": "Compact scrollable overview of all datasets with DQ status, lineage depth and last run time",
+    "templateType": "dataset-overview",
+    "category": "overview",
+    "defaultSize": {
+      "w": 4,
+      "h": 4,
+      "minW": 3,
+      "minH": 2
+    },
+    "id": "52d7e88b-b51a-4a93-85dd-01a36af8a67d",
+    "installation_id": "prod_ko5o09uj9",
+    "publishedAt": "2026-05-08T13:07:22.949Z"
   }
 ]

@@ -1,6 +1,7 @@
-// WP-5.2 — Unified ingest endpoint for latero-core adapter events.
+// Unified ingest endpoint for latero-core adapter events.
 // Accepts a JSON array of events dispatched by event_type.
 // WP-5.6 — Validates schema_version; rejects MAJOR >= 2 with 422.
+// Writes to meta.* via writeMetaPipelineRun / writeMetaDqCheck / writeMetaLineage.
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -14,6 +15,11 @@ import {
   validateSchemaVersion,
   verifyInstallationToken,
 } from "@/lib/insights-saas-db";
+import {
+  writeMetaPipelineRun,
+  writeMetaDqCheck,
+  writeMetaLineage,
+} from "@/lib/meta-ingest";
 
 interface AdapterEvent {
   event_type: string;
@@ -25,84 +31,72 @@ interface AdapterEvent {
 async function ingestPipelineRun(event: AdapterEvent, pool: ReturnType<typeof getPgPool>) {
   validateSchemaVersion(event.schema_version);
   const installationId = requireString(event.installation_id, "installation_id");
-  const datasetId = requireString(event.dataset_id, "dataset_id");
-  const runId = requireString(event.run_id, "run_id");
-  const step = requireString(event.step, "step");
-  const status = normalizeStatus(event.status);
-  const environment = requireString(event.environment, "environment");
+  const datasetId      = requireString(event.dataset_id,      "dataset_id");
+  const runId          = requireString(event.run_id,          "run_id");
+  const step           = requireString(event.step,            "step");
+  const status         = normalizeStatus(event.status);
+  const environment    = requireString(event.environment,     "environment");
 
   const finishedAt = event.finished_at ? new Date(String(event.finished_at)) : new Date();
-  const startedAt = event.started_at ? new Date(String(event.started_at)) : finishedAt;
+  const startedAt  = event.started_at  ? new Date(String(event.started_at))  : finishedAt;
   const durationMs = Math.max(0, finishedAt.getTime() - startedAt.getTime());
 
-  await pool.query(
-    `INSERT INTO pipeline_runs
-       (event_type, timestamp_utc, dataset_id, source_system, step, run_id, run_status,
-        duration_ms, installation_id, environment, payload)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-    [
-      "pipeline_run",
-      finishedAt.toISOString(),
-      datasetId,
-      optionalString(event.source_system),
-      step,
-      runId,
-      status,
-      durationMs,
-      installationId,
-      environment,
-      JSON.stringify(event),
-    ],
-  );
+  await writeMetaPipelineRun(pool, {
+    installationId,
+    datasetId,
+    jobName:     optionalString(event.job_name),
+    sourceSystem: optionalString(event.source_system),
+    layer:        optionalString(event.source_layer),
+    targetLayer:  optionalString(event.target_layer),
+    runId,
+    step,
+    status,
+    environment,
+    timestampUtc: finishedAt.toISOString(),
+    durationMs,
+  });
 }
 
 async function ingestDqCheck(event: AdapterEvent, pool: ReturnType<typeof getPgPool>) {
   validateSchemaVersion(event.schema_version);
   const installationId = requireString(event.installation_id, "installation_id");
-  const datasetId = requireString(event.dataset_id, "dataset_id");
-  const checkId = requireString(event.check_id, "check_id");
-  const checkStatus = normalizeStatus(event.check_status ?? event.status);
-  const environment = requireString(event.environment, "environment");
+  const datasetId      = requireString(event.dataset_id,      "dataset_id");
+  const checkId        = requireString(event.check_id,        "check_id");
+  const checkStatus    = normalizeStatus(event.check_status ?? event.status);
+  const environment    = requireString(event.environment,     "environment");
 
   const severity = String(event.severity ?? "medium").trim().toLowerCase();
   if (!["high", "medium", "low"].includes(severity)) {
     throw new Error("severity must be one of: high, medium, low");
   }
 
-  await pool.query(
-    `INSERT INTO data_quality_checks
-       (event_type, timestamp_utc, dataset_id, step, run_id, check_id, check_name,
-        check_status, severity, check_category, installation_id, environment, payload)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-    [
-      "data_quality_check",
-      new Date().toISOString(),
-      datasetId,
-      optionalString(event.step),
-      optionalString(event.run_id),
-      checkId,
-      checkId,
-      checkStatus,
-      severity,
-      optionalString(event.check_category),
-      installationId,
-      environment,
-      JSON.stringify(event),
-    ],
-  );
+  await writeMetaDqCheck(pool, {
+    installationId,
+    datasetId,
+    checkId,
+    checkName:     String(event.check_name ?? checkId),
+    checkStatus,
+    severity,
+    checkCategory: optionalString(event.check_category),
+    policyVersion: optionalString(event.policy_version),
+    message:       null,
+    externalRunId: optionalString(event.run_id),
+    timestampUtc:  new Date().toISOString(),
+  });
+
+  // Suppress unused variable warning — environment is validated above.
+  void environment;
 }
 
 async function ingestLineage(event: AdapterEvent, pool: ReturnType<typeof getPgPool>) {
   validateSchemaVersion(event.schema_version);
   const installationId = requireString(event.installation_id, "installation_id");
-  const datasetId = requireString(event.dataset_id, "dataset_id");
-  const runId = requireString(event.run_id, "run_id");
-  const step = requireString(event.step, "step");
-  const environment = requireString(event.environment, "environment");
+  const runId          = requireString(event.run_id,          "run_id");
+  requireString(event.step,        "step");
+  requireString(event.environment, "environment");
 
-  // New collector event format uses source_ref / target_ref as entity identifiers
-  const sourceRef = String(event.source_ref ?? "").trim();
-  const targetRef = String(event.target_ref ?? "").trim();
+  const sourceRef = String(event.source_ref  ?? event.source_entity ?? "").trim();
+  const targetRef = String(event.target_ref  ?? event.target_entity ?? "").trim();
   if (!sourceRef) throw new Error("source_ref is required");
   if (!targetRef) throw new Error("target_ref is required");
 
@@ -111,30 +105,22 @@ async function ingestLineage(event: AdapterEvent, pool: ReturnType<typeof getPgP
     throw new Error("hop_kind must be one of: data_flow, context");
   }
 
-  await pool.query(
-    `INSERT INTO data_lineage
-       (event_type, timestamp_utc, dataset_id, step, run_id,
-        source_entity, source_ref, target_entity, target_ref,
-        hop_kind, installation_id, environment, schema_version, lineage_evidence, payload)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
-    [
-      "data_lineage",
-      new Date().toISOString(),
-      datasetId,
-      step,
-      runId,
-      sourceRef,
-      sourceRef,
-      targetRef,
-      targetRef,
-      hopKind,
+  if (hopKind === "data_flow") {
+    await writeMetaLineage(pool, {
       installationId,
-      environment,
-      optionalString(event.schema_version),
-      event.evidence ? JSON.stringify(event.evidence) : null,
-      JSON.stringify(event),
-    ],
-  );
+      externalRunId:   runId,
+      sourceEntity:    String(event.source_entity ?? sourceRef),
+      targetEntity:    String(event.target_entity ?? targetRef),
+      sourceType:      optionalString(event.source_type),
+      targetType:      optionalString(event.target_type),
+      sourceAttribute: optionalString(event.source_attribute),
+      targetAttribute: optionalString(event.target_attribute),
+      sourceSystem:    optionalString(event.source_system),
+      sourceLayer:     optionalString(event.source_layer),
+      targetLayer:     optionalString(event.target_layer),
+      timestampUtc:    new Date().toISOString(),
+    });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -164,7 +150,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ accepted: true, count: 0 }, { status: 200 });
   }
 
-  // All events in a batch must belong to the same installation
   const installationId = String(events[0]?.installation_id ?? "").trim();
   if (!installationId) {
     return NextResponse.json({ error: "installation_id is required" }, { status: 400 });
@@ -183,7 +168,7 @@ export async function POST(request: NextRequest) {
     const eventType = String(event?.event_type ?? "").trim();
 
     try {
-      // WP-5.6: schema_version validated inside each handler
+      validateSchemaVersion(event.schema_version);
       if (eventType === "pipeline_run") {
         await ingestPipelineRun(event, pool);
       } else if (eventType === "data_quality_check") {

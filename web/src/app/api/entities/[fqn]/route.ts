@@ -49,7 +49,7 @@ export async function GET(
          SELECT rn.status, rn.started_at, rn.run_id
          FROM meta.runs rn
          JOIN meta.jobs j USING (job_id)
-         WHERE j.dataset_id = d.fqn
+         WHERE j.dataset_id = d.dataset_id
            AND rn.installation_id = d.installation_id
            AND d.layer = CASE
              WHEN split_part(rn.step, '_to_', 2) IN ('landing','raw','bronze','silver','gold')
@@ -63,7 +63,8 @@ export async function GET(
        ORDER BY d.layer,
          CASE d.layer WHEN 'landing' THEN 0 WHEN 'raw' THEN 1
                       WHEN 'bronze' THEN 2 WHEN 'silver' THEN 3
-                      WHEN 'gold' THEN 4 ELSE 5 END`,
+                      WHEN 'gold' THEN 4 ELSE 5 END,
+         r.started_at DESC NULLS LAST`,
       [installationId, decodedFqn]
     );
 

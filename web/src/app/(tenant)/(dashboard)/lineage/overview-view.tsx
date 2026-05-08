@@ -31,7 +31,11 @@ type LineageOverviewProps = {
   entities: LineageEntity[];
   attributes: LineageAttribute[];
   refreshedAt?: string;
-  onOpenTab: (tab: "graph" | "chains" | "columns") => void;
+  onOpenTab: (tab: "columns" | "trace") => void;
+  onOpenTrace?: (
+    anchorKey: string,
+    options?: { direction?: "upstream" | "downstream" | "both"; depth?: number }
+  ) => void;
 };
 
 function pct(part: number, total: number) {
@@ -83,22 +87,58 @@ function uniqueEntities(entities: LineageEntity[]) {
   return [...byKey.values()];
 }
 
-function datasetGroupKey(entity: LineageEntity) {
-  return lineageNodeName(entity);
+function extractNameFromKey(key: string): string {
+  // keys zijn "layer::name" — pak het deel na de eerste "::"
+  const idx = key.indexOf("::");
+  return idx >= 0 ? key.slice(idx + 2) : key;
+}
+
+function buildConnectedChains(entities: LineageEntity[]): Map<string, LineageEntity[]> {
+  // Union-Find
+  const parent = new Map<string, string>();
+  const allNames = new Set(entities.map(lineageNodeName));
+
+  function find(k: string): string {
+    if (!parent.has(k)) parent.set(k, k);
+    if (parent.get(k) !== k) parent.set(k, find(parent.get(k)!));
+    return parent.get(k)!;
+  }
+  function union(a: string, b: string) {
+    const ra = find(a), rb = find(b);
+    if (ra !== rb) parent.set(ra, rb);
+  }
+
+  for (const entity of entities) {
+    const name = lineageNodeName(entity);
+    for (const ref of [...entity.downstream_keys, ...entity.upstream_keys]) {
+      const refName = extractNameFromKey(ref);
+      if (allNames.has(refName)) union(name, refName);
+    }
+  }
+
+  const groups = new Map<string, LineageEntity[]>();
+  for (const entity of entities) {
+    const root = find(lineageNodeName(entity));
+    groups.set(root, [...(groups.get(root) ?? []), entity]);
+  }
+  return groups;
 }
 
 function readableChainName(chainEntities: LineageEntity[], fallback: string) {
+  const preferred = resolvePreferredChainEntity(chainEntities);
+  return preferred ? lineageNodeLabel(preferred) : fallback;
+}
+
+function resolvePreferredChainEntity(chainEntities: LineageEntity[]) {
   const terminalEntities = chainEntities
     .filter((entity) => entity.downstream_keys.length === 0)
     .sort((a, b) => statusRank(b.end_to_end_status) - statusRank(a.end_to_end_status));
 
-  const preferred = terminalEntities[0] ?? [...chainEntities].sort((a, b) => {
+  return terminalEntities[0] ?? [...chainEntities].sort((a, b) => {
     const aLayer = LAYER_ORDER.indexOf(a.layer.toLowerCase());
     const bLayer = LAYER_ORDER.indexOf(b.layer.toLowerCase());
     return bLayer - aLayer || a.name.localeCompare(b.name);
   })[0];
-
-  return preferred ? lineageNodeLabel(preferred) : fallback;
 }
 
 function resolveDatasetChainStatus(chainEntities: LineageEntity[]) {
@@ -227,6 +267,7 @@ function TabAction({
 
 function ChainReadinessRow({
   chain,
+  onOpenTrace,
 }: {
   chain: {
     id: string;
@@ -236,7 +277,9 @@ function ChainReadinessRow({
     layers: string[];
     coverage: number;
     latest: string | null;
+    anchorKey: string | null;
   };
+  onOpenTrace?: (anchorKey: string) => void;
 }) {
   const missingLayers = LAYER_ORDER.filter((layer) => !chain.layers.includes(layer));
   const coverageColor = chain.coverage === 100
@@ -244,6 +287,7 @@ function ChainReadinessRow({
     : chain.coverage >= 60
       ? "#F59E0B"
       : "#EF4444";
+  const canTrace = Boolean(chain.anchorKey && onOpenTrace);
 
   return (
     <div className="px-4 py-4">
@@ -268,6 +312,17 @@ function ChainReadinessRow({
           <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
             Last success: {formatTime(chain.latest)}
           </p>
+          {canTrace && (
+            <button
+              type="button"
+              onClick={() => chain.anchorKey && onOpenTrace?.(chain.anchorKey)}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold transition-colors lg:justify-end"
+              style={{ color: "var(--color-brand)" }}
+            >
+              Open in trace
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -304,7 +359,7 @@ function ChainReadinessRow({
   );
 }
 
-export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }: LineageOverviewProps) {
+export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, onOpenTrace }: LineageOverviewProps) {
   const model = useMemo(() => {
     const currentAttributes = attributes.filter((attribute) => attribute.is_current);
     const currentEntities = uniqueEntities(entities);
@@ -316,17 +371,14 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
     const unknown = Math.max(0, total - failed - warning - inProgress - success);
     const withLineage = currentEntities.filter((entity) => entity.upstream_keys.length > 0 || entity.downstream_keys.length > 0).length;
 
-    const chains = new Map<string, LineageEntity[]>();
-    for (const entity of currentEntities) {
-      const key = datasetGroupKey(entity);
-      chains.set(key, [...(chains.get(key) ?? []), entity]);
-    }
+    const chains = buildConnectedChains(currentEntities);
 
     const chainRows = [...chains.entries()]
       .map(([id, chainEntities]) => {
         const worst = resolveDatasetChainStatus(chainEntities);
         const layers = [...new Set(chainEntities.map((entity) => entity.layer.toLowerCase()))];
         const coverage = pct(layers.length, LAYER_ORDER.length);
+        const anchorEntity = resolvePreferredChainEntity(chainEntities);
         const latest = chainEntities
           .map((entity) => entity.latest_success_at)
           .filter((value): value is string => Boolean(value))
@@ -340,18 +392,28 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
           layers,
           coverage,
           latest,
+          anchorKey: anchorEntity ? `${anchorEntity.layer.toLowerCase()}::${anchorEntity.name}` : null,
         };
       })
       .sort((a, b) => statusRank(b.status) - statusRank(a.status) || a.coverage - b.coverage || a.name.localeCompare(b.name));
 
     const layerRows = LAYER_ORDER.map((layer) => {
       const layerEntities = currentEntities.filter((entity) => entity.layer.toLowerCase() === layer);
+      const focusEntity = [...layerEntities]
+        .sort((a, b) => {
+          const statusDelta = statusRank(worstEntityStatus(b)) - statusRank(worstEntityStatus(a));
+          if (statusDelta !== 0) return statusDelta;
+          const degreeDelta = (b.upstream_keys.length + b.downstream_keys.length) - (a.upstream_keys.length + a.downstream_keys.length);
+          if (degreeDelta !== 0) return degreeDelta;
+          return a.name.localeCompare(b.name);
+        })[0];
       return {
         layer,
         total: layerEntities.length,
         failed: layerEntities.filter((entity) => entity.latest_status === "FAILED" || entity.end_to_end_status === "FAILED").length,
         warning: layerEntities.filter((entity) => ["WARNING", "PARTIAL"].includes(entity.latest_status) || ["WARNING", "PARTIAL"].includes(entity.end_to_end_status)).length,
         success: layerEntities.filter((entity) => entity.latest_status === "SUCCESS").length,
+        focusEntityKey: focusEntity ? `${focusEntity.layer.toLowerCase()}::${focusEntity.name}` : null,
       };
     }).filter((row) => row.total > 0);
 
@@ -388,6 +450,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
       currentAttributes,
       uniqueSourceColumns: new Set(currentAttributes.map((attribute) => `${attribute.source_name}.${attribute.source_attribute}`)).size,
       uniqueTargetColumns: new Set(currentAttributes.map((attribute) => `${attribute.target_name}.${attribute.target_attribute}`)).size,
+      recommendedEntity: riskiestEntities[0] ?? topConnected[0] ?? null,
     };
   }, [attributes, entities]);
 
@@ -402,19 +465,87 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
   return (
     <div className="h-full overflow-auto" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto max-w-[1440px] space-y-4 px-4 py-4 lg:px-6">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>
-              Lineage control room
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold leading-tight" style={{ color: "var(--color-text)" }}>
-              End-to-end visibility across datasets, chains, and column impact
-            </h1>
-            <p className="mt-1 max-w-3xl text-sm" style={{ color: "var(--color-text-muted)" }}>
-              Prioritize broken chains, review layer coverage, and move into graph, chains, or column lineage from the tabs above.
-            </p>
+        <section
+          className="rounded-[20px] px-5 py-5 lg:px-6"
+          style={{
+            background: "linear-gradient(135deg, rgba(27,59,107,0.08), rgba(200,137,42,0.08))",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>
+                Lineage control room
+              </p>
+              <h1 className="mt-2 text-lg font-medium leading-snug" style={{ color: "var(--color-text)" }}>
+                Start with the path that needs attention, then move into Trace or Columns.
+              </h1>
+              <p className="mt-2 max-w-3xl text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                Overview is now the launch surface for investigation. Use it to jump into the most urgent entity path or verify whether column evidence exists.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (model.recommendedEntity) {
+                      onOpenTrace?.(`${model.recommendedEntity.layer.toLowerCase()}::${model.recommendedEntity.name}`, { direction: "upstream", depth: 2 });
+                      return;
+                    }
+                    onOpenTab("trace");
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
+                  style={{ background: "var(--color-accent)", color: "#fff" }}
+                >
+                  Open recommended trace
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenTab("columns")}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
+                  style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                >
+                  Review column evidence
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="rounded-2xl px-4 py-4"
+              style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+                Recommended next step
+              </p>
+              {model.recommendedEntity ? (
+                <>
+                  <div className="mt-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                        {lineageNodeLabel(model.recommendedEntity)}
+                      </p>
+                      <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                        {formatLayer(model.recommendedEntity.layer)} · {model.recommendedEntity.upstream_keys.length} upstream · {model.recommendedEntity.downstream_keys.length} downstream
+                      </p>
+                    </div>
+                    <StatusPill status={worstEntityStatus(model.recommendedEntity)} />
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                    {model.failed > 0
+                      ? "There is an active failure path. Start upstream to see what is feeding this entity."
+                      : model.warning > 0
+                      ? "Warnings are present. Start from the most exposed entity path before scanning wider impact."
+                      : "No urgent failures detected. Start from the most connected entity to understand impact."}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-3 text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  No lineage entities are available for a recommended trace yet.
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        </section>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
@@ -486,12 +617,23 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
         </section>
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
-          <Panel title="Layer coverage" action={<TabAction onClick={() => onOpenTab("graph")}>Open graph</TabAction>}>
+          <Panel title="Layer coverage" action={<TabAction onClick={() => onOpenTab("trace")}>Open in trace</TabAction>}>
             <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
               {model.layerRows.length === 0 ? (
                 <p className="px-4 py-6 text-sm" style={{ color: "var(--color-text-muted)" }}>No layer data available.</p>
               ) : model.layerRows.map((row) => (
-                <div key={row.layer} className="grid gap-3 px-4 py-3 md:grid-cols-[120px_minmax(0,1fr)_220px] md:items-center">
+                <button
+                  key={row.layer}
+                  type="button"
+                  onClick={() => {
+                    if (row.focusEntityKey) {
+                      onOpenTrace?.(row.focusEntityKey, { direction: "upstream", depth: 2 });
+                      return;
+                    }
+                    onOpenTab("trace");
+                  }}
+                  className="grid w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30 md:grid-cols-[120px_minmax(0,1fr)_220px] md:items-center"
+                >
                   <div>
                     <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>{formatLayer(row.layer)}</p>
                     <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{row.total} entities</p>
@@ -506,12 +648,12 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
                     <span>{row.warning} warning</span>
                     <span>{row.failed} failed</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </Panel>
 
-          <Panel title="Needs attention" action={<TabAction onClick={() => onOpenTab("chains")}>Open chains</TabAction>}>
+          <Panel title="Needs attention" action={<TabAction onClick={() => onOpenTab("trace")}>Trace issues</TabAction>}>
             <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
               {model.riskiestEntities.length === 0 ? (
                 <div className="flex items-center gap-3 px-4 py-6">
@@ -519,7 +661,12 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
                   <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No failed, warning, or partial entities found.</p>
                 </div>
               ) : model.riskiestEntities.map((entity) => (
-                <div key={`${entity.layer}:${entity.name}`} className="flex items-start gap-3 px-4 py-3">
+                <button
+                  key={`${entity.layer}:${entity.name}`}
+                  type="button"
+                  onClick={() => onOpenTrace?.(`${entity.layer.toLowerCase()}::${entity.name}`, { direction: "upstream", depth: 2 })}
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30"
+                >
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: statusMeta(entity.end_to_end_status).color }} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -532,46 +679,96 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab }
                       {formatLayer(entity.layer)} · {entity.upstream_keys.length} upstream · {entity.downstream_keys.length} downstream
                     </p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </Panel>
         </div>
 
         <div className="grid gap-4 xl:grid-cols-2">
-          <Panel title="Chain readiness" action={<TabAction onClick={() => onOpenTab("chains")}>Analyze chains</TabAction>}>
+          <Panel title="Critical paths" action={<TabAction onClick={() => onOpenTab("trace")}>Open in trace</TabAction>}>
             <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
               {model.chains.length === 0 ? (
-                <p className="px-4 py-6 text-sm" style={{ color: "var(--color-text-muted)" }}>No chains available.</p>
-              ) : model.chains.slice(0, 5).map((chain) => <ChainReadinessRow key={chain.id} chain={chain} />)}
+                <p className="px-4 py-6 text-sm" style={{ color: "var(--color-text-muted)" }}>No connected entity paths available.</p>
+              ) : model.chains.slice(0, 5).map((chain) => (
+                <ChainReadinessRow
+                  key={chain.id}
+                  chain={chain}
+                  onOpenTrace={(anchorKey) => onOpenTrace?.(anchorKey, { direction: "upstream", depth: 3 })}
+                />
+              ))}
             </div>
           </Panel>
 
-          <Panel title="Most connected entities" action={<TabAction onClick={() => onOpenTab("graph")}>View relationships</TabAction>}>
-            <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
-              {model.topConnected.map((entity) => {
-                const degree = entity.upstream_keys.length + entity.downstream_keys.length;
-                return (
-                  <div key={`${entity.layer}:${entity.name}`} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_120px_90px] md:items-center">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <span className="grid h-8 w-8 place-items-center rounded-lg shrink-0" style={{ background: "var(--color-surface)", color: "var(--color-brand)" }}>
-                        {entity.layer.toLowerCase() === "gold" ? <Table2 className="h-4 w-4" /> : <Database className="h-4 w-4" />}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.name}>{lineageNodeLabel(entity)}</p>
-                        <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>{formatLayer(entity.layer)}</p>
-                      </div>
-                    </div>
-                    <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                      {entity.upstream_keys.length} up · {entity.downstream_keys.length} down
-                    </p>
-                    <p className="text-right text-sm font-semibold" style={{ color: "var(--color-text)" }}>{degree}</p>
-                  </div>
-                );
-              })}
+          <Panel title="Investigation entry points" action={<TabAction onClick={() => onOpenTab("columns")}>Open columns</TabAction>}>
+            <div className="grid gap-3 p-4 md:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => onOpenTab("trace")}
+                className="rounded-xl px-4 py-4 text-left transition-colors hover:bg-muted/30"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <ShieldAlert className="h-5 w-5" style={{ color: "#EF4444" }} />
+                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Trace failures</p>
+                <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                  Follow one entity path upstream or downstream with explicit depth controls.
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenTab("columns")}
+                className="rounded-xl px-4 py-4 text-left transition-colors hover:bg-muted/30"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <Columns3 className="h-5 w-5" style={{ color: "#D97706" }} />
+                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Verify evidence</p>
+                <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                  Check whether attribute-level evidence exists for the path you are investigating.
+                </p>
+              </button>
+              <div
+                className="rounded-xl px-4 py-4"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <Layers3 className="h-5 w-5" style={{ color: "var(--color-brand)" }} />
+                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Wider scope stays in Trace</p>
+                <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                  Use direction, depth, layers, and drag controls inside Trace instead of switching to a second graph mode.
+                </p>
+              </div>
             </div>
           </Panel>
         </div>
+
+        <Panel title="Most connected entities" action={<TabAction onClick={() => onOpenTab("trace")}>Trace impact</TabAction>}>
+          <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
+            {model.topConnected.map((entity) => {
+              const degree = entity.upstream_keys.length + entity.downstream_keys.length;
+              return (
+                <button
+                  key={`${entity.layer}:${entity.name}`}
+                  type="button"
+                  onClick={() => onOpenTrace?.(`${entity.layer.toLowerCase()}::${entity.name}`, { direction: "both", depth: 2 })}
+                  className="grid w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30 md:grid-cols-[minmax(0,1fr)_120px_90px] md:items-center"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg shrink-0" style={{ background: "var(--color-surface)", color: "var(--color-brand)" }}>
+                      {entity.layer.toLowerCase() === "gold" ? <Table2 className="h-4 w-4" /> : <Database className="h-4 w-4" />}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.name}>{lineageNodeLabel(entity)}</p>
+                      <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>{formatLayer(entity.layer)}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    {entity.upstream_keys.length} up · {entity.downstream_keys.length} down
+                  </p>
+                  <p className="text-right text-sm font-semibold" style={{ color: "var(--color-text)" }}>{degree}</p>
+                </button>
+              );
+            })}
+          </div>
+        </Panel>
       </div>
     </div>
   );

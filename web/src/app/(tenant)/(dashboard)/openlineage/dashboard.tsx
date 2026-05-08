@@ -29,6 +29,13 @@ interface RunEvent {
 }
 
 const STEP_LAYER_ORDER = ["landing", "raw", "bronze", "silver", "gold"];
+const STEP_LAYER_LABELS: Record<string, string> = {
+  landing: "Landing",
+  raw: "Raw",
+  bronze: "Bronze",
+  silver: "Silver",
+  gold: "Gold",
+};
 
 export function OpenLineageDashboard() {
   const { from, to, setRange } = useDateRange();

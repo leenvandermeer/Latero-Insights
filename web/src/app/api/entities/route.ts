@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
                SELECT rn.status, rn.started_at, rn.run_id
                FROM meta.runs rn
                JOIN meta.jobs j2 USING (job_id)
-               WHERE j2.dataset_id = d.fqn
+               WHERE j2.dataset_id = d.dataset_id
                  AND rn.installation_id = d.installation_id
                  AND d.layer = CASE
                    WHEN split_part(rn.step, '_to_', 2) IN ('landing','raw','bronze','silver','gold')
@@ -71,11 +71,18 @@ export async function GET(request: NextRequest) {
              ) r ON true
              WHERE d.installation_id = e.installation_id
                AND d.entity_id = e.entity_id
+             ORDER BY d.layer, r.started_at DESC NULLS LAST
            ) ls
          ), '[]'::json) AS layer_statuses
        FROM meta.entities e
        WHERE e.installation_id = $1
          AND e.is_context_node = false
+         AND EXISTS (
+           SELECT 1 FROM meta.datasets d
+           WHERE d.installation_id = e.installation_id
+             AND d.entity_id = e.entity_id
+             AND d.layer IN ('silver', 'gold')
+         )
          ${filters}
        ORDER BY e.entity_id`,
       values

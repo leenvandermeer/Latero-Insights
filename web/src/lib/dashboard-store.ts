@@ -10,19 +10,121 @@ export function getStorageKey(installationId?: string): string {
 }
 
 // ─── System dashboard factory definitions ───────────────────────────────────
-// System dashboards start empty; operators build and publish their own layouts
-// via the widget builder and "Publish for everyone".
+// LADR-068: System dashboards ship with OOTB widget layouts.
+// Operators can override via "Publish for everyone". "Reset to default" restores
+// these factory defaults. SYSTEM_LAYOUT_VERSION bumped to 3.
 
-const systemPipelinesSlots: WidgetSlot[] = [];
+const systemPipelinesSlots: WidgetSlot[] = [
+  { instanceId: "sys-p-1", type: "total-runs" },
+  { instanceId: "sys-p-2", type: "failed-runs" },
+  { instanceId: "sys-p-3", type: "avg-run-duration" },
+  { instanceId: "sys-p-4", type: "pipeline-status" },
+  { instanceId: "sys-p-5", type: "runs-by-pipeline" },
+  { instanceId: "sys-p-6", type: "pipeline-runs-table" },
+];
+const systemPipelinesLayout: ResponsiveLayouts = {
+  lg: [
+    { i: "sys-p-1", x: 0,  y: 0, w: 3,  h: 2, minW: 2, minH: 2 },
+    { i: "sys-p-2", x: 3,  y: 0, w: 3,  h: 2, minW: 2, minH: 2 },
+    { i: "sys-p-3", x: 6,  y: 0, w: 3,  h: 2, minW: 2, minH: 2 },
+    { i: "sys-p-4", x: 0,  y: 2, w: 6,  h: 4, minW: 4, minH: 3 },
+    { i: "sys-p-5", x: 6,  y: 2, w: 6,  h: 4, minW: 4, minH: 3 },
+    { i: "sys-p-6", x: 0,  y: 6, w: 12, h: 4, minW: 6, minH: 3 },
+  ],
+  md: [
+    { i: "sys-p-1", x: 0, y: 0,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-p-2", x: 4, y: 0,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-p-3", x: 0, y: 2,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-p-4", x: 0, y: 4,  w: 8, h: 4, minW: 4, minH: 3 },
+    { i: "sys-p-5", x: 0, y: 8,  w: 8, h: 4, minW: 4, minH: 3 },
+    { i: "sys-p-6", x: 0, y: 12, w: 8, h: 4, minW: 6, minH: 3 },
+  ],
+  sm: [
+    { i: "sys-p-1", x: 0, y: 0,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-p-2", x: 0, y: 2,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-p-3", x: 0, y: 4,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-p-4", x: 0, y: 6,  w: 4, h: 4, minW: 4, minH: 3 },
+    { i: "sys-p-5", x: 0, y: 10, w: 4, h: 4, minW: 4, minH: 3 },
+    { i: "sys-p-6", x: 0, y: 14, w: 4, h: 4, minW: 6, minH: 3 },
+  ],
+};
 
-const systemPipelinesLayout: ResponsiveLayouts = {};
-const systemQualitySlots: WidgetSlot[] = [];
-const systemQualityLayout: ResponsiveLayouts = {};
-const systemBcbs239Slots: WidgetSlot[] = [];
-const systemBcbs239Layout: ResponsiveLayouts = {};
+const systemQualitySlots: WidgetSlot[] = [
+  { instanceId: "sys-q-1", type: "pass-rate" },
+  { instanceId: "sys-q-2", type: "failed-dq-checks" },
+  { instanceId: "sys-q-3", type: "warning-dq-checks" },
+  { instanceId: "sys-q-4", type: "dq-trend" },
+  { instanceId: "sys-q-5", type: "severity-category" },
+  { instanceId: "sys-q-6", type: "dq-by-category" },
+  { instanceId: "sys-q-7", type: "dq-checks-table" },
+];
+const systemQualityLayout: ResponsiveLayouts = {
+  lg: [
+    { i: "sys-q-1", x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: "sys-q-2", x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: "sys-q-3", x: 6, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: "sys-q-4", x: 0, y: 2, w: 6, h: 4, minW: 4, minH: 3 },
+    { i: "sys-q-5", x: 6, y: 2, w: 6, h: 4, minW: 4, minH: 3 },
+    { i: "sys-q-6", x: 0, y: 6, w: 4, h: 4, minW: 3, minH: 3 },
+    { i: "sys-q-7", x: 4, y: 6, w: 8, h: 4, minW: 4, minH: 3 },
+  ],
+  md: [
+    { i: "sys-q-1", x: 0, y: 0,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-q-2", x: 4, y: 0,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-q-3", x: 0, y: 2,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-q-4", x: 0, y: 4,  w: 8, h: 4, minW: 4, minH: 3 },
+    { i: "sys-q-5", x: 0, y: 8,  w: 8, h: 4, minW: 4, minH: 3 },
+    { i: "sys-q-6", x: 0, y: 12, w: 4, h: 4, minW: 3, minH: 3 },
+    { i: "sys-q-7", x: 4, y: 12, w: 4, h: 4, minW: 4, minH: 3 },
+  ],
+  sm: [
+    { i: "sys-q-1", x: 0, y: 0,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-q-2", x: 0, y: 2,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-q-3", x: 0, y: 4,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-q-4", x: 0, y: 6,  w: 4, h: 4, minW: 4, minH: 3 },
+    { i: "sys-q-5", x: 0, y: 10, w: 4, h: 4, minW: 4, minH: 3 },
+    { i: "sys-q-6", x: 0, y: 14, w: 4, h: 4, minW: 3, minH: 3 },
+    { i: "sys-q-7", x: 0, y: 18, w: 4, h: 4, minW: 4, minH: 3 },
+  ],
+};
+
+const systemBcbs239Slots: WidgetSlot[] = [
+  { instanceId: "sys-b-1", type: "bcbs239-score" },
+  { instanceId: "sys-b-2", type: "pass-rate" },
+  { instanceId: "sys-b-3", type: "failed-dq-checks" },
+  { instanceId: "sys-b-4", type: "dq-trend" },
+  { instanceId: "sys-b-5", type: "severity-category" },
+  { instanceId: "sys-b-6", type: "dq-checks-table" },
+];
+const systemBcbs239Layout: ResponsiveLayouts = {
+  lg: [
+    { i: "sys-b-1", x: 0, y: 0, w: 3,  h: 2, minW: 2, minH: 2 },
+    { i: "sys-b-2", x: 3, y: 0, w: 3,  h: 2, minW: 2, minH: 2 },
+    { i: "sys-b-3", x: 6, y: 0, w: 3,  h: 2, minW: 2, minH: 2 },
+    { i: "sys-b-4", x: 0, y: 2, w: 6,  h: 4, minW: 4, minH: 3 },
+    { i: "sys-b-5", x: 6, y: 2, w: 6,  h: 4, minW: 4, minH: 3 },
+    { i: "sys-b-6", x: 0, y: 6, w: 12, h: 4, minW: 6, minH: 3 },
+  ],
+  md: [
+    { i: "sys-b-1", x: 0, y: 0,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-b-2", x: 4, y: 0,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-b-3", x: 0, y: 2,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-b-4", x: 0, y: 4,  w: 8, h: 4, minW: 4, minH: 3 },
+    { i: "sys-b-5", x: 0, y: 8,  w: 8, h: 4, minW: 4, minH: 3 },
+    { i: "sys-b-6", x: 0, y: 12, w: 8, h: 4, minW: 6, minH: 3 },
+  ],
+  sm: [
+    { i: "sys-b-1", x: 0, y: 0,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-b-2", x: 0, y: 2,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-b-3", x: 0, y: 4,  w: 4, h: 2, minW: 2, minH: 2 },
+    { i: "sys-b-4", x: 0, y: 6,  w: 4, h: 4, minW: 4, minH: 3 },
+    { i: "sys-b-5", x: 0, y: 10, w: 4, h: 4, minW: 4, minH: 3 },
+    { i: "sys-b-6", x: 0, y: 14, w: 4, h: 4, minW: 6, minH: 3 },
+  ],
+};
 
 const NOW = new Date(0).toISOString();
-const SYSTEM_LAYOUT_VERSION = 2;
+const SYSTEM_LAYOUT_VERSION = 3;
 
 export const SYSTEM_DASHBOARD_DEFS: Record<string, Dashboard> = {
   "system:pipelines": {
@@ -66,7 +168,7 @@ function makeDefaultDashboard(): Dashboard {
   const now = new Date().toISOString();
   return {
     id: "default",
-    name: "My Dashboard",
+    name: "Personal Dashboard",
     description: undefined,
     isSystem: false,
     widgets: [],

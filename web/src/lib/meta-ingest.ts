@@ -32,17 +32,6 @@ const PIPELINE_LAYERS = new Set(["landing", "raw", "bronze", "silver", "gold"]);
 
 /**
  * Leidt de logische pipeline-laag af uit een FQN in het formaat
-/**
- * LADR-058: Layer-scoped dataset identity.
- * dataset_id in meta.datasets = "{entityName}::{layer}" (bijv. "cbs_arbeid::bronze").
- * Dit maakt iedere (entity_name, layer) combinatie uniek en voorkomt zelf-refererende edges.
- * "unknown" wordt gebruikt als de laag niet bepaald kan worden.
- */
-function layerScopedId(entityName: string, layer: string | null | undefined): string {
-  const clean = layer?.toLowerCase().trim() || null; // "" → null
-  return PIPELINE_LAYERS.has(clean ?? "") ? `${entityName}::${clean}` : `${entityName}::unknown`;
-}
-
 /** Normaliseert een layer-waarde: lege string of ongeldige waarde → null */
 function normalizeLayer(layer: string | null | undefined): string | null {
   const clean = layer?.toLowerCase().trim() || null;
@@ -81,38 +70,41 @@ export async function writeMetaPipelineRun(
     const entityName = params.datasetId;
     const layer = normalizeLayer(params.targetLayer ?? params.layer ?? null);
 
-    // Upsert entity. Context nodes (e.g. "latero" where datasetId === sourceSystem)
-    // are marked is_context_node = true so they are excluded from entity listings.
+    // Only silver/gold layers represent business entities in medallion architecture.
+    // Landing/raw/bronze are physical datasets — no entity record for those.
+    const ENTITY_LAYERS = new Set(["silver", "gold"]);
+    const isEntityLayer = ENTITY_LAYERS.has(layer ?? "");
     const isContextNode = params.sourceSystem !== null && params.datasetId === params.sourceSystem;
-    await client.query(
-      `
-        INSERT INTO meta.entities (entity_id, installation_id, entity_name, display_name, source_system, is_context_node)
-        VALUES ($1, $2, $1, $1, $3, $4)
-        ON CONFLICT (installation_id, entity_id) DO UPDATE
-          SET entity_name     = COALESCE(meta.entities.entity_name, EXCLUDED.entity_name),
-              source_system   = COALESCE(EXCLUDED.source_system, meta.entities.source_system),
-              is_context_node = meta.entities.is_context_node OR EXCLUDED.is_context_node
-      `,
-      [entityName, params.installationId, params.sourceSystem, isContextNode],
-    );
+    if (isEntityLayer || isContextNode) {
+      await client.query(
+        `
+          INSERT INTO meta.entities (entity_id, installation_id, entity_name, display_name, source_system, is_context_node)
+          VALUES ($1, $2, $1, $1, $3, $4)
+          ON CONFLICT (installation_id, entity_id) DO UPDATE
+            SET entity_name     = COALESCE(meta.entities.entity_name, EXCLUDED.entity_name),
+                source_system   = COALESCE(EXCLUDED.source_system, meta.entities.source_system),
+                is_context_node = meta.entities.is_context_node OR EXCLUDED.is_context_node
+        `,
+        [entityName, params.installationId, params.sourceSystem, isContextNode],
+      );
+    }
 
-    // 1. Upsert dataset (LADR-058: layer-scoped dataset_id)
+    // 1. Upsert dataset — LINS-021: bare entity name as dataset_id, layer as separate column
     const objectName = extractObjectName(params.datasetId);
     const namespace = extractNamespace(params.datasetId);
-    const scopedDatasetId = layerScopedId(entityName, layer);
     await client.query(
       `
         INSERT INTO meta.datasets (
-          dataset_id, installation_id, fqn, namespace, object_name,
-          platform, entity_type, source_system, layer, group_id, entity_id
-        ) VALUES ($1, $2, $3, $4, $5, 'UNKNOWN', 'TABLE', $6, $7, $3, $3)
-        ON CONFLICT (installation_id, dataset_id) DO UPDATE
+          dataset_id, installation_id, namespace, object_name,
+          platform, entity_type, source_system, layer, entity_id
+        ) VALUES ($1, $2, $3, $4, 'UNKNOWN', 'TABLE', $5, $6, $1)
+        ON CONFLICT (installation_id, dataset_id, layer) DO UPDATE
           SET last_seen_at  = now(),
               object_name   = EXCLUDED.object_name,
               entity_id     = COALESCE(meta.datasets.entity_id, EXCLUDED.entity_id),
               source_system = COALESCE(EXCLUDED.source_system, meta.datasets.source_system)
       `,
-      [scopedDatasetId, params.installationId, entityName, namespace, objectName, params.sourceSystem, layer],
+      [entityName, params.installationId, namespace, objectName, params.sourceSystem, layer ?? 'unknown'],
     );
 
     // 2. Upsert job — gebruik native job_name indien aanwezig (LINS-020), anders dataset_id
@@ -185,14 +177,14 @@ export async function writeMetaPipelineRun(
       runUuid = insertResult.rows[0].run_id as string;
     }
 
-    // 4. Upsert run_io (OUTPUT for the target dataset — layer-scoped ID)
+    // 4. Upsert run_io (OUTPUT for the target dataset)
     await client.query(
       `
-        INSERT INTO meta.run_io (run_id, installation_id, dataset_id, role, observed_at)
-        VALUES ($1, $2, $3, 'OUTPUT', $4)
-        ON CONFLICT (run_id, dataset_id, role) DO NOTHING
+        INSERT INTO meta.run_io (run_id, installation_id, dataset_id, layer, role, observed_at)
+        VALUES ($1, $2, $3, $4, 'OUTPUT', $5)
+        ON CONFLICT (run_id, dataset_id, layer, role) DO NOTHING
       `,
-      [runUuid, params.installationId, scopedDatasetId, params.timestampUtc],
+      [runUuid, params.installationId, entityName, layer ?? 'unknown', params.timestampUtc],
     );
 
     await client.query("COMMIT");
@@ -253,15 +245,15 @@ export async function writeMetaDqCheck(
   try {
     await client.query("BEGIN");
 
-    // 1. Upsert dataset
+    // 1. Upsert dataset (DQ checks may not carry a layer — use 'unknown')
     const objectName = extractObjectName(params.datasetId);
     const namespace = extractNamespace(params.datasetId);
     await client.query(
       `
         INSERT INTO meta.datasets (
-          dataset_id, installation_id, fqn, namespace, object_name, platform, entity_type
-        ) VALUES ($1, $2, $1, $3, $4, 'UNKNOWN', 'TABLE')
-        ON CONFLICT (installation_id, dataset_id) DO UPDATE
+          dataset_id, installation_id, namespace, object_name, platform, entity_type, layer
+        ) VALUES ($1, $2, $3, $4, 'UNKNOWN', 'TABLE', 'unknown')
+        ON CONFLICT (installation_id, dataset_id, layer) DO UPDATE
           SET last_seen_at = now()
       `,
       [params.datasetId, params.installationId, namespace, objectName],
@@ -383,26 +375,24 @@ export async function writeMetaLineage(
     const metaRunId: string | null =
       (runRes.rows[0]?.run_id as string | undefined) ?? null;
 
-    // 1. Upsert source dataset (LADR-058: layer-scoped dataset_id)
+    // 1. Upsert source dataset — LINS-021: bare entity name, layer as separate column
     const sourcePlatform = normalizePlatform(params.sourceType);
     const sourceObjectName = extractObjectName(params.sourceEntity);
     const sourceNamespace = extractNamespace(params.sourceEntity);
-    const sourceLayer = normalizeLayer(params.sourceLayer ?? null);
-    const sourceScopedId = layerScopedId(params.sourceEntity, sourceLayer);
+    const sourceLayer = normalizeLayer(params.sourceLayer ?? null) ?? 'unknown';
     await client.query(
       `
         INSERT INTO meta.datasets (
-          dataset_id, installation_id, fqn, namespace, object_name,
-          platform, entity_type, source_system, layer, group_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'TABLE', $7, $8, $3)
-        ON CONFLICT (installation_id, dataset_id) DO UPDATE
+          dataset_id, installation_id, namespace, object_name,
+          platform, entity_type, source_system, layer
+        ) VALUES ($1, $2, $3, $4, $5, 'TABLE', $6, $7)
+        ON CONFLICT (installation_id, dataset_id, layer) DO UPDATE
           SET last_seen_at  = now(),
               source_system = COALESCE(EXCLUDED.source_system, meta.datasets.source_system)
       `,
       [
-        sourceScopedId,
-        params.installationId,
         params.sourceEntity,
+        params.installationId,
         sourceNamespace,
         sourceObjectName,
         sourcePlatform,
@@ -411,25 +401,23 @@ export async function writeMetaLineage(
       ],
     );
 
-    // 2. Upsert target dataset (LADR-058: layer-scoped dataset_id)
+    // 2. Upsert target dataset — LINS-021: bare entity name, layer as separate column
     const targetPlatform = normalizePlatform(params.targetType);
     const targetObjectName = extractObjectName(params.targetEntity);
     const targetNamespace = extractNamespace(params.targetEntity);
-    const targetLayer = normalizeLayer(params.targetLayer ?? null);
-    const targetScopedId = layerScopedId(params.targetEntity, targetLayer);
+    const targetLayer = normalizeLayer(params.targetLayer ?? null) ?? 'unknown';
     await client.query(
       `
         INSERT INTO meta.datasets (
-          dataset_id, installation_id, fqn, namespace, object_name,
-          platform, entity_type, source_system, layer, group_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'TABLE', NULL, $7, $3)
-        ON CONFLICT (installation_id, dataset_id) DO UPDATE
+          dataset_id, installation_id, namespace, object_name,
+          platform, entity_type, source_system, layer
+        ) VALUES ($1, $2, $3, $4, $5, 'TABLE', NULL, $6)
+        ON CONFLICT (installation_id, dataset_id, layer) DO UPDATE
           SET last_seen_at = now()
       `,
       [
-        targetScopedId,
-        params.installationId,
         params.targetEntity,
+        params.installationId,
         targetNamespace,
         targetObjectName,
         targetPlatform,
@@ -437,19 +425,18 @@ export async function writeMetaLineage(
       ],
     );
 
-    // 3. Upsert lineage edge (layer-scoped source en target)
-    // LADR-064: source_kind / target_kind op basis van layer
-    const sourceKind = ["silver", "gold"].includes(sourceLayer ?? "") ? "entity" : "dataset";
-    const targetKind = ["silver", "gold"].includes(targetLayer ?? "") ? "entity" : "dataset";
+    // 3. Upsert lineage edge — LADR-064: source_kind / target_kind op basis van layer
+    const sourceKind = ["silver", "gold"].includes(sourceLayer) ? "entity" : "dataset";
+    const targetKind = ["silver", "gold"].includes(targetLayer) ? "entity" : "dataset";
     await client.query(
       `
         INSERT INTO meta.lineage_edges (
-          installation_id, source_dataset_id, target_dataset_id,
+          installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer,
           first_observed_run, last_observed_run,
           first_observed_at, last_observed_at, observation_count,
           source_kind, target_kind
-        ) VALUES ($1, $2, $3, $4, $4, $5, $5, 1, $6, $7)
-        ON CONFLICT (installation_id, source_dataset_id, target_dataset_id) DO UPDATE
+        ) VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $7, 1, $8, $9)
+        ON CONFLICT (installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer) DO UPDATE
           SET last_observed_run  = EXCLUDED.last_observed_run,
               last_observed_at   = EXCLUDED.last_observed_at,
               observation_count  = meta.lineage_edges.observation_count + 1,
@@ -458,8 +445,10 @@ export async function writeMetaLineage(
       `,
       [
         params.installationId,
-        sourceScopedId,
-        targetScopedId,
+        params.sourceEntity,
+        sourceLayer,
+        params.targetEntity,
+        targetLayer,
         metaRunId,
         params.timestampUtc,
         sourceKind,
@@ -468,10 +457,8 @@ export async function writeMetaLineage(
     );
 
     // 3a. LADR-064: Vul meta.entities voor alle silver/gold targets (entity-nodes)
-    //     Vul meta.entity_sources alleen wanneer de bron een dataset is (bronze→silver, silver is niet dataset)
     if (targetKind === "entity") {
       const targetEntityName = extractObjectName(params.targetEntity);
-      // Altijd entiteit aanmaken voor silver/gold targets
       await client.query(
         `
           INSERT INTO meta.entities (entity_id, installation_id, entity_name, display_name, source_system)
@@ -490,11 +477,12 @@ export async function writeMetaLineage(
           SET entity_id = $1
           WHERE installation_id = $2
             AND dataset_id = $3
+            AND layer = $4
             AND entity_id IS DISTINCT FROM $1
         `,
-        [targetEntityName, params.installationId, targetScopedId],
+        [targetEntityName, params.installationId, params.targetEntity, targetLayer],
       );
-      // Vul entity_sources alleen voor dataset→entity hops (bron is een data-laag)
+      // Vul entity_sources alleen voor dataset→entity hops
       if (sourceKind === "dataset") {
         await client.query(
           `
@@ -508,53 +496,55 @@ export async function writeMetaLineage(
           [
             params.installationId,
             targetEntityName,
-            sourceScopedId,
-            sourceLayer ?? "bronze",
+            params.sourceEntity,
+            sourceLayer,
             params.timestampUtc,
           ],
         );
       }
     }
 
-    // 4. Upsert run_io voor INPUT (bron) en OUTPUT (doel) zodat status-rollup werkt
-    //    ook voor datasets die alleen via lineage binnenkomen en niet via pipeline-runs.
+    // 4. Upsert run_io voor INPUT en OUTPUT
     if (metaRunId) {
       await client.query(
         `
-          INSERT INTO meta.run_io (run_id, installation_id, dataset_id, role, observed_at)
-          VALUES ($1, $2, $3, 'INPUT',  $4)
-          ON CONFLICT (run_id, dataset_id, role) DO NOTHING
+          INSERT INTO meta.run_io (run_id, installation_id, dataset_id, layer, role, observed_at)
+          VALUES ($1, $2, $3, $4, 'INPUT', $5)
+          ON CONFLICT (run_id, dataset_id, layer, role) DO NOTHING
         `,
-        [metaRunId, params.installationId, sourceScopedId, params.timestampUtc],
+        [metaRunId, params.installationId, params.sourceEntity, sourceLayer, params.timestampUtc],
       );
       await client.query(
         `
-          INSERT INTO meta.run_io (run_id, installation_id, dataset_id, role, observed_at)
-          VALUES ($1, $2, $3, 'OUTPUT', $4)
-          ON CONFLICT (run_id, dataset_id, role) DO NOTHING
+          INSERT INTO meta.run_io (run_id, installation_id, dataset_id, layer, role, observed_at)
+          VALUES ($1, $2, $3, $4, 'OUTPUT', $5)
+          ON CONFLICT (run_id, dataset_id, layer, role) DO NOTHING
         `,
-        [metaRunId, params.installationId, targetScopedId, params.timestampUtc],
+        [metaRunId, params.installationId, params.targetEntity, targetLayer, params.timestampUtc],
       );
     }
 
-    // 5. Upsert column-level lineage (only when both attributes are present)
+    // 5. Upsert column-level lineage
     if (params.sourceAttribute && params.targetAttribute) {
       await client.query(
         `
           INSERT INTO meta.lineage_columns (
             installation_id,
-            source_dataset_id, source_column,
-            target_dataset_id, target_column,
+            source_dataset_id, source_layer, source_column,
+            target_dataset_id, target_layer, target_column,
             first_observed_at, last_observed_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $6)
-          ON CONFLICT (installation_id, source_dataset_id, source_column, target_dataset_id, target_column)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+          ON CONFLICT (installation_id, source_dataset_id, source_layer, source_column,
+                       target_dataset_id, target_layer, target_column)
           DO UPDATE SET last_observed_at = EXCLUDED.last_observed_at
         `,
         [
           params.installationId,
-          sourceScopedId,
+          params.sourceEntity,
+          sourceLayer,
           params.sourceAttribute,
-          targetScopedId,
+          params.targetEntity,
+          targetLayer,
           params.targetAttribute,
           params.timestampUtc,
         ],
@@ -598,8 +588,8 @@ export async function writeMetaColumnLineage(
   // Extraheer korte entiteitnaam uit Databricks FQN (laatste segment)
   const sourceEntityName = extractObjectName(params.sourceName);
   const targetEntityName = extractObjectName(params.targetName);
-  const sourceScopedId = layerScopedId(sourceEntityName, params.sourceLayer);
-  const targetScopedId = layerScopedId(targetEntityName, params.targetLayer);
+  const sourceLayerNorm = normalizeLayer(params.sourceLayer) ?? 'unknown';
+  const targetLayerNorm = normalizeLayer(params.targetLayer) ?? 'unknown';
 
   // Normaliseer naar OL-vocabulaire
   const transformationType = OL_TRANSFORM_TYPES.has(params.transformationType ?? "")
@@ -612,21 +602,24 @@ export async function writeMetaColumnLineage(
       `
         INSERT INTO meta.lineage_columns (
           installation_id,
-          source_dataset_id, source_column,
-          target_dataset_id, target_column,
+          source_dataset_id, source_layer, source_column,
+          target_dataset_id, target_layer, target_column,
           transformation_type,
           first_observed_at, last_observed_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, now(), now())
-        ON CONFLICT (installation_id, source_dataset_id, source_column, target_dataset_id, target_column)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())
+        ON CONFLICT (installation_id, source_dataset_id, source_layer, source_column,
+                     target_dataset_id, target_layer, target_column)
         DO UPDATE SET
-          last_observed_at   = now(),
+          last_observed_at    = now(),
           transformation_type = COALESCE(EXCLUDED.transformation_type, meta.lineage_columns.transformation_type)
       `,
       [
         params.installationId,
-        sourceScopedId,
+        sourceEntityName,
+        sourceLayerNorm,
         params.sourceColumn,
-        targetScopedId,
+        targetEntityName,
+        targetLayerNorm,
         params.targetColumn,
         transformationType,
       ],

@@ -5,10 +5,9 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
-  { label: "Pipelines", href: "/pipelines", icon: "Activity" },
+  { label: "Overview", href: "/overview", icon: "LayoutDashboard" },
+  { label: "Runs", href: "/runs", icon: "Activity" },
   { label: "Data Quality", href: "/quality", icon: "ShieldCheck" },
-  { label: "Datasets", href: "/datasets", icon: "Database" },
+  { label: "Catalog", href: "/catalog", icon: "Package" },
   { label: "Lineage", href: "/lineage", icon: "GitBranch" },
-  { label: "OpenLineage", href: "/openlineage", icon: "Network" },
 ];

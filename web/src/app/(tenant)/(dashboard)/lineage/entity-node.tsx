@@ -1,8 +1,8 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Database, FileText, Table2 } from "lucide-react";
+import { Database, FileText, Table2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { HealthStatus } from "./lineage-utils";
 
 interface EntityData {
@@ -16,6 +16,13 @@ interface EntityData {
   // LADR-064: dataset vs entity split
   nodeKind?: "dataset" | "entity";
   sourceDatasetsCount?: number;
+  // navigation callbacks injected by graph-view
+  upstreamCount?: number;
+  downstreamCount?: number;
+  onFocusUpstream?: () => void;
+  onFocusDownstream?: () => void;
+  traceRole?: "anchor" | "upstream" | "downstream" | "both" | "neutral";
+  hopDistance?: number;
 }
 
 const HEALTH_COLORS: Record<HealthStatus, { border: string; dot: string; statusBg: string }> = {
@@ -34,15 +41,25 @@ const LAYER_ACCENT: Record<string, string> = {
   file:    "#6B7280",
 };
 
-function EntityNodeComponent({ data }: NodeProps) {
-  const { label, type, attributes, health, atRisk, layer, nodeKind, sourceDatasetsCount } = data as unknown as EntityData & { atRisk?: boolean };
+function EntityNodeComponent({ data, selected }: NodeProps) {
+  const { label, type, attributes, health, atRisk, layer, nodeKind, sourceDatasetsCount,
+          upstreamCount, downstreamCount, onFocusUpstream, onFocusDownstream, traceRole, hopDistance } =
+    data as unknown as EntityData & { atRisk?: boolean };
+  const [hovered, setHovered] = useState(false);
+  const showNav = (hovered || selected) && (upstreamCount || downstreamCount);
+
   const Icon = type === "table" ? Table2 : type === "file" ? FileText : Database;
   const colors = HEALTH_COLORS[health ?? "unknown"];
   const layerKey = layer?.toLowerCase() ?? "raw";
   const accentColor = LAYER_ACCENT[layerKey] ?? "var(--color-border)";
-  // LADR-064: entity-nodes (silver/gold) krijgen afgeronde hoeken en subtiele achtergrond
   const isEntity = nodeKind === "entity" || layerKey === "silver" || layerKey === "gold";
   const borderRadius = isEntity ? "12px" : "8px";
+  const isAnchor = traceRole === "anchor";
+  const traceBorder =
+    traceRole === "upstream" ? "#3B82F6"
+    : traceRole === "downstream" ? "#D97706"
+    : traceRole === "both" ? "var(--color-brand, #1B3B6B)"
+    : null;
 
   return (
     <div
@@ -51,9 +68,20 @@ function EntityNodeComponent({ data }: NodeProps) {
         background: isEntity ? "var(--color-surface)" : "var(--color-card)",
         border: "1px solid var(--color-border)",
         borderRadius,
-        outline: health !== "unknown" ? `1.5px solid ${colors.border}` : undefined,
-        outlineOffset: "-1px",
+        outline: selected
+          ? "2px solid var(--color-brand, #1B3B6B)"
+          : isAnchor
+          ? "2px solid var(--color-brand, #1B3B6B)"
+          : traceBorder
+          ? `1.5px solid ${traceBorder}`
+          : health !== "unknown"
+          ? `1.5px solid ${colors.border}`
+          : undefined,
+        outlineOffset: selected ? "2px" : "-1px",
+        boxShadow: isAnchor ? "0 0 0 4px rgba(27,59,107,0.12)" : undefined,
       }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <Handle type="target" position={Position.Left} className="!w-2 !h-2" style={{ background: accentColor, border: "none" }} />
 
@@ -74,6 +102,15 @@ function EntityNodeComponent({ data }: NodeProps) {
             title="Business entity (silver/gold)"
           >
             ENTITY
+          </span>
+        )}
+        {isAnchor && (
+          <span
+            className="text-[9px] font-bold rounded-full px-1.5 py-0.5 shrink-0"
+            style={{ background: "rgba(27,59,107,0.12)", color: "var(--color-brand, #1B3B6B)", border: "1px solid rgba(27,59,107,0.2)" }}
+            title="Current trace anchor"
+          >
+            ANCHOR
           </span>
         )}
         {atRisk && (
@@ -100,7 +137,23 @@ function EntityNodeComponent({ data }: NodeProps) {
           className="px-3 py-1 text-[10px]"
           style={{ borderTop: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
         >
-          gevoed door {sourceDatasetsCount} bron{sourceDatasetsCount > 1 ? "nen" : ""}
+          fed by {sourceDatasetsCount} source{sourceDatasetsCount > 1 ? "s" : ""}
+        </div>
+      )}
+
+      {typeof hopDistance === "number" && (
+        <div
+          className="flex items-center justify-between px-3 py-1 text-[10px]"
+          style={{ borderTop: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "rgba(128,128,128,0.04)" }}
+        >
+          <span>
+            {isAnchor ? "trace anchor" : `${hopDistance} hop${hopDistance === 1 ? "" : "s"} away`}
+          </span>
+          {traceRole && traceRole !== "neutral" && !isAnchor && (
+            <span className="font-semibold uppercase" style={{ color: traceBorder ?? "var(--color-text-muted)" }}>
+              {traceRole}
+            </span>
+          )}
         </div>
       )}
 
@@ -125,6 +178,40 @@ function EntityNodeComponent({ data }: NodeProps) {
       )}
 
       <Handle type="source" position={Position.Right} className="!w-2 !h-2" style={{ background: accentColor, border: "none" }} />
+
+      {/* Parent / child navigation — visible on hover or when selected */}
+      {showNav && (
+        <div
+          className="flex items-center justify-between px-2 py-1 gap-1"
+          style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-surface)" }}
+        >
+          {upstreamCount ? (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onFocusUpstream?.(); }}
+              className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold transition-colors hover:opacity-80"
+              style={{ background: `${accentColor}18`, color: accentColor, border: `1px solid ${accentColor}33` }}
+              title={`Show ${upstreamCount} upstream parent${upstreamCount > 1 ? "s" : ""}`}
+            >
+              <ChevronLeft className="h-3 w-3" />
+              {upstreamCount}
+            </button>
+          ) : <span />}
+
+          {downstreamCount ? (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onFocusDownstream?.(); }}
+              className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold transition-colors hover:opacity-80"
+              style={{ background: `${accentColor}18`, color: accentColor, border: `1px solid ${accentColor}33` }}
+              title={`Show ${downstreamCount} downstream child${downstreamCount > 1 ? "ren" : ""}`}
+            >
+              {downstreamCount}
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          ) : <span />}
+        </div>
+      )}
     </div>
   );
 }

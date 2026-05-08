@@ -5,13 +5,14 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { ResponsiveGridLayout, verticalCompactor, type LayoutItem, type ResponsiveLayouts } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
-import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2, Check, MoreHorizontal, Sparkles, Plus, Globe } from "lucide-react";
+import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2, Check, MoreHorizontal, Sparkles, Plus, Globe, Star } from "lucide-react";
 import { useDateRange } from "@/hooks/use-date-range";
 import { useHealth } from "@/hooks/use-health";
 import { DateRangePicker, Button, SourceIndicator } from "@/components/ui";
 import { useDashboards } from "@/contexts/dashboard-context";
 import { useInstallation } from "@/contexts/installation-context";
 import { useSharedWidgets, useUpdateSharedWidget } from "@/hooks/use-shared-widgets";
+import { usePinnedDashboards } from "@/hooks/use-pinned-dashboards";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
 import { DashboardSettingsDialog } from "@/components/dashboard/dashboard-settings-dialog";
 import { WidgetPickerDrawer } from "@/components/dashboard/widget-picker-modal";
@@ -61,6 +62,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
   const { mutateAsync: updateSharedWidget } = useUpdateSharedWidget();
   const { from, to, setRange } = useDateRange();
   const { data: health } = useHealth();
+  const { toggle: togglePin, isPinned } = usePinnedDashboards(installation?.installation_id);
   const [editMode, setEditMode] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishDone, setPublishDone] = useState(false);
@@ -251,6 +253,13 @@ export function DashboardCanvas({ dashboardId }: Props) {
   if (!mounted || !dashboard) return null;
 
   const isSystem = dashboard.isSystem;
+  const dashboardScopeLabel = isSystem ? "Organization dashboard" : "Personal dashboard";
+  const dashboardScopeStyles = isSystem
+    ? { background: "rgba(27,59,107,0.10)", color: "var(--color-brand, #1b3b6b)" }
+    : { background: "rgba(200,137,42,0.12)", color: "var(--color-accent)" };
+  const dashboardScopeHint = isSystem
+    ? "Changes affect the tenant after publishing."
+    : "Only visible in your personal workspace.";
 
   return (
     <>
@@ -260,11 +269,11 @@ export function DashboardCanvas({ dashboardId }: Props) {
         <div className="flex-1 min-w-0 space-y-4 p-0 overflow-hidden pr-1">
         {/* Dashboard header */}
         <div
-          className="flex items-center gap-3 mb-5 min-h-[44px]"
+          className="mb-5 flex min-h-[44px] flex-wrap items-center gap-3"
           style={{ borderBottom: `1px solid ${editMode ? "var(--color-accent)" : "var(--color-border)"}`, paddingBottom: "12px", transition: "border-color 0.2s" }}
         >
           {/* Left: icon + title */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <LayoutGrid className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
 
             {editingName ? (
@@ -282,29 +291,54 @@ export function DashboardCanvas({ dashboardId }: Props) {
                 </button>
               </div>
             ) : (
-              <div className="relative group/title min-w-0 flex-1 flex items-center gap-1.5">
-                <h1
-                  className="text-[17px] font-semibold leading-none truncate"
-                  style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}
-                >
-                  {dashboard.name}
-                </h1>
-                {!isSystem && editMode && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setEditingName(true); setNameInput(dashboard.name); }}
-                    className="p-1 rounded opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0"
-                    style={{ color: "var(--color-text-muted)" }}
-                    title="Edit name"
+              <div className="relative group/title min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <h1
+                    className="truncate text-[17px] font-semibold leading-none"
+                    style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}
                   >
-                    <Pencil className="h-3 w-3" />
-                  </button>
-                )}
+                    {dashboard.name}
+                  </h1>
+                  {!isSystem && editMode && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditingName(true); setNameInput(dashboard.name); }}
+                      className="shrink-0 rounded p-1 opacity-0 transition-opacity group-hover/title:opacity-100"
+                      style={{ color: "var(--color-text-muted)" }}
+                      title="Edit name"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  )}
+                  {!isSystem && (
+                    <button
+                      onClick={() => togglePin(dashboardId)}
+                      className="shrink-0 rounded p-1"
+                      style={{ color: isPinned(dashboardId) ? "var(--color-accent)" : "var(--color-text-muted)", opacity: isPinned(dashboardId) ? 1 : 0, transition: "opacity 0.15s" }}
+                      title={isPinned(dashboardId) ? "Unpin from sidebar" : "Pin to sidebar"}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = isPinned(dashboardId) ? "1" : "0"; }}
+                    >
+                      <Star className="h-3 w-3" fill={isPinned(dashboardId) ? "currentColor" : "none"} />
+                    </button>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span
+                    className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium"
+                    style={dashboardScopeStyles}
+                  >
+                    {dashboardScopeLabel}
+                  </span>
+                  <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    {dashboardScopeHint}
+                  </span>
+                </div>
               </div>
             )}
           </div>
 
           {/* Right: date + controls */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5">
             {health && (() => {
               let source: string | null = null;
               if (health.cache.cacheOnly) source = "cache";
@@ -373,10 +407,15 @@ export function DashboardCanvas({ dashboardId }: Props) {
                         </>
                       )}
                       <button onClick={() => { setEditMode(true); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
-                        <Pencil className="h-4 w-4" /> Edit
+                        <Pencil className="h-4 w-4" /> {isSystem ? "Edit organization layout" : "Edit personal layout"}
                       </button>
+                      {!isSystem && (
+                        <button onClick={() => { setSettingsOpen(true); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
+                          <Settings2 className="h-4 w-4" /> Dashboard settings
+                        </button>
+                      )}
                       <button onClick={() => { duplicateDash(dashboardId); setMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-sidebar-hover)]" style={{ color: "var(--color-text)" }}>
-                        <Copy className="h-4 w-4" /> Duplicate
+                        <Copy className="h-4 w-4" /> {isSystem ? "Create personal copy" : "Duplicate dashboard"}
                       </button>
                       {isSystem ? (
                         hasOverride ? (

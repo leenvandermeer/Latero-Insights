@@ -69,7 +69,7 @@ export function NewDashboardModal({ open, onClose }: NewDashboardModalProps) {
               <div className="flex items-center gap-2">
                 <LayoutDashboard className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
                 <h2 className="font-display font-semibold text-base" style={{ color: "var(--color-text)" }}>
-                  New dashboard
+                  New personal dashboard
                 </h2>
               </div>
               <button
@@ -95,7 +95,7 @@ export function NewDashboardModal({ open, onClose }: NewDashboardModalProps) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                  placeholder="My operational overview"
+                  placeholder="My data quality workspace"
                   className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
                   style={{ background: "var(--color-card)", borderColor: "var(--color-border)", color: "var(--color-text)" }}
                 />
@@ -134,7 +134,7 @@ export function NewDashboardModal({ open, onClose }: NewDashboardModalProps) {
                 className="flex-1 rounded-lg py-2 text-sm font-medium transition-opacity disabled:opacity-40"
                 style={{ background: "var(--color-accent)", color: "#fff" }}
               >
-                Create
+                Create dashboard
               </button>
             </div>
           </>

@@ -16,8 +16,8 @@ export function useEntities(filter: EntitiesFilter = {}) {
   return useQuery({
     queryKey: ["entities", installationId, filter],
     queryFn: () => fetchEntities(filter),
+    enabled: !!installationId,
     staleTime: 60_000,
-    refetchOnMount: "always",
     retry: 1,
   });
 }

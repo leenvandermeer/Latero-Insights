@@ -306,7 +306,7 @@ export default function WidgetBuilderPage() {
           </h1>
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
             {templateNaming
-              ? `Publishing "${selectedTemplateReg?.label}" as a shared widget`
+              ? `Publishing "${selectedTemplateReg?.label}" as an organization widget`
               : "Build a custom widget or choose a template"}
           </p>
         </div>
@@ -461,7 +461,7 @@ export default function WidgetBuilderPage() {
             style={{ background: "var(--color-accent)", color: "#fff" }}
           >
             <Check className="h-4 w-4" />
-            {publishing ? "Publishing…" : "Publish to shared library"}
+            {publishing ? "Publishing…" : "Publish to organization library"}
           </button>
         </div>
       )}
@@ -769,7 +769,7 @@ export default function WidgetBuilderPage() {
                 className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity disabled:opacity-40"
                 style={{ background: "var(--color-accent)", color: "#fff" }}>
                 <Check className="h-4 w-4" />
-                {publishing ? "Publishing…" : "Publish to shared library"}
+                {publishing ? "Publishing…" : "Publish to organization library"}
               </button>
             )}
           </div>
