@@ -16,7 +16,6 @@ import {
   TrendingUp,
   Users,
   ClipboardList,
-  CircleDollarSign,
   BellRing,
   Settings,
   Sun,
@@ -52,7 +51,6 @@ const EXPLORE_NAV = [
   { label: "Changes", href: "/changes", icon: GitCommit },
   { label: "Impact", href: "/impact", icon: TrendingUp },
   { label: "Consumers", href: "/consumers", icon: Users },
-  { label: "Costs", href: "/costs", icon: CircleDollarSign },
 ];
 
 const MAX_PINNED_IN_NAV = 3;
