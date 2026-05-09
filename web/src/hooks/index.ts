@@ -10,3 +10,5 @@ export { useDateRange } from "./use-date-range";
 export { useSharedWidgets, usePublishWidget, useWithdrawWidget, useUpdateSharedWidget } from "./use-shared-widgets";
 export { useFieldValues } from "./use-field-values";
 export { usePinnedDashboards } from "./use-pinned-dashboards";
+export { usePolicies, useComplianceMatrix, useCreatePolicy, useUpdatePolicy, useDeletePolicy, useRunAllCompliance, useCellRunner, usePolicyPacks, useCreatePolicyPack, useUpdatePolicyPack, useDeletePolicyPack } from "./use-compliance";
+export type { VerdictValue } from "./use-compliance";

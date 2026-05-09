@@ -110,6 +110,11 @@ export async function updatePolicy(
   return body.data;
 }
 
+export async function deletePolicy(id: string): Promise<void> {
+  const res = await fetch(`/api/policies/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete policy");
+}
+
 export async function getComplianceMatrix(): Promise<ComplianceMatrix> {
   const res = await fetch("/api/compliance");
   if (!res.ok) throw new Error("Failed to load compliance matrix");
@@ -152,4 +157,66 @@ export async function resolveException(
   if (!res.ok) throw new Error("Failed to resolve exception");
   const body = await res.json() as { data: PolicyException };
   return body.data;
+}
+
+export async function runAllCompliance(): Promise<void> {
+  const res = await fetch("/api/compliance", { method: "POST" });
+  if (!res.ok) throw new Error("Failed to run all compliance checks");
+}
+
+export async function runProductCompliance(
+  productId: string,
+  policyId: string
+): Promise<PolicyVerdict> {
+  const res = await fetch(`/api/compliance/${encodeURIComponent(productId)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ policy_id: policyId }),
+  });
+  if (!res.ok) throw new Error("Failed to run compliance check");
+  const body = await res.json() as { data: { verdict: string } };
+  return { policy_id: policyId, product_id: productId, verdict: body.data.verdict as PolicyVerdict["verdict"], detail: null, evaluated_at: new Date().toISOString() };
+}
+
+// ── Policy packs ──────────────────────────────────────────────────────────────
+
+export async function listPolicyPacks(): Promise<PolicyPack[]> {
+  const res = await fetch("/api/policy-packs");
+  if (!res.ok) throw new Error("Failed to load policy packs");
+  const body = await res.json() as { data: PolicyPack[] };
+  return body.data;
+}
+
+export async function createPolicyPack(data: {
+  name: string;
+  framework?: string;
+  description?: string;
+}): Promise<PolicyPack> {
+  const res = await fetch("/api/policy-packs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create policy pack");
+  const body = await res.json() as { data: PolicyPack };
+  return body.data;
+}
+
+export async function updatePolicyPack(
+  id: string,
+  data: Partial<{ name: string; framework: string; description: string }>
+): Promise<PolicyPack> {
+  const res = await fetch(`/api/policy-packs/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update policy pack");
+  const body = await res.json() as { data: PolicyPack };
+  return body.data;
+}
+
+export async function deletePolicyPack(id: string): Promise<void> {
+  const res = await fetch(`/api/policy-packs/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete policy pack");
 }
