@@ -110,6 +110,105 @@ const CONDITIONS: Record<
     );
     return { pass: !!r.rows[0]?.contract_ver };
   },
+
+  // ── WP-404: Advanced rule types ──────────────────────────────────────────
+
+  /**
+   * Fails if the volume of records in the latest pipeline run deviates more than
+   * `threshold` % from the 30-day average.
+   */
+  volume_anomaly: async (productId, installationId, threshold = 30) => {
+    const pool = getPgPool();
+    const r = await pool.query(
+      `WITH recent AS (
+         SELECT row_count, started_at
+         FROM meta.pipeline_runs pr
+         JOIN meta.entities e ON e.installation_id = pr.installation_id AND e.data_product_id = $2
+         WHERE pr.installation_id = $1 AND pr.started_at >= now() - INTERVAL '30 days'
+         ORDER BY started_at DESC
+       ),
+       latest AS (SELECT row_count FROM recent LIMIT 1),
+       avg_30 AS (SELECT AVG(row_count) AS avg FROM recent)
+       SELECT latest.row_count AS latest_vol, avg_30.avg AS avg_vol
+       FROM latest, avg_30`,
+      [installationId, productId]
+    );
+    const row = r.rows[0] as { latest_vol: number | null; avg_vol: number | null } | undefined;
+    if (!row?.latest_vol || !row.avg_vol) return { pass: true };
+    const deviation = Math.abs((row.latest_vol - row.avg_vol) / row.avg_vol) * 100;
+    return {
+      pass: deviation <= threshold,
+      detail: { deviation: Math.round(deviation), threshold, latest_vol: row.latest_vol, avg_vol: Math.round(row.avg_vol) },
+    };
+  },
+
+  /**
+   * Fails if there are no consumer access events for N days (default 30).
+   */
+  consumer_inactivity: async (productId, installationId, threshold = 30) => {
+    const pool = getPgPool();
+    const r = await pool.query(
+      `SELECT MAX(last_access_at) AS last_access
+       FROM meta.product_consumers
+       WHERE installation_id = $1 AND product_id = $2`,
+      [installationId, productId]
+    );
+    const lastAccess = r.rows[0]?.last_access as string | null;
+    if (!lastAccess) return { pass: false, detail: { last_access: null, threshold_days: threshold } };
+    const daysAgo = (Date.now() - new Date(lastAccess).getTime()) / 86400_000;
+    return {
+      pass: daysAgo <= threshold,
+      detail: { days_since_access: Math.round(daysAgo), threshold_days: threshold },
+    };
+  },
+
+  /**
+   * Fails if a required evidence event_type is missing in the last N days (default 7).
+   */
+  evidence_gap: async (productId, installationId, threshold = 7) => {
+    const pool = getPgPool();
+    const r = await pool.query(
+      `SELECT COUNT(*)::int AS cnt
+       FROM meta.evidence_records
+       WHERE installation_id = $1 AND product_id = $2
+         AND recorded_at >= now() - ($3 || ' days')::INTERVAL`,
+      [installationId, productId, threshold]
+    );
+    return {
+      pass: (r.rows[0]?.cnt ?? 0) > 0,
+      detail: { evidence_count: r.rows[0]?.cnt, threshold_days: threshold },
+    };
+  },
+
+  /**
+   * Fails if there are gaps of > threshold days in the evidence ledger
+   * over the last 90 days (temporal coverage check).
+   */
+  temporal_coverage: async (productId, installationId, threshold = 7) => {
+    const pool = getPgPool();
+    // Find the longest gap in evidence records over last 90 days
+    const r = await pool.query(
+      `WITH daily AS (
+         SELECT date_trunc('day', recorded_at)::date AS d
+         FROM meta.evidence_records
+         WHERE installation_id = $1 AND product_id = $2
+           AND recorded_at >= now() - INTERVAL '90 days'
+         GROUP BY 1
+       ),
+       gaps AS (
+         SELECT d, LAG(d) OVER (ORDER BY d) AS prev_d,
+                d - LAG(d) OVER (ORDER BY d) AS gap_days
+         FROM daily
+       )
+       SELECT MAX(gap_days)::int AS max_gap FROM gaps`,
+      [installationId, productId]
+    );
+    const maxGap = r.rows[0]?.max_gap ?? 0;
+    return {
+      pass: maxGap <= threshold,
+      detail: { max_gap_days: maxGap, threshold_days: threshold },
+    };
+  },
 };
 
 // ---------------------------------------------------------------------------

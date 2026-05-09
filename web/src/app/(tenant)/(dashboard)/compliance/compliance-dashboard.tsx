@@ -1,7 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, CheckCircle2, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { Shield, CheckCircle2, XCircle, AlertTriangle, RefreshCw, PlusCircle } from "lucide-react";
+
+// ---------------------------------------------------------------------------
+// WP-404 — all supported condition types (mirrors policy-engine.ts CONDITIONS)
+// ---------------------------------------------------------------------------
+const CONDITION_OPTIONS: { value: string; label: string; hasThreshold: boolean; thresholdLabel?: string; defaultThreshold?: number }[] = [
+  { value: "owner_missing",         label: "Owner missing",                   hasThreshold: false },
+  { value: "sla_missing",           label: "SLA missing",                     hasThreshold: false },
+  { value: "contract_missing",      label: "Contract version missing",        hasThreshold: false },
+  { value: "no_lineage",            label: "No upstream lineage",             hasThreshold: false },
+  { value: "quality_below_threshold", label: "Quality pass-rate below threshold", hasThreshold: true, thresholdLabel: "Min pass-rate (%)", defaultThreshold: 95 },
+  { value: "open_incidents",        label: "Open incidents above limit",      hasThreshold: true, thresholdLabel: "Max open incidents", defaultThreshold: 0 },
+  // WP-404 additions
+  { value: "volume_anomaly",        label: "Volume anomaly (% deviation from 30-day avg)", hasThreshold: true, thresholdLabel: "Max deviation (%)", defaultThreshold: 30 },
+  { value: "consumer_inactivity",   label: "Consumer inactivity (no access for N days)",  hasThreshold: true, thresholdLabel: "Max inactive days", defaultThreshold: 30 },
+  { value: "evidence_gap",          label: "Evidence gap (no evidence in last N days)",    hasThreshold: true, thresholdLabel: "Days to check", defaultThreshold: 7 },
+  { value: "temporal_coverage",     label: "Temporal coverage gap (longest gap > N days)", hasThreshold: true, thresholdLabel: "Max gap (days)", defaultThreshold: 7 },
+];
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface Policy {
@@ -133,10 +150,137 @@ function RunPolicyModal({ policies, products, onClose }: {
   );
 }
 
+// ── Create Policy Modal ───────────────────────────────────────────────────────
+
+function CreatePolicyModal({ packs, onClose }: { packs: PolicyPack[]; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [conditionKey, setConditionKey] = useState(CONDITION_OPTIONS[0].value);
+  const [threshold, setThreshold] = useState<number>(CONDITION_OPTIONS[0].defaultThreshold ?? 95);
+  const [action, setAction] = useState<"warn" | "block" | "notify">("warn");
+  const [packId, setPackId] = useState(packs[0]?.id ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const conditionMeta = CONDITION_OPTIONS.find((c) => c.value === conditionKey);
+
+  const handleConditionChange = (val: string) => {
+    setConditionKey(val);
+    const meta = CONDITION_OPTIONS.find((c) => c.value === val);
+    if (meta?.defaultThreshold !== undefined) setThreshold(meta.defaultThreshold);
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) { setError("Name is required"); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      const rule: Record<string, unknown> = { subject: "product", condition: conditionKey };
+      if (conditionMeta?.hasThreshold) rule.threshold = threshold;
+      const res = await fetch("/api/policies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          rule,
+          scope: { all: true },
+          action,
+          pack_id: packId || null,
+        }),
+      });
+      if (!res.ok) { const b = await res.json() as { error?: string }; throw new Error(b.error ?? "Failed"); }
+      qc.invalidateQueries({ queryKey: ["policies"] });
+      qc.invalidateQueries({ queryKey: ["compliance"] });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectCls = "w-full rounded-lg px-3 py-2 text-sm outline-none";
+  const selectStyle = { background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-text)" };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.4)" }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full max-w-md rounded-2xl p-6 flex flex-col gap-4"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>New Policy</h2>
+
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Policy name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)}
+            className={selectCls} style={selectStyle} placeholder="e.g. Owner required" />
+        </div>
+
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Condition</label>
+          <select value={conditionKey} onChange={(e) => handleConditionChange(e.target.value)}
+            className={selectCls} style={selectStyle}>
+            {CONDITION_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {conditionMeta?.hasThreshold && (
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>
+              {conditionMeta.thresholdLabel ?? "Threshold"}
+            </label>
+            <input type="number" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))}
+              className={selectCls} style={selectStyle} min={0} />
+          </div>
+        )}
+
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Action on fail</label>
+          <select value={action} onChange={(e) => setAction(e.target.value as "warn" | "block" | "notify")}
+            className={selectCls} style={selectStyle}>
+            <option value="warn">Warn</option>
+            <option value="block">Block</option>
+            <option value="notify">Notify</option>
+          </select>
+        </div>
+
+        {packs.length > 0 && (
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Policy pack (optional)</label>
+            <select value={packId} onChange={(e) => setPackId(e.target.value)}
+              className={selectCls} style={selectStyle}>
+              <option value="">— None —</option>
+              {packs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+        )}
+
+        {error && <p className="text-xs" style={{ color: "#b91c1c" }}>{error}</p>}
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm"
+            style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+            style={{ background: "var(--color-brand)", color: "#fff" }}>
+            {saving ? "Saving…" : "Create policy"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export function ComplianceDashboard() {
   const [showRunModal, setShowRunModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data: policiesResponse } = useQuery({
     queryKey: ["policies"],
@@ -189,14 +333,24 @@ export function ComplianceDashboard() {
             Policy verdicts across your data estate
           </p>
         </div>
-        <button
-          onClick={() => setShowRunModal(true)}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
-          style={{ background: "var(--color-brand)", color: "#fff" }}
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Run check
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+          >
+            <PlusCircle className="h-3.5 w-3.5" />
+            New policy
+          </button>
+          <button
+            onClick={() => setShowRunModal(true)}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
+            style={{ background: "var(--color-brand)", color: "#fff" }}
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Run check
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -291,6 +445,12 @@ export function ComplianceDashboard() {
           policies={policies}
           products={products}
           onClose={() => setShowRunModal(false)}
+        />
+      )}
+      {showCreateModal && (
+        <CreatePolicyModal
+          packs={policiesResponse?.packs ?? []}
+          onClose={() => setShowCreateModal(false)}
         />
       )}
     </div>
