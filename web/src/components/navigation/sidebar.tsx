@@ -17,6 +17,7 @@ import {
   Users,
   ClipboardList,
   CircleDollarSign,
+  BellRing,
   Settings,
   Sun,
   Moon,
@@ -40,6 +41,7 @@ const MONITOR_NAV = [
   { label: "Data Quality", href: "/quality", icon: ShieldCheck },
   { label: "Incidents", href: "/incidents", icon: AlertTriangle },
   { label: "Compliance", href: "/compliance", icon: ClipboardList },
+  { label: "Alerts", href: "/alerts", icon: BellRing },
 ];
 
 const EXPLORE_NAV = [
