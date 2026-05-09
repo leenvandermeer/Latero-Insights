@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { requireSession } from "@/lib/session-auth";
 import { getPgPool } from "@/lib/insights-saas-db";
+import { runPolicyCheck } from "@/lib/policy-engine";
 
 function ip(r: NextRequest) {
   return r.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -64,6 +65,29 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (err) {
     console.error("[GET /api/compliance]", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/compliance
+ * Voert alle actieve policies uit voor alle producten in de installatie.
+ * Schrijft verdicts naar meta.policy_verdicts.
+ */
+export async function POST(request: NextRequest) {
+  const { allowed } = rateLimit(ip(request));
+  if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  let installationId: string;
+  try { installationId = await resolveInstallation(request); } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    await runPolicyCheck(installationId);
+    return NextResponse.json({ data: { ok: true } });
+  } catch (err) {
+    console.error("[POST /api/compliance]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
