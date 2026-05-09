@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Shield, CheckCircle2, XCircle, AlertTriangle, RefreshCw, PlusCircle } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -394,9 +394,9 @@ export function ComplianceDashboard() {
               {Array.from(policyByPack.entries()).map(([packId, packPolicies]) => {
                 const pack = packs.find((pk) => pk.id === packId);
                 return (
-                  <>
+                  <React.Fragment key={packId}>
                     {pack && (
-                      <tr key={`pack-${packId}`}>
+                      <tr>
                         <td colSpan={products.length + 1} className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide"
                           style={{ background: "var(--color-surface-raised)", color: "var(--color-text-muted)" }}>
                           {pack.name}
@@ -423,7 +423,7 @@ export function ComplianceDashboard() {
                         })}
                       </tr>
                     ))}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>
