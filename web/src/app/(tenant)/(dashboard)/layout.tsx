@@ -5,7 +5,6 @@ import { InstallationProvider } from "@/contexts/installation-context";
 import { InstallationGate } from "@/components/navigation/installation-gate";
 import { TemporalProvider } from "@/contexts/TemporalContext";
 import { TemporalModeBar } from "@/components/shared/temporal-mode-bar";
-import { CopilotPanel } from "@/components/copilot/copilot-panel";
 export default function DashboardLayout({
   children,
 }: {
@@ -29,7 +28,6 @@ export default function DashboardLayout({
                 </div>
               </main>
               <BottomNav />
-              <CopilotPanel />
             </div>
           </InstallationGate>
         </TemporalProvider>
