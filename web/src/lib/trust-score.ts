@@ -187,16 +187,23 @@ export async function calculateTrustScore(
  */
 export async function getLatestTrustScore(
   productId: string,
-  installationId: string
+  installationId: string,
+  asOf?: string
 ): Promise<{ score: number; factors: TrustFactor[]; calculated_at: string } | null> {
   const pool = getPgPool();
+  const values: unknown[] = [installationId, productId];
+  let filter = "";
+  if (asOf) {
+    values.push(asOf);
+    filter = `AND calculated_at <= $${values.length}`;
+  }
   const result = await pool.query(
     `SELECT score, factors, calculated_at
      FROM meta.trust_score_snapshots
-     WHERE installation_id = $1 AND product_id = $2
+     WHERE installation_id = $1 AND product_id = $2 ${filter}
      ORDER BY calculated_at DESC
      LIMIT 1`,
-    [installationId, productId]
+    values
   );
   if (result.rows.length === 0) return null;
   return result.rows[0];

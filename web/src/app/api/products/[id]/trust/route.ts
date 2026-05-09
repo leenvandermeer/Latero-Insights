@@ -31,16 +31,17 @@ export async function GET(
 
   const { id } = await params;
   const refresh = request.nextUrl.searchParams.get("refresh") === "true";
+  const asOf = request.nextUrl.searchParams.get("as_of") ?? undefined;
 
   try {
-    if (refresh) {
+    if (refresh && !asOf) {
       const result = await calculateTrustScore(id, installationId);
       return NextResponse.json({ data: result });
     }
 
-    const snapshot = await getLatestTrustScore(id, installationId);
+    const snapshot = await getLatestTrustScore(id, installationId, asOf);
     if (!snapshot) {
-      // Bereken on-demand als er nog geen snapshot is
+      if (asOf) return NextResponse.json({ data: null });
       const result = await calculateTrustScore(id, installationId);
       return NextResponse.json({ data: result });
     }

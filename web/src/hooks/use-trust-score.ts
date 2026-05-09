@@ -33,12 +33,14 @@ async function apiFetch<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function useTrustScore(productId: string | null) {
+export function useTrustScore(productId: string | null, asOf?: string) {
   return useQuery({
-    queryKey: ["trust-score", productId],
-    queryFn: () =>
-      apiFetch<{ data: TrustScore }>(`/api/products/${encodeURIComponent(productId!)}/trust`)
-        .then((r) => r.data),
+    queryKey: ["trust-score", productId, asOf],
+    queryFn: () => {
+      const params = asOf ? `?as_of=${encodeURIComponent(asOf)}` : "";
+      return apiFetch<{ data: TrustScore }>(`/api/products/${encodeURIComponent(productId!)}/trust${params}`)
+        .then((r) => r.data);
+    },
     enabled: !!productId,
     staleTime: 5 * 60_000,
     retry: 1,
