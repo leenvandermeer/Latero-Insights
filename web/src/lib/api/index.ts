@@ -47,3 +47,54 @@ export type {
   CreateDataProductInput,
   UpdateDataProductInput,
 } from "./data-products";
+export {
+  listIncidents,
+  getIncident,
+  createIncident,
+  updateIncident,
+  addIncidentStep,
+  addIncidentEvidence,
+} from "./incidents";
+export type {
+  Incident,
+  IncidentDetail,
+  IncidentStep,
+  IncidentEvidence,
+  IncidentSeverity,
+  IncidentStatus,
+  IncidentSourceType,
+  ListIncidentsOptions,
+  CreateIncidentInput,
+  UpdateIncidentInput,
+} from "./incidents";
+export {
+  listBusinessOutputs,
+  createBusinessOutput,
+  getProductBusinessOutputs,
+  linkBusinessOutput,
+  unlinkBusinessOutput,
+  getEntityImpact,
+} from "./business-outputs";
+export type {
+  BusinessOutput,
+  BusinessOutputType,
+  BusinessOutputCriticality,
+  CreateBusinessOutputInput,
+  ListBusinessOutputsOptions,
+} from "./business-outputs";
+export {
+  listGlossaryTerms,
+  getGlossaryTerm,
+  createGlossaryTerm,
+  updateGlossaryTerm,
+  deleteGlossaryTerm,
+  getGlossaryConflicts,
+} from "./glossary";
+export type {
+  GlossaryTerm,
+  GlossaryTermDetail,
+  GlossaryDatasetLink,
+  GlossaryConflict,
+  CreateGlossaryTermInput,
+  UpdateGlossaryTermInput,
+} from "./glossary";
