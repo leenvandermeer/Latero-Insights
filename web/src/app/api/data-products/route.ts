@@ -11,6 +11,9 @@ const PRODUCT_SELECT = `
   dp.owner,
   dp.domain,
   dp.sla_tier,
+  dp.sla,
+  dp.contract_ver,
+  dp.deprecated_at,
   dp.tags,
   dp.created_at,
   dp.updated_at,
@@ -23,11 +26,13 @@ const PRODUCT_FROM = `
   LEFT JOIN meta.entities e
     ON e.installation_id = dp.installation_id
    AND e.data_product_id = dp.data_product_id
+   AND e.valid_to IS NULL
 `;
 
 const PRODUCT_GROUP = `
   GROUP BY dp.data_product_id, dp.display_name, dp.description,
-           dp.owner, dp.domain, dp.sla_tier, dp.tags, dp.created_at, dp.updated_at
+           dp.owner, dp.domain, dp.sla_tier, dp.sla, dp.contract_ver,
+           dp.deprecated_at, dp.tags, dp.created_at, dp.updated_at
 `;
 
 const VALID_SLA = new Set(["bronze", "silver", "gold"]);
@@ -48,12 +53,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const params = request.nextUrl.searchParams;
+  const include_deprecated = params.get("include_deprecated") === "true";
+
   const pool = getPgPool();
   try {
     const result = await pool.query(
       `SELECT ${PRODUCT_SELECT} ${PRODUCT_FROM}
        WHERE dp.installation_id = $1
          AND dp.valid_to IS NULL
+         ${include_deprecated ? "" : "AND dp.deprecated_at IS NULL"}
        ${PRODUCT_GROUP}
        ORDER BY dp.display_name`,
       [installationId]
@@ -84,9 +93,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { display_name, description, owner, domain, sla_tier, entity_ids } = body as {
+  const { display_name, description, owner, domain, sla_tier, entity_ids, sla, contract_ver } = body as {
     display_name?: string; description?: string; owner?: string;
     domain?: string; sla_tier?: string; entity_ids?: string[];
+    sla?: { freshness_minutes?: number; quality_threshold?: number } | null;
+    contract_ver?: string | null;
   };
 
   if (!display_name?.trim()) return NextResponse.json({ error: "display_name is required" }, { status: 400 });
@@ -98,9 +109,10 @@ export async function POST(request: NextRequest) {
     await client.query("BEGIN");
     const id = randomUUID();
     await client.query(
-      `INSERT INTO meta.data_products (data_product_id, installation_id, display_name, description, owner, domain, sla_tier)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, installationId, display_name.trim(), description ?? null, owner ?? null, domain ?? null, sla_tier ?? null]
+      `INSERT INTO meta.data_products (data_product_id, installation_id, display_name, description, owner, domain, sla_tier, sla, contract_ver)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [id, installationId, display_name.trim(), description ?? null, owner ?? null, domain ?? null, sla_tier ?? null,
+       sla !== undefined ? JSON.stringify(sla) : null, contract_ver ?? null]
     );
     if (Array.isArray(entity_ids) && entity_ids.length > 0) {
       await client.query(

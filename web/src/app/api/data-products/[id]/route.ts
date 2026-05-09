@@ -10,6 +10,9 @@ const PRODUCT_SELECT = `
   dp.owner,
   dp.domain,
   dp.sla_tier,
+  dp.sla,
+  dp.contract_ver,
+  dp.deprecated_at,
   dp.tags,
   dp.created_at,
   dp.updated_at,
@@ -27,7 +30,8 @@ const PRODUCT_FROM = `
 
 const PRODUCT_GROUP = `
   GROUP BY dp.data_product_id, dp.display_name, dp.description,
-           dp.owner, dp.domain, dp.sla_tier, dp.tags, dp.created_at, dp.updated_at
+           dp.owner, dp.domain, dp.sla_tier, dp.sla, dp.contract_ver,
+           dp.deprecated_at, dp.tags, dp.created_at, dp.updated_at
 `;
 
 const VALID_SLA = new Set(["bronze", "silver", "gold"]);
@@ -90,9 +94,11 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { display_name, description, owner, domain, sla_tier, entity_ids } = body as {
+  const { display_name, description, owner, domain, sla_tier, entity_ids, sla, contract_ver } = body as {
     display_name?: string; description?: string; owner?: string;
     domain?: string; sla_tier?: string | null; entity_ids?: string[];
+    sla?: { freshness_minutes?: number; quality_threshold?: number } | null;
+    contract_ver?: string | null;
   };
 
   if (display_name !== undefined && !display_name.trim()) {
@@ -119,19 +125,23 @@ export async function PUT(
 
     await client.query(
       `UPDATE meta.data_products SET
-         display_name = COALESCE($3, display_name),
-         description  = $4,
-         owner        = $5,
-         domain       = $6,
-         sla_tier     = $7,
-         updated_at   = now()
+         display_name  = COALESCE($3, display_name),
+         description   = $4,
+         owner         = $5,
+         domain        = $6,
+         sla_tier      = $7,
+         sla           = CASE WHEN $8::text IS NULL THEN sla ELSE $8::jsonb END,
+         contract_ver  = CASE WHEN $9::text IS NULL THEN contract_ver ELSE $9 END,
+         updated_at    = now()
        WHERE installation_id = $1 AND data_product_id = $2`,
       [installationId, id,
        display_name?.trim() ?? null,
        description ?? null,
        owner ?? null,
        domain ?? null,
-       sla_tier ?? null]
+       sla_tier ?? null,
+       sla !== undefined ? JSON.stringify(sla) : null,
+       contract_ver !== undefined ? contract_ver : null]
     );
 
     if (Array.isArray(entity_ids)) {

@@ -31,3 +31,19 @@ export function isNoDataError(error: unknown): boolean {
     (typeof e.message === "string" && e.message.toLowerCase().includes("no cached data"));
 }
 export type { ApiResponse, ApiError, ApiHealthResponse, CacheStatusResponse, CacheRefreshResponse, CacheClearResponse, SettingsResponse, SettingsUpdateRequest } from "./types";
+export {
+  listDataProducts,
+  getDataProduct,
+  createDataProduct,
+  updateDataProduct,
+  deprecateDataProduct,
+  undeprecateDataProduct,
+  deleteDataProduct,
+} from "./data-products";
+export type {
+  DataProduct,
+  DataProductSla,
+  ListDataProductsOptions,
+  CreateDataProductInput,
+  UpdateDataProductInput,
+} from "./data-products";
