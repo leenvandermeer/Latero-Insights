@@ -2,6 +2,8 @@
 
 import { useEstateHealth, useDataProducts } from "@/hooks/use-data-products";
 import { useRuns } from "@/hooks/use-runs";
+import { useIncidents } from "@/hooks/use-incidents";
+import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
   CheckCircle,
@@ -12,6 +14,8 @@ import {
   Boxes,
   TrendingUp,
   Clock,
+  ClipboardList,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -62,6 +66,22 @@ export function HealthOverview() {
   const health = healthRes?.data as Record<string, unknown> | undefined;
   const products = (productsRes?.data ?? []) as Array<Record<string, unknown>>;
   const runs = (runsRes?.data ?? []) as Array<Record<string, unknown>>;
+
+  // Operating model data
+  const { data: complianceData } = useQuery({
+    queryKey: ["compliance"],
+    queryFn: () => fetch("/api/compliance").then((r) => r.json())
+      .then((b: { data: { verdicts: Array<{ verdict: string }> } }) => b.data),
+    staleTime: 60_000,
+    retry: 1,
+  });
+  const { data: incidentData } = useIncidents({ status: "open" });
+
+  const verdicts = complianceData?.verdicts ?? [];
+  const compliancePassRate = verdicts.length > 0
+    ? Math.round((verdicts.filter((v) => v.verdict === "pass").length / verdicts.length) * 100)
+    : null;
+  const openIncidents = incidentData != null ? incidentData.length : null;
 
   const statCards = [
     {
@@ -237,6 +257,48 @@ export function HealthOverview() {
               })}
             </ul>
           )}
+        </div>
+      </div>
+
+      {/* Operating model */}
+      <div>
+        <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text-muted)" }}>
+          Operating model
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <Link href="/compliance"
+            className="rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <ClipboardList className="h-5 w-5 shrink-0" style={{ color: "var(--color-brand)" }} />
+            <div>
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Policy pass rate</p>
+              <p className="text-xl font-bold tabular-nums" style={{ color: "var(--color-text)" }}>
+                {compliancePassRate !== null ? `${compliancePassRate}%` : "—"}
+              </p>
+            </div>
+          </Link>
+          <Link href="/incidents"
+            className="rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <AlertTriangle className="h-5 w-5 shrink-0" style={{ color: openIncidents && openIncidents > 0 ? "#dc2626" : "var(--color-text-muted)" }} />
+            <div>
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Open incidents</p>
+              <p className="text-xl font-bold tabular-nums" style={{ color: openIncidents && openIncidents > 0 ? "#dc2626" : "var(--color-text)" }}>
+                {openIncidents !== null ? openIncidents : "—"}
+              </p>
+            </div>
+          </Link>
+          <Link href="/products"
+            className="rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <Shield className="h-5 w-5 shrink-0" style={{ color: "var(--color-brand)" }} />
+            <div>
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Data products</p>
+              <p className="text-xl font-bold tabular-nums" style={{ color: "var(--color-text)" }}>
+                {productsLoading ? "…" : String(health?.data_product_count ?? products.length)}
+              </p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>
