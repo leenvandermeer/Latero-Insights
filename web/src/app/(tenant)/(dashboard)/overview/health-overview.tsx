@@ -88,7 +88,7 @@ export function HealthOverview() {
       label: "Data Products",
       value: health?.data_product_count ?? "—",
       icon: Package,
-      href: "/catalog",
+      href: "/products",
     },
     {
       label: "Open Issues",
@@ -159,7 +159,7 @@ export function HealthOverview() {
               <Package className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
               <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Data Products</span>
             </div>
-            <Link href="/catalog" className="text-xs hover:underline" style={{ color: "var(--color-brand)" }}>
+            <Link href="/products" className="text-xs hover:underline" style={{ color: "var(--color-brand)" }}>
               View all →
             </Link>
           </div>
@@ -192,7 +192,7 @@ export function HealthOverview() {
                       {ec} {ec === 1 ? "entity" : "entities"}
                     </span>
                     <Link
-                      href="/catalog"
+                      href={`/products/${encodeURIComponent(id)}`}
                       className="text-xs hover:underline shrink-0"
                       style={{ color: "var(--color-brand)" }}
                     >

@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { ChevronLeft, RefreshCw, AlertTriangle, Shield } from "lucide-react";
+import { ChevronLeft, RefreshCw, AlertTriangle, Shield, GitBranch, Plus, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useDataProduct } from "@/hooks/use-data-products";
 import { useTrustScore } from "@/hooks/use-trust-score";
@@ -175,14 +176,38 @@ function IncidentsTab({ productId }: { productId: string }) {
   const { data: incidents, isLoading } = useIncidents({ product_id: productId });
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <Link
+          href={`/incidents?product_id=${encodeURIComponent(productId)}`}
+          className="text-xs hover:underline flex items-center gap-1"
+          style={{ color: "var(--color-brand)" }}
+        >
+          View all incidents <ArrowRight className="h-3 w-3" />
+        </Link>
+        <Link
+          href={`/incidents?new=1&product_id=${encodeURIComponent(productId)}`}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-opacity hover:opacity-90"
+          style={{ background: "var(--color-brand)", color: "#fff" }}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Create incident
+        </Link>
+      </div>
+
       {isLoading && (
         <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Loading incidents…</p>
       )}
       {!isLoading && (!incidents || incidents.length === 0) && (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          No incidents recorded for this product.
-        </p>
+        <div
+          className="rounded-xl p-6 text-center"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <AlertTriangle className="h-6 w-6 mx-auto mb-2" style={{ color: "var(--color-text-muted)" }} />
+          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            No incidents recorded for this product.
+          </p>
+        </div>
       )}
       {incidents?.map((inc) => <IncidentRow key={inc.id} incident={inc as Incident} />)}
     </div>
@@ -206,6 +231,34 @@ const EVENT_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   incident:       { bg: "#fee2e2", text: "#b91c1c" },
 };
 
+function summarisePayload(eventType: string, payload: Record<string, unknown>): string {
+  switch (eventType) {
+    case "quality_run": {
+      const check = payload.check_name ?? payload.check_id ?? "check";
+      const result = payload.result ?? payload.status ?? payload.verdict;
+      return result ? `${String(check)}: ${String(result)}` : String(check);
+    }
+    case "lineage_update": {
+      const from = payload.source ?? payload.from;
+      const to   = payload.target ?? payload.to;
+      if (from && to) return `${String(from)} → ${String(to)}`;
+      return payload.message ? String(payload.message) : "Lineage updated";
+    }
+    case "policy_check": {
+      const policy  = payload.policy_name ?? payload.policy_id ?? "policy";
+      const verdict = payload.verdict ?? payload.result;
+      return verdict ? `${String(policy)}: ${String(verdict)}` : String(policy);
+    }
+    case "incident":
+      return payload.title ? String(payload.title) : "Incident recorded";
+    default: {
+      const entries = Object.entries(payload).slice(0, 3);
+      if (entries.length === 0) return "—";
+      return entries.map(([k, v]) => `${k}: ${String(v)}`).join(" · ");
+    }
+  }
+}
+
 function EvidenceTab({ productId }: { productId: string }) {
   const { data, isLoading } = useQuery({
     queryKey: ["evidence", productId],
@@ -217,27 +270,59 @@ function EvidenceTab({ productId }: { productId: string }) {
     retry: 1,
   });
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl p-4 flex items-start gap-3"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <div className="h-5 w-20 rounded-full animate-pulse shrink-0" style={{ background: "var(--color-border)" }} />
+            <div className="flex-1 flex flex-col gap-2">
+              <div className="h-4 w-full rounded animate-pulse" style={{ background: "var(--color-border)" }} />
+              <div className="h-3 w-32 rounded animate-pulse" style={{ background: "var(--color-border)" }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className="rounded-xl p-8 text-center"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <Shield className="h-6 w-6 mx-auto mb-2" style={{ color: "var(--color-text-muted)" }} />
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No evidence records yet.</p>
+        <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+          Records appear automatically as pipeline runs and quality checks complete.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      {isLoading && <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Loading evidence…</p>}
-      {!isLoading && (!data || data.length === 0) && (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No evidence records yet.</p>
-      )}
-      {data?.map((rec) => {
-        const style = EVENT_TYPE_COLORS[rec.event_type] ?? { bg: "#f1f5f9", text: "#475569" };
+      {data.map((rec) => {
+        const style   = EVENT_TYPE_COLORS[rec.event_type] ?? { bg: "#f1f5f9", text: "#475569" };
+        const summary = summarisePayload(rec.event_type, rec.payload);
         return (
           <div key={rec.id} className="rounded-xl p-4 flex items-start gap-3"
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium mt-0.5"
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium mt-0.5 shrink-0"
               style={{ background: style.bg, color: style.text }}>
               {rec.event_type.replace(/_/g, " ")}
             </span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm" style={{ color: "var(--color-text)" }}>
-                {JSON.stringify(rec.payload).slice(0, 120)}
+              <p className="text-sm truncate" style={{ color: "var(--color-text)" }}>
+                {summary}
               </p>
               <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-                {new Date(rec.recorded_at).toLocaleString()}
+                {new Date(rec.recorded_at).toLocaleString("en-GB", {
+                  day: "2-digit", month: "short", year: "numeric",
+                  hour: "2-digit", minute: "2-digit",
+                })}
                 {rec.recorded_by && ` · ${rec.recorded_by}`}
               </p>
             </div>
@@ -248,14 +333,30 @@ function EvidenceTab({ productId }: { productId: string }) {
   );
 }
 
-// ── Placeholder tabs ──────────────────────────────────────────────────────────
+// ── Lineage tab ───────────────────────────────────────────────────────────────
 
-function PlaceholderTab({ label }: { label: string }) {
+function LineageTab({ productId }: { productId: string }) {
   return (
-    <div className="flex items-center justify-center py-16">
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-        {label} — coming soon
-      </p>
+    <div
+      className="rounded-xl p-8 flex flex-col items-center gap-4 text-center"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <GitBranch className="h-8 w-8" style={{ color: "var(--color-text-muted)" }} />
+      <div>
+        <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+          View lineage for this product
+        </p>
+        <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+          Explore upstream sources and downstream consumers in the full lineage graph.
+        </p>
+      </div>
+      <Link
+        href={`/lineage?product_id=${encodeURIComponent(productId)}`}
+        className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg font-medium transition-opacity hover:opacity-90"
+        style={{ background: "var(--color-brand)", color: "#fff" }}
+      >
+        Open lineage graph <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
     </div>
   );
 }
@@ -316,7 +417,7 @@ export function ProductDetail({ productId }: { productId: string }) {
     <div className="flex flex-col h-full" style={{ padding: "var(--spacing-page, 24px)" }}>
       {/* Back */}
       <button
-        onClick={() => router.push("/products")}
+        onClick={() => router.back()}
         className="flex items-center gap-1 text-xs mb-4 hover:underline w-fit"
         style={{ color: "var(--color-text-muted)" }}
       >
@@ -377,7 +478,7 @@ export function ProductDetail({ productId }: { productId: string }) {
       <div className="flex-1 min-h-0 overflow-y-auto">
         {tab === "overview" && <OverviewTab product={product} trustScore={trustScore} />}
         {tab === "incidents" && <IncidentsTab productId={productId} />}
-        {tab === "lineage" && <PlaceholderTab label="Lineage graph" />}
+        {tab === "lineage" && <LineageTab productId={productId} />}
         {tab === "evidence" && <EvidenceTab productId={productId} />}
       </div>
     </div>
