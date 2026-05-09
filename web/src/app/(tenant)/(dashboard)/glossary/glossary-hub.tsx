@@ -197,7 +197,7 @@ export function GlossaryHub() {
     queryFn: () => {
       const url = new URL("/api/glossary", window.location.origin);
       if (query) url.searchParams.set("q", query);
-      return apiFetch<{ data: GlossaryTerm[] }>(url.toString()).then((r) => r.data);
+      return apiFetch<{ data: GlossaryTerm[] }>(url.toString()).then((r) => r.data ?? []);
     },
     staleTime: 30_000,
     retry: 1,

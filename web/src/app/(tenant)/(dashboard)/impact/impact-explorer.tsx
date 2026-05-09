@@ -159,7 +159,7 @@ function ImpactPanel({ entityId, onClose }: { entityId: string; onClose: () => v
   const { data: response, isLoading } = useQuery({
     queryKey: ["entity-impact", entityId],
     queryFn: () => apiFetch<{ data: ImpactResult[] }>(`/api/lineage/${encodeURIComponent(entityId)}/impact`)
-      .then((r) => r.data),
+      .then((r) => r.data ?? []),
     staleTime: 60_000,
     retry: 1,
   });
@@ -222,7 +222,7 @@ export function ImpactExplorer() {
 
   const { data: response, isLoading } = useQuery({
     queryKey: ["business-outputs"],
-    queryFn: () => apiFetch<{ data: BusinessOutput[] }>("/api/business-outputs").then((r) => r.data),
+    queryFn: () => apiFetch<{ data: BusinessOutput[] }>("/api/business-outputs").then((r) => r.data ?? []),
     staleTime: 60_000,
     retry: 1,
   });

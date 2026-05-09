@@ -39,7 +39,7 @@ export function useTrustScore(productId: string | null, asOf?: string) {
     queryFn: () => {
       const params = asOf ? `?as_of=${encodeURIComponent(asOf)}` : "";
       return apiFetch<{ data: TrustScore }>(`/api/products/${encodeURIComponent(productId!)}/trust${params}`)
-        .then((r) => r.data);
+        .then((r) => r.data ?? null);
     },
     enabled: !!productId,
     staleTime: 5 * 60_000,
@@ -53,7 +53,7 @@ export function useTrustScoreHistory(productId: string | null, limit = 30) {
     queryFn: () =>
       apiFetch<{ data: TrustScoreHistory[] }>(
         `/api/products/${encodeURIComponent(productId!)}/trust/history?limit=${limit}`
-      ).then((r) => r.data),
+      ).then((r) => r.data ?? []),
     enabled: !!productId,
     staleTime: 10 * 60_000,
     retry: 1,

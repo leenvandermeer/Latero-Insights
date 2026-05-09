@@ -155,7 +155,7 @@ export function CostDashboard() {
   const { data: costsResponse, isLoading } = useQuery({
     queryKey: ["costs"],
     queryFn: () => apiFetch<{ data: CostRecord[] }>("/api/costs")
-      .then((r) => r.data),
+      .then((r) => r.data ?? []),
     staleTime: 30_000,
     retry: 1,
   });

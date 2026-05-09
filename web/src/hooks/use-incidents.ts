@@ -53,7 +53,7 @@ export function useIncidents(params?: {
     queryKey: ["incidents", params],
     queryFn: () =>
       apiFetch<{ data: Incident[] }>(`/api/incidents${qs ? `?${qs}` : ""}`)
-        .then((r) => r.data),
+        .then((r) => r.data ?? []),
     staleTime: 30_000,
     retry: 1,
   });

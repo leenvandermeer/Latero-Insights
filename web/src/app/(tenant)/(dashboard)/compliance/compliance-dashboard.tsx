@@ -285,7 +285,7 @@ export function ComplianceDashboard() {
   const { data: policiesResponse } = useQuery({
     queryKey: ["policies"],
     queryFn: () => apiFetch<{ data: { policies: Policy[]; packs: PolicyPack[] } }>("/api/policies")
-      .then((r) => r.data),
+      .then((r) => r.data ?? { policies: [], packs: [] }),
     staleTime: 60_000,
     retry: 1,
   });
@@ -293,7 +293,7 @@ export function ComplianceDashboard() {
   const { data: complianceResponse, isLoading } = useQuery({
     queryKey: ["compliance"],
     queryFn: () => apiFetch<{ data: { verdicts: PolicyVerdict[]; products: ComplianceProduct[]; packs: PolicyPack[] } }>("/api/compliance")
-      .then((r) => r.data),
+      .then((r) => r.data ?? { verdicts: [], products: [], packs: [] }),
     staleTime: 30_000,
     retry: 1,
   });

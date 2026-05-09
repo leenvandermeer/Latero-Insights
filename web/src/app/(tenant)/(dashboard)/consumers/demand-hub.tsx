@@ -63,7 +63,7 @@ function ProductDemandPanel({ productId }: { productId: string }) {
     queryKey: ["consumers", productId],
     queryFn: () =>
       apiFetch<{ data: ProductConsumer[] }>(`/api/products/${encodeURIComponent(productId)}/consumers`)
-        .then((r) => r.data),
+        .then((r) => r.data ?? []),
     staleTime: 30_000,
     retry: 1,
   });
@@ -72,7 +72,7 @@ function ProductDemandPanel({ productId }: { productId: string }) {
     queryKey: ["usage", productId],
     queryFn: () =>
       apiFetch<{ data: ProductUsageDay[] }>(`/api/products/${encodeURIComponent(productId)}/usage`)
-        .then((r) => r.data),
+        .then((r) => r.data ?? []),
     staleTime: 30_000,
     retry: 1,
   });
