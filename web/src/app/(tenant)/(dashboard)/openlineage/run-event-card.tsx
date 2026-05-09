@@ -12,7 +12,6 @@ interface RunEvent {
   run_id: string;
   job_name: string;
   dataset_id: string;
-  step: string;
   layer: string;
   timestamp: string;
   hops: LineageHop[];
@@ -52,7 +51,6 @@ export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
         hop.target_entity,
         hop.target_ref,
         hop.target_attribute,
-        hop.step,
       ].some((value) => (value ?? "").toLowerCase().includes(q))
     );
   }, [event.hops, hopSearch]);
@@ -79,7 +77,6 @@ export function RunEventCard({ event, onViewJson }: RunEventCardProps) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-semibold truncate" title={event.job_name}>{event.job_name}</span>
               <Badge variant="default">{LAYER_LABELS[event.layer] ?? event.layer}</Badge>
-              <Badge variant="muted">{event.step}</Badge>
               <Badge variant="muted">{event.dataset_id}</Badge>
               <Badge variant="muted" title={event.run_id}>Run {event.run_id.slice(0, 8)}</Badge>
             </div>

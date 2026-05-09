@@ -96,9 +96,6 @@ export function EventLogWidget({ from, to, titleOverride }: Props) {
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-[10px] font-mono truncate" style={{ color: "var(--color-text-muted)" }}>
-                        {run.step}
-                      </span>
                       {run.duration_ms !== null && (
                         <>
                           <span style={{ color: "var(--color-border)" }}>·</span>

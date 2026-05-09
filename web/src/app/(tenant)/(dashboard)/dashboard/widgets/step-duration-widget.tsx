@@ -13,16 +13,17 @@ export function StepDurationWidget({ from, to, titleOverride }: Props) {
 
   const chartData = useMemo(() => {
     const runs = response?.data ?? [];
-    const byStep = new Map<string, { total: number; count: number }>();
+    const byJob = new Map<string, { total: number; count: number }>();
     for (const run of runs) {
       if (run.duration_ms == null) continue;
-      const existing = byStep.get(run.step) ?? { total: 0, count: 0 };
+      const key = run.job_name ?? run.dataset_id ?? "unknown";
+      const existing = byJob.get(key) ?? { total: 0, count: 0 };
       existing.total += run.duration_ms;
       existing.count++;
-      byStep.set(run.step, existing);
+      byJob.set(key, existing);
     }
-    return Array.from(byStep.entries())
-      .map(([step, { total, count }]) => ({ step, avgDuration: Math.round(total / count / 100) / 10 }))
+    return Array.from(byJob.entries())
+      .map(([job, { total, count }]) => ({ step: job, avgDuration: Math.round(total / count / 100) / 10 }))
       .sort((a, b) => b.avgDuration - a.avgDuration);
   }, [response]);
 
@@ -35,7 +36,7 @@ export function StepDurationWidget({ from, to, titleOverride }: Props) {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader><CardTitle>{titleOverride ?? "Avg Duration by Step"}</CardTitle></CardHeader>
+      <CardHeader><CardTitle>{titleOverride ?? "Avg Duration by Job"}</CardTitle></CardHeader>
       <CardContent className="flex-1 min-h-0 pb-4">
         {chartData.length === 0 ? (
           <p className="text-sm text-center py-8" style={{ color: "var(--color-text-muted)" }}>No duration data</p>

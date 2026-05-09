@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
   try {
     const result = await pool.query(
       `SELECT
-         (SELECT COUNT(*)::int FROM meta.data_products WHERE installation_id = $1) AS data_product_count,
-         (SELECT COUNT(*)::int FROM meta.entities  WHERE installation_id = $1 AND is_context_node = false) AS entity_count,
+         (SELECT COUNT(*)::int FROM meta.data_products WHERE installation_id = $1 AND valid_to IS NULL) AS data_product_count,
+         (SELECT COUNT(*)::int FROM meta.entities  WHERE installation_id = $1 AND valid_to IS NULL AND is_context_node = false) AS entity_count,
          (
            SELECT COUNT(*)::int
            FROM meta.quality_results qr

@@ -25,11 +25,10 @@ const fmt = (ts: string) => {
   catch { return ts; }
 };
 
-type Col = "check_id" | "dataset_id" | "step" | "check_category" | "check_status" | "timestamp_utc";
+type Col = "check_id" | "dataset_id" | "check_category" | "check_status" | "timestamp_utc";
 const COLS: { k: Col; l: string }[] = [
   { k: "check_id",       l: "Check ID" },
   { k: "dataset_id",     l: "Dataset" },
-  { k: "step",           l: "Step" },
   { k: "check_category", l: "Category" },
   { k: "check_status",   l: "Status" },
   { k: "timestamp_utc",  l: "Time" },
@@ -97,7 +96,6 @@ export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
                   onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")}>
                   <td className="px-2 py-0.5 font-mono truncate max-w-[120px]" style={{ color: "var(--color-text)" }}>{c.check_id}</td>
                   <td className="px-2 py-0.5 truncate max-w-[90px]" style={{ color: "var(--color-text-muted)" }}>{c.dataset_id}</td>
-                  <td className="px-2 py-0.5" style={{ color: "var(--color-text-muted)" }}>{c.step}</td>
                   <td className="px-2 py-0.5" style={{ color: "var(--color-text-muted)" }}>{c.check_category ?? "—"}</td>
                   <td className="px-2 py-0.5">
                     <span className="inline-flex rounded-full px-1.5 py-px font-semibold" style={{ fontSize: 10, background: bg, color }}>{norm}</span>
@@ -107,7 +105,7 @@ export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
               );
             })}
             {rows.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-6 text-center" style={{ fontSize: 11, color: "var(--color-text-muted)" }}>No checks in selected period</td></tr>
+              <tr><td colSpan={5} className="px-3 py-6 text-center" style={{ fontSize: 11, color: "var(--color-text-muted)" }}>No checks in selected period</td></tr>
             )}
           </tbody>
         </table>
@@ -153,7 +151,6 @@ export function DqChecksTableWidget({ from, to, titleOverride }: Props) {
           </div>
           <div className="space-y-3 text-xs">
             <Detail label="Dataset" value={selectedCheck.dataset_id} />
-            <Detail label="Step" value={selectedCheck.step} />
             <Detail label="Status" value={normalizeStatus(selectedCheck.check_status)} />
             <Detail label="Category" value={selectedCheck.check_category ?? "—"} />
             <Detail label="Policy version" value={selectedCheck.policy_version ?? "—"} />

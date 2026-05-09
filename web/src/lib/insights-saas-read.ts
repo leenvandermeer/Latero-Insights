@@ -1,5 +1,6 @@
 import type { DataQualityCheck, LineageAttribute, LineageEntity, LineageHop, PipelineRun } from "@/lib/adapters/types";
 import { getPgPool } from "@/lib/insights-saas-db";
+import { currentClause } from "@/lib/temporal";
 
 type DateRange = { from: string; to: string; installationId?: string | null; runId?: string | null; entityFqn?: string | null };
 type PipelineRunRow = PipelineRun & { duration_ms: number | string | null };
@@ -35,7 +36,6 @@ async function getPipelineRunsFromMetaStore(range: DateRange): Promise<PipelineR
         to_char(r.run_date, 'YYYY-MM-DD')       AS event_date,
         COALESCE(j.dataset_id, j.job_name)      AS dataset_id,
         COALESCE(d.source_system, '')            AS source_system,
-        r.step,
         r.external_run_id                       AS run_id,
         r.status                                AS run_status,
         r.duration_ms,
@@ -90,7 +90,6 @@ async function getDataQualityChecksFromMetaStore(range: DateRange): Promise<Data
         qr.executed_at                                AS timestamp_utc,
         to_char(qr.result_date, 'YYYY-MM-DD')         AS event_date,
         COALESCE(qru.dataset_id, qru.check_id)        AS dataset_id,
-        COALESCE(r.step, '')                          AS step,
         COALESCE(r.external_run_id, qr.run_id::text, '') AS run_id,
         qr.result_id::text                            AS result_id,
         qr.check_id,
@@ -140,7 +139,6 @@ async function getLineageHopsFromMetaStore(range: DateRange): Promise<LineageHop
         to_char((e.last_observed_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD')
                                                               AS event_date,
         e.source_dataset_id                                   AS dataset_id,
-        ''                                                    AS step,
         COALESCE(lr.external_run_id, '')                      AS run_id,
         e.source_dataset_id                                   AS source_entity,
         COALESCE(src.platform, '')                            AS source_type,
@@ -274,7 +272,9 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
       LEFT JOIN entity_source_names es ON es.entity_id   = d.entity_id
       LEFT JOIN meta.entities      ent ON ent.installation_id = d.installation_id
                                        AND ent.entity_id      = d.entity_id
+                                       AND ent.valid_to IS NULL
       WHERE d.installation_id = $1
+        AND ${currentClause('d')}
         AND d.layer IN ('landing', 'raw', 'bronze', 'silver', 'gold')
         AND (d.source_system IS NULL OR d.dataset_id != d.source_system)
       ORDER BY d.dataset_id

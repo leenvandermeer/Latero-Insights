@@ -58,8 +58,8 @@ export function OpenLineageDashboard() {
           run_id: hop.run_id,
           job_name: hop.dataset_id,
           dataset_id: hop.dataset_id,
-          step: hop.step,
-          layer: hop.step,
+          step: hop.run_id,
+          layer: hop.hop_kind ?? "",
           timestamp: hop.timestamp_utc,
           hops: [],
         });

@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
          ) AS latest_run_at
        FROM meta.datasets d
        WHERE d.installation_id = $1
+         AND d.valid_to IS NULL
          AND d.layer IN ('landing', 'raw', 'bronze')
          AND (d.source_system IS NULL OR d.dataset_id != d.source_system)
          ${filters}

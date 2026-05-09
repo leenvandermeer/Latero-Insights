@@ -22,6 +22,7 @@ const PRODUCT_FROM = `
   LEFT JOIN meta.entities e
     ON e.installation_id = dp.installation_id
    AND e.data_product_id = dp.data_product_id
+   AND e.valid_to IS NULL
 `;
 
 const PRODUCT_GROUP = `
@@ -58,6 +59,7 @@ export async function GET(
     const result = await pool.query(
       `SELECT ${PRODUCT_SELECT} ${PRODUCT_FROM}
        WHERE dp.installation_id = $1 AND dp.data_product_id = $2
+         AND dp.valid_to IS NULL
        ${PRODUCT_GROUP}`,
       [installationId, id]
     );

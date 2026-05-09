@@ -29,7 +29,7 @@ export async function GET(
       `SELECT e.entity_id, e.display_name, e.data_product_id,
               e.source_system, e.owner, e.description, e.tags
        FROM meta.entities e
-       WHERE e.installation_id = $1 AND e.entity_id = $2`,
+       WHERE e.installation_id = $1 AND e.entity_id = $2 AND e.valid_to IS NULL`,
       [installationId, decodedFqn]
     );
     if (entityRes.rows.length === 0) {
@@ -54,7 +54,7 @@ export async function GET(
          ORDER BY rn.started_at DESC
          LIMIT 1
        ) r ON true
-       WHERE d.installation_id = $1 AND d.entity_id = $2
+       WHERE d.installation_id = $1 AND d.entity_id = $2 AND d.valid_to IS NULL
        ORDER BY d.layer,
          CASE d.layer WHEN 'landing' THEN 0 WHEN 'raw' THEN 1
                       WHEN 'bronze' THEN 2 WHEN 'silver' THEN 3

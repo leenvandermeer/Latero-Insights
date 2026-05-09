@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
     const result = await pool.query(
       `SELECT ${PRODUCT_SELECT} ${PRODUCT_FROM}
        WHERE dp.installation_id = $1
+         AND dp.valid_to IS NULL
        ${PRODUCT_GROUP}
        ORDER BY dp.display_name`,
       [installationId]

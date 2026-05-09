@@ -67,16 +67,19 @@ export async function GET(request: NextRequest) {
                LIMIT 1
              ) r ON true
              WHERE d.installation_id = e.installation_id
+               AND d.valid_to IS NULL
                AND d.entity_id = e.entity_id
              ORDER BY d.layer, r.started_at DESC NULLS LAST
            ) ls
          ), '[]'::json) AS layer_statuses
        FROM meta.entities e
        WHERE e.installation_id = $1
+         AND e.valid_to IS NULL
          AND e.is_context_node = false
          AND EXISTS (
            SELECT 1 FROM meta.datasets d
            WHERE d.installation_id = e.installation_id
+             AND d.valid_to IS NULL
              AND d.entity_id = e.entity_id
              AND d.layer IN ('silver', 'gold')
          )

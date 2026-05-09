@@ -93,7 +93,6 @@ export function QualityExplorer() {
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Status</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Check</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Dataset</th>
-                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Step</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Category</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Time</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}></th>
@@ -102,7 +101,7 @@ export function QualityExplorer() {
             <tbody>
               {checks.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: "var(--color-text-muted)" }}>
+                  <td colSpan={6} className="px-4 py-8 text-center" style={{ color: "var(--color-text-muted)" }}>
                     No checks found
                   </td>
                 </tr>
@@ -131,9 +130,6 @@ export function QualityExplorer() {
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {check.dataset_id ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {check.step || "—"}
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {check.check_category ?? "—"}

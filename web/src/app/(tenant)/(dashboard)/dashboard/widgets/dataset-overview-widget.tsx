@@ -13,7 +13,6 @@ interface DatasetSummary {
   id: string;
   lastRunStatus: string | null;
   lastRunAt: string | null;
-  lastStep: string | null;
   dqTotal: number;
   dqPass: number;
   dqWarn: number;
@@ -120,7 +119,6 @@ export function DatasetOverviewWidget({ from, to, titleOverride }: WidgetProps) 
         id,
         lastRunStatus: latestRun?.run_status ?? null,
         lastRunAt: latestRun?.timestamp_utc ?? null,
-        lastStep: latestRun?.step ?? null,
         dqTotal: datasetChecks.length,
         dqPass,
         dqWarn,
@@ -246,11 +244,6 @@ function DatasetRow({ dataset: ds }: { dataset: DatasetSummary }) {
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs font-semibold truncate" style={{ color: "var(--color-text)" }}>{ds.id}</p>
-          {ds.lastStep && (
-            <p className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
-              {ds.lastStep}
-            </p>
-          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: h.dot }} />

@@ -87,7 +87,7 @@ export function PipelineRunsTableWidget({ from, to, titleOverride }: Props) {
         <table className="w-full text-xs">
           <thead>
             <tr style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
-              {["Job", "Step", "Status", "Duration", "Time"].map((h) => (
+              {["Job", "Status", "Duration", "Time"].map((h) => (
                 <th
                   key={h}
                   className="px-4 py-2 text-left font-semibold uppercase tracking-wider"
@@ -110,7 +110,6 @@ export function PipelineRunsTableWidget({ from, to, titleOverride }: Props) {
                   onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")}
                 >
                   <td className="px-4 py-2 font-medium truncate max-w-[120px]" style={{ color: "var(--color-text)" }}>{r.job_name ?? r.dataset_id}</td>
-                  <td className="px-4 py-2" style={{ color: "var(--color-text-muted)" }}>{r.step}</td>
                   <td className="px-4 py-2">
                     <span
                       className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
@@ -150,7 +149,6 @@ export function PipelineRunsTableWidget({ from, to, titleOverride }: Props) {
           </div>
           <div className="space-y-3 text-xs">
             <Detail label="Run ID" value={selectedRun.run_id} mono />
-            <Detail label="Step" value={selectedRun.step} />
             <Detail label="Status" value={selectedRun.run_status} />
             <Detail label="Duration" value={fmtDuration(selectedRun.duration_ms)} />
             <Detail label="Time" value={fmtTs(selectedRun.timestamp_utc)} />
