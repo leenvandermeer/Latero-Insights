@@ -27,7 +27,7 @@ export async function GET(
   try {
     const result = await pool.query(
       `SELECT r.run_id, r.external_run_id, j.job_name, j.dataset_id,
-              r.step, r.status, r.environment,
+              r.status, r.environment,
               r.started_at, r.ended_at, r.duration_ms
        FROM meta.runs r
        JOIN meta.jobs j USING (job_id)

@@ -58,7 +58,7 @@ export function EntityDetail({ fqn }: { fqn: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-muted)" }}>
-        Laden…
+        Loading…
       </div>
     );
   }
@@ -66,9 +66,9 @@ export function EntityDetail({ fqn }: { fqn: string }) {
   if (isError || !entity) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
-        <p className="text-red-500">Entity niet gevonden.</p>
+        <p className="text-red-500">Entity not found.</p>
         <Link href="/entities" className="text-sm hover:underline" style={{ color: "var(--color-brand)" }}>
-          ← Terug naar Entities
+          ← Back to Entities
         </Link>
       </div>
     );
@@ -138,7 +138,7 @@ export function EntityDetail({ fqn }: { fqn: string }) {
         </div>
         {runs.length === 0 ? (
           <p className="px-5 py-8 text-sm text-center" style={{ color: "var(--color-text-muted)" }}>
-            Geen runs gevonden
+            No runs found
           </p>
         ) : (
           <table className="w-full text-sm">

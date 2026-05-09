@@ -134,19 +134,22 @@ export function InstallationPicker({ collapsed }: Props) {
             const isDefault = inst.installation_id === defaultInstallationId;
             const instLabel = inst.label ?? inst.installation_id;
             return (
-              <button
+              <div
                 key={inst.installation_id}
-                type="button"
-                disabled={validating}
-                onClick={() => void handleSwitch(inst)}
-                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left text-xs transition-colors disabled:opacity-60"
+                role="button"
+                tabIndex={validating ? -1 : 0}
+                aria-disabled={validating}
+                onClick={() => !validating && void handleSwitch(inst)}
+                onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !validating) void handleSwitch(inst); }}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left text-xs transition-colors cursor-pointer"
                 style={{
                   background: isActive ? "var(--color-brand-subtle, rgba(27,59,107,0.08))" : "transparent",
                   color: "var(--color-text)",
                   borderBottom: "1px solid var(--color-border, #e2e8f0)",
+                  opacity: validating ? 0.6 : 1,
                 }}
-                onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover, #f1f5f9)"; }}
-                onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--color-sidebar-hover, #f1f5f9)"; }}
+                onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {isActive
@@ -168,7 +171,7 @@ export function InstallationPicker({ collapsed }: Props) {
                 >
                   <Star className={cn("h-3.5 w-3.5", isDefault && "fill-current")} />
                 </button>
-              </button>
+              </div>
             );
           })}
         </div>

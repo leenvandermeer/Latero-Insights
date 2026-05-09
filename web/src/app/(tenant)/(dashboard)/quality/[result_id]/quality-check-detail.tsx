@@ -45,7 +45,7 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-muted)", padding: "var(--spacing-page, 24px)" }}>
-        Laden…
+        Loading…
       </div>
     );
   }
@@ -53,9 +53,9 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
   if (isError || !data?.data) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3" style={{ padding: "var(--spacing-page, 24px)" }}>
-        <p style={{ color: "var(--color-error, #dc2626)" }}>Check result niet gevonden.</p>
+        <p style={{ color: "var(--color-error, #dc2626)" }}>Check result not found.</p>
         <Link href="/quality" className="text-sm hover:underline" style={{ color: "var(--color-brand)" }}>
-          ← Terug naar Data Quality
+          ← Back to Data Quality
         </Link>
       </div>
     );

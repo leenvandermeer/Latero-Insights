@@ -37,7 +37,7 @@ export function RunDetail({ runId }: { runId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-muted)" }}>
-        Laden…
+        Loading…
       </div>
     );
   }
@@ -45,9 +45,9 @@ export function RunDetail({ runId }: { runId: string }) {
   if (isError || !run) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
-        <p className="text-red-500">Run niet gevonden.</p>
+        <p className="text-red-500">Run not found.</p>
         <Link href="/runs" className="text-sm hover:underline" style={{ color: "var(--color-brand)" }}>
-          ← Terug naar Runs
+          ← Back to Runs
         </Link>
       </div>
     );

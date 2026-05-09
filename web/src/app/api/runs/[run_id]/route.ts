@@ -27,7 +27,7 @@ export async function GET(
     // Run + job
     const runRes = await pool.query(
       `SELECT r.run_id, r.external_run_id, j.job_name, j.dataset_id,
-              r.step, r.status, r.environment,
+              r.status, r.environment,
               r.started_at, r.ended_at, r.duration_ms, r.parent_run_id, r.run_facets
        FROM meta.runs r
        JOIN meta.jobs j USING (job_id)
@@ -79,7 +79,7 @@ export async function GET(
     // Child runs
     const childrenRes = await pool.query(
       `SELECT r.run_id, r.external_run_id, j.job_name, j.dataset_id,
-              r.step, r.status, r.started_at, r.ended_at, r.duration_ms
+              r.status, r.started_at, r.ended_at, r.duration_ms
        FROM meta.runs r
        JOIN meta.jobs j USING (job_id)
        WHERE r.parent_run_id = $1 AND r.installation_id = $2
