@@ -33,13 +33,12 @@ export function useCopilot() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),
       });
-      if (!res.ok) throw new Error("Query failed");
+      if (!res.ok) throw new Error(`Query failed (${res.status})`);
       return res.json() as Promise<QueryResponse>;
     },
-    onSuccess: (data, query) => {
+    onSuccess: (data) => {
       setMessages((prev) => [
         ...prev,
-        { role: "user", content: query },
         {
           role: "assistant",
           content: data.data.answer,
@@ -49,13 +48,28 @@ export function useCopilot() {
         },
       ]);
     },
+    onError: () => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Something went wrong. Check that the application is configured correctly and try again.",
+        },
+      ]);
+    },
   });
+
+  const sendQuery = (query: string) => {
+    // Add user message immediately so the UI responds at once
+    setMessages((prev) => [...prev, { role: "user", content: query }]);
+    mutation.mutate(query);
+  };
 
   const suggestedQueries = getSuggestedQueries(pathname);
 
   return {
     messages,
-    sendQuery: mutation.mutate,
+    sendQuery,
     isLoading: mutation.isPending,
     error: mutation.error,
     suggestedQueries,

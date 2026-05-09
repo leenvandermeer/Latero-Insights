@@ -96,7 +96,7 @@ export function CopilotPanel() {
 
             {/* Chat area */}
             <div className="flex-1 overflow-hidden flex flex-col px-4">
-              <CopilotChat messages={messages} />
+              <CopilotChat messages={messages} isLoading={isLoading} />
 
               {/* Suggestions when empty */}
               {messages.length === 0 && (

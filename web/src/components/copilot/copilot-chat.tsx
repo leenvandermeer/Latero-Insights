@@ -6,7 +6,7 @@ import { Bot, User } from "lucide-react";
 import { CopilotCitation } from "./copilot-citation";
 import type { CopilotMessage } from "@/hooks/use-copilot";
 
-export function CopilotChat({ messages }: { messages: CopilotMessage[] }) {
+export function CopilotChat({ messages, isLoading }: { messages: CopilotMessage[]; isLoading?: boolean }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,6 +66,20 @@ export function CopilotChat({ messages }: { messages: CopilotMessage[] }) {
           </div>
         </div>
       ))}
+      {isLoading && (
+        <div className="flex gap-2">
+          <div className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+            style={{ background: "var(--color-surface-raised)" }}>
+            <Bot className="h-3.5 w-3.5" style={{ color: "var(--color-brand)" }} />
+          </div>
+          <div className="rounded-xl px-3 py-2 flex items-center gap-1"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <span className="h-1.5 w-1.5 rounded-full animate-bounce" style={{ background: "var(--color-text-muted)", animationDelay: "0ms" }} />
+            <span className="h-1.5 w-1.5 rounded-full animate-bounce" style={{ background: "var(--color-text-muted)", animationDelay: "150ms" }} />
+            <span className="h-1.5 w-1.5 rounded-full animate-bounce" style={{ background: "var(--color-text-muted)", animationDelay: "300ms" }} />
+          </div>
+        </div>
+      )}
       <div ref={bottomRef} />
     </div>
   );
