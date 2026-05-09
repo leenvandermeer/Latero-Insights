@@ -18,7 +18,6 @@ export type IntentType =
   | "gap_query"
   | "historical_state"
   | "owner_lookup"
-  | "cost_query"
   | "compliance_query"
   | "incident_lookup"
   | "change_history"
@@ -67,10 +66,6 @@ export function parseIntent(query: string): ParsedIntent {
 
   if (/trust score|trust|data quality score|quality score/.test(q)) {
     return { type: "trust_query", params: {}, confidence: 0.8 };
-  }
-
-  if (/cost|roi|spend|budget|expensive/.test(q)) {
-    return { type: "cost_query", params: {}, confidence: 0.75 };
   }
 
   if (/compli|policy|policies|pass|fail|regulation|bcbs|csrd/.test(q)) {
@@ -170,23 +165,6 @@ export async function executeIntent(
       };
     }
 
-    case "cost_query": {
-      const result = await pool.query(
-        `SELECT SUM(cost_usd) AS total, COUNT(DISTINCT product_id) AS products
-         FROM meta.product_cost_records
-         WHERE installation_id = $1`,
-        [installationId]
-      );
-      const row = result.rows[0] as { total: string | null; products: number } | undefined;
-      return {
-        answer: row?.total
-          ? `Total tracked cost: $${parseFloat(row.total).toLocaleString()} across ${row.products} product(s).`
-          : "No cost records found.",
-        citations: [],
-        navigation_links: [{ label: "Costs & ROI", href: "/costs" }],
-      };
-    }
-
     case "change_history": {
       const result = await pool.query(
         `SELECT change_type, severity, entity_id, detected_at
@@ -248,7 +226,7 @@ export async function executeIntent(
 
     default:
       return {
-        answer: "I don't have enough information to answer that query. Try asking about compliance, incidents, owners, costs, or changes.",
+        answer: "I don't have enough information to answer that query. Try asking about compliance, incidents, owners, or changes.",
         citations: [],
         navigation_links: [{ label: "Overview", href: "/overview" }],
       };

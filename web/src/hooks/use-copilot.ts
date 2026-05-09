@@ -77,12 +77,6 @@ function getSuggestedQueries(pathname: string): string[] {
       "Which products are failing BCBS-239 policies?",
     ];
   }
-  if (pathname.includes("/costs")) {
-    return [
-      "What is the total tracked cost?",
-      "Which products have the highest cost?",
-    ];
-  }
   return [
     "Show me all open incidents",
     "Which data products have compliance failures?",
