@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS meta.policy_packs (
   installation_id TEXT        NOT NULL REFERENCES insights_installations (installation_id),
   name            TEXT        NOT NULL,
   description     TEXT,
+  framework       TEXT,
   PRIMARY KEY (installation_id, id)
 );
 

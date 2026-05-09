@@ -22,6 +22,7 @@ export type IntentType =
   | "compliance_query"
   | "incident_lookup"
   | "change_history"
+  | "trust_query"
   | "unknown";
 
 export interface ParsedIntent {
@@ -62,6 +63,10 @@ export function parseIntent(query: string): ParsedIntent {
   if (/who owns|owner of|owned by|contact/.test(q)) {
     const productMatch = query.match(/[`"']([^`"']+)[`"']/);
     return { type: "owner_lookup", params: { product: productMatch?.[1] ?? "" }, confidence: 0.8 };
+  }
+
+  if (/trust score|trust|data quality score|quality score/.test(q)) {
+    return { type: "trust_query", params: {}, confidence: 0.8 };
   }
 
   if (/cost|roi|spend|budget|expensive/.test(q)) {
@@ -127,13 +132,13 @@ export async function executeIntent(
 
     case "incident_lookup": {
       const result = await pool.query(
-        `SELECT title, severity, status, product_id, opened_at
+        `SELECT title, severity, status, product_id, created_at
          FROM meta.incidents
          WHERE installation_id = $1 AND status = 'open'
-         ORDER BY opened_at DESC LIMIT 10`,
+         ORDER BY created_at DESC LIMIT 10`,
         [installationId]
       );
-      const incidents = result.rows as Array<{ title: string; severity: string; status: string; product_id: string; opened_at: string }>;
+      const incidents = result.rows as Array<{ title: string; severity: string; status: string; product_id: string; created_at: string }>;
       if (incidents.length === 0) {
         return { answer: "No open incidents found.", citations: [], navigation_links: [{ label: "Incidents", href: "/incidents" }] };
       }
@@ -184,13 +189,13 @@ export async function executeIntent(
 
     case "change_history": {
       const result = await pool.query(
-        `SELECT change_type, severity, entity_id, changed_at
+        `SELECT change_type, severity, entity_id, detected_at
          FROM meta.change_events
          WHERE installation_id = $1
-         ORDER BY changed_at DESC LIMIT 5`,
+         ORDER BY detected_at DESC LIMIT 5`,
         [installationId]
       );
-      const changes = result.rows as Array<{ change_type: string; severity: string; entity_id: string; changed_at: string }>;
+      const changes = result.rows as Array<{ change_type: string; severity: string; entity_id: string; detected_at: string }>;
       return {
         answer: changes.length === 0
           ? "No recent changes recorded."
@@ -214,6 +219,30 @@ export async function executeIntent(
         answer: `As of ${asOf}: ${valid.length} product snapshot(s) available. Use the time-travel bar to view the full historical state.`,
         citations: valid.slice(0, 3).map((s) => ({ label: s!.display_name, href: `/products/${s!.data_product_id}` })),
         navigation_links: [{ label: "Products", href: "/products" }],
+      };
+    }
+
+    case "trust_query": {
+      const result = await pool.query(
+        `SELECT dp.display_name, dp.data_product_id, t.score, t.calculated_at
+         FROM meta.trust_score_snapshots t
+         JOIN meta.data_products dp ON dp.data_product_id = t.product_id AND dp.installation_id = t.installation_id
+         WHERE t.installation_id = $1
+         ORDER BY t.calculated_at DESC, t.score DESC`,
+        [installationId]
+      );
+      const scores = result.rows as Array<{ display_name: string; data_product_id: string; score: number; calculated_at: string }>;
+      const unique = Object.values(
+        scores.reduce((acc, r) => { if (!acc[r.data_product_id]) acc[r.data_product_id] = r; return acc; }, {} as Record<string, typeof scores[0]>)
+      ).sort((a, b) => b.score - a.score);
+      if (unique.length === 0) {
+        return { answer: "No trust score data available yet.", citations: [], navigation_links: [{ label: "Products", href: "/products" }] };
+      }
+      const top = unique[0]!;
+      return {
+        answer: `Highest trust score: "${top.display_name}" at ${top.score}/100. Scores: ${unique.map((u) => `${u.display_name} (${u.score})`).join(", ")}.`,
+        citations: unique.slice(0, 3).map((u) => ({ label: `${u.display_name}: ${u.score}`, href: `/products/${u.data_product_id}` })),
+        navigation_links: [{ label: "View products", href: "/products" }],
       };
     }
 

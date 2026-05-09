@@ -22,11 +22,17 @@ CREATE TABLE IF NOT EXISTS meta.alerts (
 );
 
 -- Support suppressed_by FK after table creation
-ALTER TABLE meta.alerts
-  ADD CONSTRAINT IF NOT EXISTS alerts_suppressed_by_fkey
-    FOREIGN KEY (suppressed_by) REFERENCES meta.incidents (id)
-    ON DELETE SET NULL
-    DEFERRABLE INITIALLY DEFERRED;
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'alerts_suppressed_by_fkey'
+  ) THEN
+    ALTER TABLE meta.alerts
+      ADD CONSTRAINT alerts_suppressed_by_fkey
+        FOREIGN KEY (suppressed_by) REFERENCES meta.incidents (id)
+        ON DELETE SET NULL
+        DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS meta.alert_routing_rules (
   id              TEXT        PRIMARY KEY,
