@@ -10,6 +10,9 @@ import {
   GitBranch,
   Package,
   Layers,
+  AlertTriangle,
+  BookOpen,
+  GitCommit,
   Settings,
   Sun,
   Moon,
@@ -31,12 +34,15 @@ const MONITOR_NAV = [
   { label: "Overview", href: "/overview", icon: LayoutDashboard },
   { label: "Runs", href: "/runs", icon: Activity },
   { label: "Data Quality", href: "/quality", icon: ShieldCheck },
+  { label: "Incidents", href: "/incidents", icon: AlertTriangle },
 ];
 
 const EXPLORE_NAV = [
   { label: "Products", href: "/products", icon: Layers },
   { label: "Catalog", href: "/catalog", icon: Package },
   { label: "Lineage", href: "/lineage", icon: GitBranch },
+  { label: "Glossary", href: "/glossary", icon: BookOpen },
+  { label: "Changes", href: "/changes", icon: GitCommit },
 ];
 
 const MAX_PINNED_IN_NAV = 3;
