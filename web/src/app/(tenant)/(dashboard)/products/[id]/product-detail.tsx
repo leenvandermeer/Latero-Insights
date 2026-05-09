@@ -7,13 +7,13 @@ import {
   Shield, GitBranch, Plus, ArrowRight, Loader2, CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   useDataProduct, useUpdateDataProduct, useDeleteDataProduct,
   type DataProduct, type DataProductInput,
 } from "@/hooks/use-data-products";
 import { useEntities } from "@/hooks/use-entities";
-import { useTrustScore } from "@/hooks/use-trust-score";
+import { useRefreshTrustScore, useTrustScore, type TrustFactor } from "@/hooks/use-trust-score";
 import { useIncidents } from "@/hooks/use-incidents";
 import { TrustScoreBreakdown } from "@/components/trust/trust-score-breakdown";
 import { TrustScoreBadge } from "@/components/trust/trust-score-badge";
@@ -67,13 +67,7 @@ const ENTITY_LAYER_ORDER = ["landing", "raw", "bronze", "silver", "gold"] as con
 
 interface TrustScoreData {
   score: number;
-  factors: {
-    has_owner: boolean;
-    has_sla: boolean;
-    lineage_coverage: number;
-    quality_pass_rate: number;
-    open_critical_incidents: number;
-  };
+  factors: TrustFactor[];
 }
 
 interface EvidenceRecord {
@@ -690,7 +684,7 @@ function OverviewTab({
   product: DataProduct;
   trustScore: TrustScoreData | null;
   refreshing: boolean;
-  onRefreshTrust: () => void;
+  onRefreshTrust: () => Promise<void>;
   onManageMembers: () => void;
 }) {
   const slaStyle = product.sla_tier ? SLA_STYLE[product.sla_tier] : null;
@@ -1068,7 +1062,6 @@ export function ProductDetail({ productId }: { productId: string }) {
   const router       = useRouter();
   const pathname     = usePathname();
   const searchParams = useSearchParams();
-  const qc           = useQueryClient();
 
   const tab = useMemo<Tab>(() => {
     const v = searchParams.get("tab");
@@ -1077,6 +1070,7 @@ export function ProductDetail({ productId }: { productId: string }) {
 
   const { data: productResponse, isLoading, error } = useDataProduct(productId);
   const { data: trustData }  = useTrustScore(productId);
+  const refreshTrust = useRefreshTrustScore(productId);
   const { data: incidents }  = useIncidents({ product_id: productId });
   const { data: evidence } = useQuery({
     queryKey: ["product-evidence-summary", productId],
@@ -1091,7 +1085,6 @@ export function ProductDetail({ productId }: { productId: string }) {
   const [showEdit,   setShowEdit]   = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showManageMembers, setShowManageMembers] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
 
   const product    = (productResponse as { data?: DataProduct } | null)?.data ?? null;
   const trustScore = trustData
@@ -1110,13 +1103,7 @@ export function ProductDetail({ productId }: { productId: string }) {
   };
 
   const handleRefreshTrust = async () => {
-    setRefreshing(true);
-    try {
-      await fetch(`/api/products/${encodeURIComponent(productId)}/trust?refresh=true`);
-      await qc.invalidateQueries({ queryKey: ["trust-score", productId] });
-    } finally {
-      setRefreshing(false);
-    }
+    await refreshTrust.mutateAsync();
   };
 
   if (isLoading) {
@@ -1247,7 +1234,7 @@ export function ProductDetail({ productId }: { productId: string }) {
           <OverviewTab
             product={product}
             trustScore={trustScore}
-            refreshing={refreshing}
+            refreshing={refreshTrust.isPending}
             onRefreshTrust={handleRefreshTrust}
             onManageMembers={() => setShowManageMembers(true)}
           />

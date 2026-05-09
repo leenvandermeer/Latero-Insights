@@ -2,26 +2,26 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-interface TrustScoreFactors {
-  has_owner: boolean;
-  has_sla: boolean;
-  lineage_coverage: number;
-  quality_pass_rate: number;
-  open_critical_incidents: number;
+export interface TrustFactor {
+  id: string;
+  label: string;
+  weight: number;
+  delta: number;
+  passed: boolean;
+  link?: string;
 }
 
 export interface TrustScore {
   product_id: string;
   installation_id: string;
   score: number;
-  factors: TrustScoreFactors;
-  computed_at: string;
+  factors: TrustFactor[];
+  calculated_at: string;
 }
 
 export interface TrustScoreHistory {
   score: number;
-  factors: TrustScoreFactors;
-  computed_at: string;
+  calculated_at: string;
 }
 
 async function apiFetch<T>(path: string): Promise<T> {
@@ -65,13 +65,15 @@ export function useRefreshTrustScore(productId: string) {
   return useMutation({
     mutationFn: async () => {
       const res = await fetch(
-        `/api/products/${encodeURIComponent(productId)}/trust?refresh=true`
+        `/api/products/${encodeURIComponent(productId)}/trust?refresh=true`,
+        { cache: "no-store" }
       );
       if (!res.ok) throw new Error("Failed to refresh trust score");
       return (res.json() as Promise<{ data: TrustScore }>).then((r) => r.data);
     },
     onSuccess: (data) => {
-      qc.setQueryData(["trust-score", productId], data);
+      qc.setQueriesData({ queryKey: ["trust-score", productId] }, data);
+      void qc.invalidateQueries({ queryKey: ["trust-score-history", productId] });
     },
   });
 }

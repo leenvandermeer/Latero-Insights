@@ -64,17 +64,18 @@ export async function calculateTrustScore(
 
   // --- Factor 2: Freshness SLA defined (−10 indien ontbreekt) ---
   const slaRes = await pool.query(
-    `SELECT sla FROM meta.data_products
+    `SELECT sla_tier, sla FROM meta.data_products
      WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
     [installationId, productId]
   );
+  const slaTier = slaRes.rows[0]?.sla_tier ?? null;
   const sla = slaRes.rows[0]?.sla ?? null;
-  const slaPassed = !!sla;
+  const slaPassed = !!(slaTier || sla);
   const slaDelta = slaPassed ? 0 : -10;
   deduction += Math.abs(slaDelta);
   factors.push({
     id: "sla_defined",
-    label: "Freshness SLA defined",
+    label: slaTier ? `SLA tier defined (${slaTier})` : "Freshness SLA defined",
     weight: 10,
     delta: slaDelta,
     passed: slaPassed,

@@ -53,10 +53,10 @@ const CONDITIONS: Record<
   sla_missing: async (productId, installationId) => {
     const pool = getPgPool();
     const r = await pool.query(
-      `SELECT sla FROM meta.data_products WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
+      `SELECT sla_tier, sla FROM meta.data_products WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
       [installationId, productId]
     );
-    return { pass: !!r.rows[0]?.sla };
+    return { pass: !!(r.rows[0]?.sla_tier || r.rows[0]?.sla) };
   },
 
   quality_below_threshold: async (productId, installationId, threshold = 95) => {

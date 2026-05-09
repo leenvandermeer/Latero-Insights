@@ -1,18 +1,11 @@
 "use client";
 
 // Trust Score Breakdown — factor list with visual indicators
-
-interface TrustScoreFactors {
-  has_owner: boolean;
-  has_sla: boolean;
-  lineage_coverage: number;
-  quality_pass_rate: number;
-  open_critical_incidents: number;
-}
+import type { TrustFactor } from "@/hooks/use-trust-score";
 
 interface TrustScoreBreakdownProps {
   score: number;
-  factors: TrustScoreFactors;
+  factors: TrustFactor[];
 }
 
 function FactorRow({ label, ok, detail }: { label: string; ok: boolean; detail?: string }) {
@@ -56,9 +49,6 @@ function ScoreBar({ value }: { value: number }) {
 }
 
 export function TrustScoreBreakdown({ score, factors }: TrustScoreBreakdownProps) {
-  const qPct = Math.round(factors.quality_pass_rate * 100);
-  const linPct = Math.round(factors.lineage_coverage * 100);
-
   return (
     <div
       className="rounded-xl p-4"
@@ -82,27 +72,14 @@ export function TrustScoreBreakdown({ score, factors }: TrustScoreBreakdownProps
       <ScoreBar value={score} />
 
       <div className="mt-3 divide-y" style={{ borderColor: "var(--color-border)" }}>
-        <FactorRow label="Owner assigned" ok={factors.has_owner} />
-        <FactorRow label="SLA defined" ok={factors.has_sla} />
-        <FactorRow
-          label="Quality pass rate"
-          ok={factors.quality_pass_rate >= 0.8}
-          detail={`${qPct}%`}
-        />
-        <FactorRow
-          label="Lineage coverage"
-          ok={factors.lineage_coverage > 0}
-          detail={`${linPct}%`}
-        />
-        <FactorRow
-          label="No open critical incidents"
-          ok={factors.open_critical_incidents === 0}
-          detail={
-            factors.open_critical_incidents > 0
-              ? `${factors.open_critical_incidents} open`
-              : undefined
-          }
-        />
+        {factors.map((factor) => (
+          <FactorRow
+            key={factor.id}
+            label={factor.label}
+            ok={factor.passed}
+            detail={factor.delta < 0 ? `${factor.delta}` : undefined}
+          />
+        ))}
       </div>
     </div>
   );
