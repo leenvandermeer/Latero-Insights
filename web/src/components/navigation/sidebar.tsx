@@ -15,6 +15,8 @@ import {
   GitCommit,
   TrendingUp,
   Users,
+  ClipboardList,
+  CircleDollarSign,
   Settings,
   Sun,
   Moon,
@@ -37,6 +39,7 @@ const MONITOR_NAV = [
   { label: "Runs", href: "/runs", icon: Activity },
   { label: "Data Quality", href: "/quality", icon: ShieldCheck },
   { label: "Incidents", href: "/incidents", icon: AlertTriangle },
+  { label: "Compliance", href: "/compliance", icon: ClipboardList },
 ];
 
 const EXPLORE_NAV = [
@@ -47,6 +50,7 @@ const EXPLORE_NAV = [
   { label: "Changes", href: "/changes", icon: GitCommit },
   { label: "Impact", href: "/impact", icon: TrendingUp },
   { label: "Consumers", href: "/consumers", icon: Users },
+  { label: "Costs", href: "/costs", icon: CircleDollarSign },
 ];
 
 const MAX_PINNED_IN_NAV = 3;

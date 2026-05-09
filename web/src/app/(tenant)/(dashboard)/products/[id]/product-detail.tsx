@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ChevronLeft, RefreshCw, AlertTriangle, Shield } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useDataProduct } from "@/hooks/use-data-products";
 import { useTrustScore } from "@/hooks/use-trust-score";
 import { useIncidents } from "@/hooks/use-incidents";
@@ -188,6 +189,65 @@ function IncidentsTab({ productId }: { productId: string }) {
   );
 }
 
+// ── Evidence tab ──────────────────────────────────────────────────────────────
+
+interface EvidenceRecord {
+  id: number;
+  event_type: string;
+  payload: Record<string, unknown>;
+  recorded_at: string;
+  recorded_by: string | null;
+}
+
+const EVENT_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
+  quality_run:    { bg: "#dcfce7", text: "#166534" },
+  lineage_update: { bg: "#dbeafe", text: "#1e40af" },
+  policy_check:   { bg: "#fef9c3", text: "#a16207" },
+  incident:       { bg: "#fee2e2", text: "#b91c1c" },
+};
+
+function EvidenceTab({ productId }: { productId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["evidence", productId],
+    queryFn: () =>
+      fetch(`/api/products/${encodeURIComponent(productId)}/evidence`)
+        .then((r) => r.json())
+        .then((b: { data: EvidenceRecord[] }) => b.data),
+    staleTime: 30_000,
+    retry: 1,
+  });
+
+  return (
+    <div className="flex flex-col gap-2">
+      {isLoading && <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Loading evidence…</p>}
+      {!isLoading && (!data || data.length === 0) && (
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No evidence records yet.</p>
+      )}
+      {data?.map((rec) => {
+        const style = EVENT_TYPE_COLORS[rec.event_type] ?? { bg: "#f1f5f9", text: "#475569" };
+        return (
+          <div key={rec.id} className="rounded-xl p-4 flex items-start gap-3"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium mt-0.5"
+              style={{ background: style.bg, color: style.text }}>
+              {rec.event_type.replace(/_/g, " ")}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm" style={{ color: "var(--color-text)" }}>
+                {JSON.stringify(rec.payload).slice(0, 120)}
+              </p>
+              <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+                {new Date(rec.recorded_at).toLocaleString()}
+                {rec.recorded_by && ` · ${rec.recorded_by}`}
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Placeholder tabs ──────────────────────────────────────────────────────────
 
 function PlaceholderTab({ label }: { label: string }) {
@@ -318,7 +378,7 @@ export function ProductDetail({ productId }: { productId: string }) {
         {tab === "overview" && <OverviewTab product={product} trustScore={trustScore} />}
         {tab === "incidents" && <IncidentsTab productId={productId} />}
         {tab === "lineage" && <PlaceholderTab label="Lineage graph" />}
-        {tab === "evidence" && <PlaceholderTab label="Evidence ledger" />}
+        {tab === "evidence" && <EvidenceTab productId={productId} />}
       </div>
     </div>
   );
