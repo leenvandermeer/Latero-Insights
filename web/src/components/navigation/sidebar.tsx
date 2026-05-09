@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   GitBranch,
   Package,
+  Layers,
   Settings,
   Sun,
   Moon,
@@ -33,6 +34,7 @@ const MONITOR_NAV = [
 ];
 
 const EXPLORE_NAV = [
+  { label: "Products", href: "/products", icon: Layers },
   { label: "Catalog", href: "/catalog", icon: Package },
   { label: "Lineage", href: "/lineage", icon: GitBranch },
 ];
