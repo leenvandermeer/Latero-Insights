@@ -30,37 +30,37 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 const SLA_STYLE: Record<string, { bg: string; text: string }> = {
-  bronze: { bg: "#fed7aa", text: "#c2410c" },
-  silver: { bg: "#cffafe", text: "#0e7490" },
-  gold:   { bg: "#fef9c3", text: "#a16207" },
+  bronze: { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
+  silver: { bg: "var(--color-brand-subtle)",   text: "var(--color-brand)" },
+  gold:   { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
 };
 
 const SEVERITY_STYLE: Record<string, { bg: string; text: string }> = {
-  critical: { bg: "#fee2e2", text: "#b91c1c" },
-  high:     { bg: "#ffedd5", text: "#c2410c" },
-  medium:   { bg: "#fef9c3", text: "#a16207" },
-  low:      { bg: "#f0f9ff", text: "#0369a1" },
+  critical: { bg: "var(--color-error-subtle)",   text: "var(--color-error)" },
+  high:     { bg: "var(--color-error-subtle)",   text: "var(--color-error)" },
+  medium:   { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
+  low:      { bg: "var(--color-brand-subtle)",   text: "var(--color-brand)" },
 };
 
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
-  open:        { bg: "#fee2e2", text: "#b91c1c" },
-  in_progress: { bg: "#fef9c3", text: "#a16207" },
-  resolved:    { bg: "#dcfce7", text: "#166534" },
+  open:        { bg: "var(--color-error-subtle)",   text: "var(--color-error)" },
+  in_progress: { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
+  resolved:    { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
 };
 
 const ENTITY_HEALTH_STYLE: Record<string, { bg: string; text: string }> = {
-  SUCCESS: { bg: "#dcfce7", text: "#166534" },
-  WARNING: { bg: "#fef3c7", text: "#b45309" },
-  FAILED: { bg: "#fee2e2", text: "#b91c1c" },
-  UNKNOWN: { bg: "#e5e7eb", text: "#4b5563" },
+  SUCCESS: { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
+  WARNING: { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
+  FAILED:  { bg: "var(--color-error-subtle)",   text: "var(--color-error)" },
+  UNKNOWN: { bg: "var(--color-surface-alt)",    text: "var(--color-text-muted)" },
 };
 
 const ENTITY_LAYER_STYLE: Record<string, { bg: string; text: string }> = {
-  landing: { bg: "#dbeafe", text: "#1d4ed8" },
-  raw: { bg: "#dcfce7", text: "#166534" },
-  bronze: { bg: "#ffedd5", text: "#c2410c" },
-  silver: { bg: "#e5e7eb", text: "#475569" },
-  gold: { bg: "#fef3c7", text: "#a16207" },
+  landing: { bg: "var(--color-brand-subtle)",   text: "var(--color-brand)" },
+  raw:     { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
+  bronze:  { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
+  silver:  { bg: "var(--color-surface-alt)",    text: "var(--color-text-muted)" },
+  gold:    { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
 };
 
 const ENTITY_LAYER_ORDER = ["landing", "raw", "bronze", "silver", "gold"] as const;
@@ -101,7 +101,7 @@ function Badge({ bg, text, label }: { bg: string; text: string; label: string })
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm outline-none";
 const inputStyle = {
-  background: "var(--color-surface-raised)",
+  background: "var(--color-surface-alt)",
   border: "1px solid var(--color-border)",
   color: "var(--color-text)",
 };
@@ -200,7 +200,7 @@ function ProductMembersPanel({
             onClick={onManageMembers}
             className="rounded-lg px-3 py-1.5 text-xs font-medium"
             style={{
-              background: "var(--color-surface-raised)",
+              background: "var(--color-surface-alt)",
               border: "1px solid var(--color-border)",
               color: "var(--color-text)",
             }}
@@ -216,7 +216,7 @@ function ProductMembersPanel({
             <div
               key={index}
               className="rounded-lg p-3 animate-pulse"
-              style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)" }}
+              style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)" }}
             >
               <div className="h-4 w-40 rounded" style={{ background: "var(--color-border)" }} />
             </div>
@@ -227,7 +227,7 @@ function ProductMembersPanel({
       {!isLoading && members.length === 0 && (
         <div
           className="rounded-lg p-4 text-sm"
-          style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+          style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
         >
           This product has no linked entities yet.
         </div>
@@ -243,7 +243,7 @@ function ProductMembersPanel({
               <div
                 key={entity.entity_id}
                 className="rounded-lg px-3 py-3 flex items-start justify-between gap-3"
-                style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)" }}
+                style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)" }}
               >
                 <div className="min-w-0 flex-1">
                   <Link
@@ -403,7 +403,7 @@ function ManageMembersModal({
                   onClick={() => toggleEntity(entity.entity_id)}
                   className="w-full px-4 py-3 flex items-start gap-3 text-left"
                   style={{
-                    background: checked ? "var(--color-surface-raised)" : "transparent",
+                    background: checked ? "var(--color-surface-alt)" : "transparent",
                     borderTop: index === 0 ? "none" : "1px solid var(--color-border)",
                   }}
                 >
@@ -436,7 +436,7 @@ function ManageMembersModal({
           </div>
         </div>
 
-        {error && <p className="text-xs" style={{ color: "#b91c1c" }}>{error}</p>}
+        {error && <p className="text-xs" style={{ color: "var(--color-error)" }}>{error}</p>}
 
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
@@ -526,9 +526,9 @@ function EditProductModal({
         {gaps.length > 0 && (
           <div
             className="rounded-xl px-3 py-2"
-            style={{ background: "#fff7ed", border: "1px solid #fdba74" }}
+            style={{ background: "var(--color-warning-subtle)", border: "1px solid var(--color-warning)" }}
           >
-            <p className="text-xs font-semibold" style={{ color: "#9a3412" }}>
+            <p className="text-xs font-semibold" style={{ color: "var(--color-warning)" }}>
               Product completeness
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -536,7 +536,7 @@ function EditProductModal({
                 <span
                   key={gap}
                   className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                  style={{ background: "#ffedd5", color: "#c2410c" }}
+                  style={{ background: "var(--color-warning-subtle)", color: "var(--color-warning)" }}
                 >
                   {gap}
                 </span>
@@ -576,13 +576,13 @@ function EditProductModal({
           </select>
         </div>
 
-        {error && <p className="text-xs" style={{ color: "#b91c1c" }}>{error}</p>}
+        {error && <p className="text-xs" style={{ color: "var(--color-error)" }}>{error}</p>}
 
         <div className="flex gap-2 pt-1">
           <button
             onClick={onClose}
             className="flex-1 py-2 rounded-lg text-sm"
-            style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+            style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
           >
             Cancel
           </button>
@@ -590,7 +590,7 @@ function EditProductModal({
             onClick={handleSave}
             disabled={update.isPending}
             className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ background: "var(--color-brand)", color: "#fff" }}
+            style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
           >
             {update.isPending
               ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
@@ -646,13 +646,13 @@ function DeleteConfirmModal({
           </p>
         </div>
 
-        {error && <p className="text-xs" style={{ color: "#b91c1c" }}>{error}</p>}
+        {error && <p className="text-xs" style={{ color: "var(--color-error)" }}>{error}</p>}
 
         <div className="flex gap-2">
           <button
             onClick={onClose}
             className="flex-1 py-2 rounded-lg text-sm"
-            style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+            style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
           >
             Cancel
           </button>
@@ -660,7 +660,7 @@ function DeleteConfirmModal({
             onClick={handleDelete}
             disabled={del.isPending}
             className="flex-1 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ background: "#b91c1c", color: "#fff" }}
+            style={{ background: "var(--color-error)", color: "var(--color-text-on-dark)" }}
           >
             {del.isPending
               ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Deleting…</>
@@ -696,15 +696,15 @@ function OverviewTab({
         {gaps.length > 0 && (
           <div
             className="rounded-xl p-4 flex flex-col gap-2"
-            style={{ background: "#fff7ed", border: "1px solid #fdba74" }}
+            style={{ background: "var(--color-warning-subtle)", border: "1px solid var(--color-warning)" }}
           >
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" style={{ color: "#c2410c" }} />
-              <h2 className="text-sm font-semibold" style={{ color: "#9a3412" }}>
+              <AlertTriangle className="h-4 w-4" style={{ color: "var(--color-warning)" }} />
+              <h2 className="text-sm font-semibold" style={{ color: "var(--color-warning)" }}>
                 Needs attention
               </h2>
             </div>
-            <p className="text-xs" style={{ color: "#9a3412" }}>
+            <p className="text-xs" style={{ color: "var(--color-warning)" }}>
               Complete the product basics so ownership and trust are clearer.
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -712,7 +712,7 @@ function OverviewTab({
                 <span
                   key={gap}
                   className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                  style={{ background: "#ffedd5", color: "#c2410c" }}
+                  style={{ background: "var(--color-warning-subtle)", color: "var(--color-warning)" }}
                 >
                   {gap}
                 </span>
@@ -810,7 +810,7 @@ function IncidentsTab({ productId }: { productId: string }) {
         <Link
           href={`/incidents?new=1&product_id=${encodeURIComponent(productId)}`}
           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
-          style={{ background: "var(--color-brand)", color: "#fff" }}
+          style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
         >
           <Plus className="h-3.5 w-3.5" /> Report issue
         </Link>
@@ -827,7 +827,7 @@ function IncidentsTab({ productId }: { productId: string }) {
           className="rounded-xl p-8 text-center"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
-          <CheckCircle2 className="h-7 w-7 mx-auto mb-2" style={{ color: "#16a34a" }} />
+          <CheckCircle2 className="h-7 w-7 mx-auto mb-2" style={{ color: "var(--color-success)" }} />
           <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>No open issues</p>
           <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
             This product has no recorded trust issues.
@@ -885,7 +885,7 @@ function LineageTab({ productId }: { productId: string }) {
         <Link
           href="/lineage"
           className="flex items-center justify-center gap-1.5 text-xs px-4 py-2 rounded-lg font-medium"
-          style={{ background: "var(--color-brand)", color: "#fff" }}
+          style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
         >
           Open lineage workspace <ArrowRight className="h-3.5 w-3.5" />
         </Link>
@@ -897,10 +897,10 @@ function LineageTab({ productId }: { productId: string }) {
 // ── Evidence tab ──────────────────────────────────────────────────────────────
 
 const EVENT_COLORS: Record<string, { bg: string; text: string }> = {
-  quality_run:    { bg: "#dcfce7", text: "#166534" },
-  lineage_update: { bg: "#dbeafe", text: "#1e40af" },
-  policy_check:   { bg: "#fef9c3", text: "#a16207" },
-  incident:       { bg: "#fee2e2", text: "#b91c1c" },
+  quality_run:    { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
+  lineage_update: { bg: "var(--color-brand-subtle)",   text: "var(--color-brand)" },
+  policy_check:   { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
+  incident:       { bg: "var(--color-error-subtle)",   text: "var(--color-error)" },
 };
 
 function summarisePayload(eventType: string, payload: Record<string, unknown>): string {
@@ -994,7 +994,7 @@ function EvidenceTab({ productId }: { productId: string }) {
           className="rounded-full px-2.5 py-1 text-[11px] font-medium"
           style={{
             background: eventFilter === "all" ? "var(--color-brand)" : "var(--color-surface)",
-            color: eventFilter === "all" ? "#fff" : "var(--color-text-muted)",
+            color: eventFilter === "all" ? "var(--color-text-on-dark)" : "var(--color-text-muted)",
             border: eventFilter === "all" ? "none" : "1px solid var(--color-border)",
           }}
         >
@@ -1008,7 +1008,7 @@ function EvidenceTab({ productId }: { productId: string }) {
             className="rounded-full px-2.5 py-1 text-[11px] font-medium"
             style={{
               background: eventFilter === eventType ? "var(--color-brand)" : "var(--color-surface)",
-              color: eventFilter === eventType ? "#fff" : "var(--color-text-muted)",
+              color: eventFilter === eventType ? "var(--color-text-on-dark)" : "var(--color-text-muted)",
               border: eventFilter === eventType ? "none" : "1px solid var(--color-border)",
             }}
           >
@@ -1018,7 +1018,7 @@ function EvidenceTab({ productId }: { productId: string }) {
       </div>
 
       {filteredData.map((rec) => {
-        const style   = EVENT_COLORS[rec.event_type] ?? { bg: "#f1f5f9", text: "#475569" };
+        const style   = EVENT_COLORS[rec.event_type] ?? { bg: "var(--color-surface-alt)", text: "var(--color-text-muted)" };
         const summary = summarisePayload(rec.event_type, rec.payload);
         return (
           <div key={rec.id} className="rounded-xl p-4 flex items-start gap-3"
@@ -1178,7 +1178,7 @@ export function ProductDetail({ productId }: { productId: string }) {
             style={{
               background: "var(--color-surface)",
               border: "1px solid #fca5a5",
-              color: "#b91c1c",
+              color: "var(--color-error)",
             }}
           >
             <Trash2 className="h-3.5 w-3.5" /> Delete
@@ -1219,7 +1219,7 @@ export function ProductDetail({ productId }: { productId: string }) {
             {id === "incidents" && incidentCount > 0 && (
               <span
                 className="text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none"
-                style={{ background: "#fee2e2", color: "#b91c1c" }}
+                style={{ background: "var(--color-error-subtle)", color: "var(--color-error)" }}
               >
                 {incidentCount}
               </span>

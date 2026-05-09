@@ -68,7 +68,7 @@ function StatusPill({
       ? { background: "#dcfce7", color: "#166534" }
       : tone === "warning"
       ? { background: "#fef3c7", color: "#b45309" }
-      : { background: "var(--color-surface-raised)", color: "var(--color-text-muted)" };
+      : { background: "var(--color-surface-alt)", color: "var(--color-text-muted)" };
   return (
     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={style}>
       {label}
@@ -183,7 +183,7 @@ function SummaryCard({
       </div>
       <div
         className="flex h-10 w-10 items-center justify-center rounded-xl"
-        style={{ background: "var(--color-surface-raised)", color: "var(--color-text-muted)" }}
+        style={{ background: "var(--color-surface-alt)", color: "var(--color-text-muted)" }}
       >
         <Icon className="h-4 w-4" />
       </div>

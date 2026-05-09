@@ -83,22 +83,6 @@ export type {
   ListBusinessOutputsOptions,
 } from "./business-outputs";
 export {
-  listGlossaryTerms,
-  getGlossaryTerm,
-  createGlossaryTerm,
-  updateGlossaryTerm,
-  deleteGlossaryTerm,
-  getGlossaryConflicts,
-} from "./glossary";
-export type {
-  GlossaryTerm,
-  GlossaryTermDetail,
-  GlossaryDatasetLink,
-  GlossaryConflict,
-  CreateGlossaryTermInput,
-  UpdateGlossaryTermInput,
-} from "./glossary";
-export {
   getProductConsumers,
   registerConsumer,
   getProductUsage,
