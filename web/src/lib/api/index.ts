@@ -98,3 +98,18 @@ export type {
   CreateGlossaryTermInput,
   UpdateGlossaryTermInput,
 } from "./glossary";
+export {
+  getProductConsumers,
+  registerConsumer,
+  getProductUsage,
+  logUsageEvent,
+  submitContractRequest,
+  resolveContractRequest,
+} from "./demand-side";
+export type {
+  ProductConsumer,
+  ProductUsageDay,
+  ContractRequest,
+  ConsumerType,
+  ContractRequestStatus,
+} from "./demand-side";

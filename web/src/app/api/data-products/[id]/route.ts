@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { requireSession } from "@/lib/session-auth";
 import { getPgPool } from "@/lib/insights-saas-db";
+import { detectOwnershipDrift, detectContractDrift } from "@/lib/change-detection";
 
 const PRODUCT_SELECT = `
   dp.data_product_id,
@@ -113,15 +114,16 @@ export async function PUT(
   try {
     await client.query("BEGIN");
 
-    // Verify ownership
+    // Verify ownership + fetch current state for drift detection
     const exists = await client.query(
-      `SELECT 1 FROM meta.data_products WHERE installation_id = $1 AND data_product_id = $2`,
+      `SELECT owner, sla, contract_ver FROM meta.data_products WHERE installation_id = $1 AND data_product_id = $2`,
       [installationId, id]
     );
     if (exists.rows.length === 0) {
       await client.query("ROLLBACK");
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+    const prev = exists.rows[0];
 
     await client.query(
       `UPDATE meta.data_products SET
@@ -159,6 +161,17 @@ export async function PUT(
     }
 
     await client.query("COMMIT");
+
+    // Fire-and-forget: drift detection (non-blocking)
+    const newOwner = owner !== undefined ? (owner ?? null) : (prev.owner ?? null);
+    const newSla = sla !== undefined ? sla : prev.sla;
+    const newContractVer = contract_ver !== undefined ? (contract_ver ?? null) : (prev.contract_ver ?? null);
+
+    void detectOwnershipDrift(id, installationId, prev.owner ?? null, newOwner).catch(() => {});
+    void detectContractDrift(id, installationId,
+      { sla: prev.sla, contract_ver: prev.contract_ver ?? null },
+      { sla: newSla, contract_ver: newContractVer }
+    ).catch(() => {});
 
     const row = await pool.query(
       `SELECT ${PRODUCT_SELECT} ${PRODUCT_FROM}
