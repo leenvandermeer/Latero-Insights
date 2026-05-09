@@ -113,3 +113,39 @@ export type {
   ConsumerType,
   ContractRequestStatus,
 } from "./demand-side";
+export {
+  listPolicies,
+  getPolicy,
+  createPolicy,
+  updatePolicy,
+  getComplianceMatrix,
+  getProductCompliance,
+  submitException,
+  resolveException,
+} from "./policies";
+export type {
+  Policy,
+  PolicyPack,
+  PolicyVerdict,
+  PolicyException,
+  ComplianceMatrix,
+} from "./policies";
+export {
+  getProductEvidence,
+  appendEvidence,
+  getEvidenceGaps,
+} from "./evidence";
+export type {
+  EvidenceRecord,
+  EvidenceGaps,
+  EvidenceEventType,
+} from "./evidence";
+export {
+  listCosts,
+  syncCostRecord,
+  getProductCosts,
+} from "./costs";
+export type {
+  CostRecord,
+  ProductCostSummary,
+} from "./costs";
