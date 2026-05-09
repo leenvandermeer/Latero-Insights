@@ -23,28 +23,29 @@ const statusIcon = (status: string) => {
 export function RunsExplorer() {
   const [status, setStatus] = useState("");
   const [step, setStep] = useState("");
-  const { from, to, setRange } = useDateRange();
+  const { from, to, preset, setRange, setPreset, summaryLabel } = useDateRange({ scope: "monitor:runs", defaultPreset: "7d" });
   const { data, isLoading, isError } = useRuns({ from, to, status: status || undefined, step: step || undefined });
 
   const runs = (data?.data ?? []) as Array<Record<string, string>>;
 
   return (
     <div className="flex flex-col h-full" style={{ padding: "var(--spacing-page, 24px)" }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Activity className="h-5 w-5" style={{ color: "var(--color-brand)" }} />
+      <div className="flex flex-col gap-3 mb-5">
+        <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4" style={{ color: "var(--color-brand)" }} />
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>Runs</h1>
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Pipeline run history</p>
+            <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Runs</h1>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Showing {summaryLabel}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Status filter */}
+
+        <div
+          className="flex flex-wrap items-center gap-2"
+        >
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="text-sm rounded-md border px-2 py-1.5"
+            className="h-9 text-sm rounded-md border px-2.5 min-w-40"
             style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
           >
             <option value="">All statuses</option>
@@ -57,10 +58,16 @@ export function RunsExplorer() {
             placeholder="Filter by job…"
             value={step}
             onChange={(e) => setStep(e.target.value)}
-            className="text-sm rounded-md border px-2 py-1.5 w-44"
+            className="h-9 text-sm rounded-md border px-2.5 min-w-56 flex-1"
             style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
           />
-          <DateRangePicker from={from} to={to} onChange={setRange} />
+          <DateRangePicker
+            from={from}
+            to={to}
+            preset={preset}
+            onChange={setRange}
+            onPresetChange={setPreset}
+          />
         </div>
       </div>
 

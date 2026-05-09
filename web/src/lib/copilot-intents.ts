@@ -194,7 +194,7 @@ export async function executeIntent(
       );
       const valid = snapshots.filter(Boolean);
       return {
-        answer: `As of ${asOf}: ${valid.length} product snapshot(s) available. Use the time-travel bar to view the full historical state.`,
+        answer: `As of ${asOf}: ${valid.length} product snapshot(s) available. Open the relevant product to review the historical state.`,
         citations: valid.slice(0, 3).map((s) => ({ label: s!.display_name, href: `/products/${s!.data_product_id}` })),
         navigation_links: [{ label: "Products", href: "/products" }],
       };

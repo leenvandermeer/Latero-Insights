@@ -20,6 +20,12 @@ const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
   resolved:    { bg: "#dcfce7", text: "#166534" },
 };
 
+const SOURCE_STYLE: Record<string, { bg: string; text: string; label: string }> = {
+  manual: { bg: "#e0f2fe", text: "#0369a1", label: "Reported" },
+  alert: { bg: "#dcfce7", text: "#166534", label: "Detected" },
+  policy_violation: { bg: "#fef3c7", text: "#a16207", label: "Policy" },
+};
+
 function Badge({ style, label }: { style: { bg: string; text: string }; label: string }) {
   return (
     <span
@@ -59,7 +65,7 @@ function CreateIncidentModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            New Incident
+            New issue
           </h2>
           <button onClick={onClose}>
             <X className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
@@ -82,8 +88,28 @@ function CreateIncidentModal({ onClose }: { onClose: () => void }) {
                 border: "1px solid var(--color-border)",
                 color: "var(--color-text)",
               }}
-              placeholder="Brief description of the incident"
+              placeholder="Brief description of the issue"
             />
+          </div>
+
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>
+              Issue type
+            </label>
+            <select
+              value={form.source_type ?? "manual"}
+              onChange={(e) => setForm((f) => ({ ...f, source_type: e.target.value }))}
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+              style={{
+                background: "var(--color-surface-raised)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+              }}
+            >
+              <option value="manual">Reported issue</option>
+              <option value="alert">Detected issue</option>
+              <option value="policy_violation">Policy issue</option>
+            </select>
           </div>
 
           <div>
@@ -119,9 +145,9 @@ function CreateIncidentModal({ onClose }: { onClose: () => void }) {
               style={{
                 background: "var(--color-surface-raised)",
                 border: "1px solid var(--color-border)",
-                color: "var(--color-text)",
+              color: "var(--color-text)",
               }}
-              placeholder="Optional details…"
+              placeholder="Optional trust or remediation notes…"
             />
           </div>
 
@@ -131,8 +157,8 @@ function CreateIncidentModal({ onClose }: { onClose: () => void }) {
             </label>
             <input
               type="text"
-              value={form.assigned_to ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, assigned_to: e.target.value }))}
+              value={form.assignee ?? form.assigned_to ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, assignee: e.target.value, assigned_to: e.target.value }))}
               className="w-full rounded-lg px-3 py-2 text-sm outline-none"
               style={{
                 background: "var(--color-surface-raised)",
@@ -162,7 +188,7 @@ function CreateIncidentModal({ onClose }: { onClose: () => void }) {
               className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
               style={{ background: "var(--color-brand)", color: "#fff" }}
             >
-              {createMutation.isPending ? "Creating…" : "Create"}
+              {createMutation.isPending ? "Creating…" : "Create issue"}
             </button>
           </div>
         </form>
@@ -195,7 +221,8 @@ function IncidentRow({ incident }: { incident: Incident }) {
 
   const sev = SEVERITY_STYLE[incident.severity] ?? SEVERITY_STYLE.low;
   const sts = STATUS_STYLE[incident.status] ?? STATUS_STYLE.open;
-  const when = new Date(incident.opened_at).toLocaleDateString();
+  const when = new Date(incident.opened_at ?? incident.created_at).toLocaleDateString();
+  const source = SOURCE_STYLE[incident.source_type ?? "manual"] ?? SOURCE_STYLE.manual;
 
   const StatusIcon =
     incident.status === "resolved"
@@ -215,13 +242,14 @@ function IncidentRow({ incident }: { incident: Incident }) {
         <span className="text-sm font-medium truncate block" style={{ color: "var(--color-text)" }}>
           {incident.title}
         </span>
-        {incident.assigned_to && (
+        {(incident.assignee ?? incident.assigned_to) && (
           <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-            → {incident.assigned_to}
+            → {incident.assignee ?? incident.assigned_to}
           </span>
         )}
       </div>
 
+      <Badge style={{ bg: source.bg, text: source.text }} label={source.label} />
       <Badge style={sev} label={incident.severity} />
       <Badge style={sts} label={incident.status.replace("_", " ")} />
 
@@ -261,10 +289,15 @@ const FILTERS: { id: Filter; label: string }[] = [
 export function IncidentHub() {
   const [filter, setFilter] = useState<Filter>("all");
   const [showCreate, setShowCreate] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<"all" | "manual" | "alert" | "policy_violation">("all");
 
   const { data: incidents, isLoading } = useIncidents({
     status: filter === "all" ? undefined : filter,
   });
+
+  const visibleIncidents = (incidents ?? []).filter((incident) =>
+    sourceFilter === "all" ? true : (incident.source_type ?? "manual") === sourceFilter
+  );
 
   const stats = {
     open: incidents?.filter((i) => i.status === "open").length ?? 0,
@@ -278,9 +311,9 @@ export function IncidentHub() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>Incidents</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>Issues</h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            Data quality and pipeline incidents
+            Detected and reported trust issues for data products
           </p>
         </div>
         <button
@@ -289,7 +322,7 @@ export function IncidentHub() {
           style={{ background: "var(--color-brand)", color: "#fff" }}
         >
           <Plus className="h-3.5 w-3.5" />
-          New Incident
+          New issue
         </button>
       </div>
 
@@ -333,18 +366,40 @@ export function IncidentHub() {
         ))}
       </div>
 
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        {[
+          { id: "all", label: "All issues" },
+          { id: "manual", label: "Reported" },
+          { id: "alert", label: "Detected" },
+          { id: "policy_violation", label: "Policy" },
+        ].map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => setSourceFilter(id as typeof sourceFilter)}
+            className="rounded-full px-2.5 py-1 text-[11px] font-medium"
+            style={{
+              background: sourceFilter === id ? "var(--color-brand)" : "var(--color-surface)",
+              color: sourceFilter === id ? "#fff" : "var(--color-text-muted)",
+              border: sourceFilter === id ? "none" : "1px solid var(--color-border)",
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* List */}
       <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
         {isLoading && (
           <p className="text-sm py-4" style={{ color: "var(--color-text-muted)" }}>Loading…</p>
         )}
-        {!isLoading && (!incidents || incidents.length === 0) && (
+        {!isLoading && visibleIncidents.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-2">
             <CheckCircle2 className="h-8 w-8" style={{ color: "var(--color-text-muted)" }} />
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No incidents found.</p>
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No issues found.</p>
           </div>
         )}
-        {incidents?.map((inc) => <IncidentRow key={inc.id} incident={inc} />)}
+        {visibleIncidents.map((inc) => <IncidentRow key={inc.id} incident={inc} />)}
       </div>
 
       {showCreate && <CreateIncidentModal onClose={() => setShowCreate(false)} />}

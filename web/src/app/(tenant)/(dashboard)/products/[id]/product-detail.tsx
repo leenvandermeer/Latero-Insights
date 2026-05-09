@@ -12,6 +12,7 @@ import {
   useDataProduct, useUpdateDataProduct, useDeleteDataProduct,
   type DataProduct, type DataProductInput,
 } from "@/hooks/use-data-products";
+import { useEntities } from "@/hooks/use-entities";
 import { useTrustScore } from "@/hooks/use-trust-score";
 import { useIncidents } from "@/hooks/use-incidents";
 import { TrustScoreBreakdown } from "@/components/trust/trust-score-breakdown";
@@ -23,7 +24,7 @@ type Tab = "overview" | "incidents" | "lineage" | "evidence";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview",  label: "Overview" },
-  { id: "incidents", label: "Incidents" },
+  { id: "incidents", label: "Issues" },
   { id: "lineage",   label: "Lineage" },
   { id: "evidence",  label: "Evidence" },
 ];
@@ -47,6 +48,23 @@ const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
   resolved:    { bg: "#dcfce7", text: "#166534" },
 };
 
+const ENTITY_HEALTH_STYLE: Record<string, { bg: string; text: string }> = {
+  SUCCESS: { bg: "#dcfce7", text: "#166534" },
+  WARNING: { bg: "#fef3c7", text: "#b45309" },
+  FAILED: { bg: "#fee2e2", text: "#b91c1c" },
+  UNKNOWN: { bg: "#e5e7eb", text: "#4b5563" },
+};
+
+const ENTITY_LAYER_STYLE: Record<string, { bg: string; text: string }> = {
+  landing: { bg: "#dbeafe", text: "#1d4ed8" },
+  raw: { bg: "#dcfce7", text: "#166534" },
+  bronze: { bg: "#ffedd5", text: "#c2410c" },
+  silver: { bg: "#e5e7eb", text: "#475569" },
+  gold: { bg: "#fef3c7", text: "#a16207" },
+};
+
+const ENTITY_LAYER_ORDER = ["landing", "raw", "bronze", "silver", "gold"] as const;
+
 interface TrustScoreData {
   score: number;
   factors: {
@@ -64,6 +82,14 @@ interface EvidenceRecord {
   payload: Record<string, unknown>;
   recorded_at: string;
   recorded_by: string | null;
+}
+
+interface ProductMemberEntity {
+  entity_id: string;
+  display_name: string | null;
+  health_status?: string;
+  latest_run_at?: string | null;
+  layer_statuses?: Array<{ layer: string; latest_status?: string }>;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -86,6 +112,367 @@ const inputStyle = {
   color: "var(--color-text)",
 };
 
+function getEntityHighestLayer(entity: ProductMemberEntity): string | null {
+  const layers = new Set((entity.layer_statuses ?? []).map((item) => item.layer));
+  for (let index = ENTITY_LAYER_ORDER.length - 1; index >= 0; index -= 1) {
+    const layer = ENTITY_LAYER_ORDER[index];
+    if (layers.has(layer)) return layer;
+  }
+  return null;
+}
+
+function getProductGaps(product: DataProduct) {
+  const gaps: string[] = [];
+  if (!product.owner) gaps.push("Add an owner");
+  if (!product.domain) gaps.push("Add a domain");
+  if (!product.sla_tier) gaps.push("Set an SLA tier");
+  if ((product.entity_count ?? 0) === 0) gaps.push("Link at least one entity");
+  return gaps;
+}
+
+function ProductSignalCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  hint: string;
+}) {
+  return (
+    <div
+      className="rounded-xl p-4"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-muted)" }}>
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-semibold" style={{ color: "var(--color-text)" }}>
+        {value}
+      </p>
+      <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
+        {hint}
+      </p>
+    </div>
+  );
+}
+
+function ProductMembersPanel({
+  productId,
+  compact = false,
+  onManageMembers,
+}: {
+  productId: string;
+  compact?: boolean;
+  onManageMembers?: () => void;
+}) {
+  const { data, isLoading } = useEntities({ product_id: productId });
+  const members = useMemo(() => {
+    const rows = ((data?.data ?? []) as ProductMemberEntity[]).slice();
+    rows.sort((a, b) => {
+      const layerA = getEntityHighestLayer(a);
+      const layerB = getEntityHighestLayer(b);
+      const layerRankA = layerA ? ENTITY_LAYER_ORDER.indexOf(layerA as (typeof ENTITY_LAYER_ORDER)[number]) : -1;
+      const layerRankB = layerB ? ENTITY_LAYER_ORDER.indexOf(layerB as (typeof ENTITY_LAYER_ORDER)[number]) : -1;
+      if (layerRankA !== layerRankB) return layerRankB - layerRankA;
+      return (a.display_name ?? a.entity_id).localeCompare(b.display_name ?? b.entity_id);
+    });
+    return rows;
+  }, [data]);
+
+  return (
+    <div
+      className="rounded-xl p-4 flex flex-col gap-3"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Member entities
+          </h2>
+          <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+            Review composition and open trace from a member.
+          </p>
+        </div>
+        <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
+          {members.length} member{members.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      {onManageMembers && (
+        <div className="flex justify-start">
+          <button
+            type="button"
+            onClick={onManageMembers}
+            className="rounded-lg px-3 py-1.5 text-xs font-medium"
+            style={{
+              background: "var(--color-surface-raised)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text)",
+            }}
+          >
+            Manage members
+          </button>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: compact ? 3 : 5 }).map((_, index) => (
+            <div
+              key={index}
+              className="rounded-lg p-3 animate-pulse"
+              style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)" }}
+            >
+              <div className="h-4 w-40 rounded" style={{ background: "var(--color-border)" }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && members.length === 0 && (
+        <div
+          className="rounded-lg p-4 text-sm"
+          style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+        >
+          This product has no linked entities yet.
+        </div>
+      )}
+
+      {!isLoading && members.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {members.slice(0, compact ? 6 : members.length).map((entity) => {
+            const health = ENTITY_HEALTH_STYLE[entity.health_status ?? "UNKNOWN"] ?? ENTITY_HEALTH_STYLE.UNKNOWN;
+            const highestLayer = getEntityHighestLayer(entity);
+            const layerStyle = highestLayer ? ENTITY_LAYER_STYLE[highestLayer] : null;
+            return (
+              <div
+                key={entity.entity_id}
+                className="rounded-lg px-3 py-3 flex items-start justify-between gap-3"
+                style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)" }}
+              >
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={`/entities/${encodeURIComponent(entity.entity_id)}`}
+                    className="text-sm font-medium hover:underline"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    {entity.display_name || entity.entity_id}
+                  </Link>
+                  <p className="mt-1 truncate text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                    {entity.entity_id}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <Badge bg={health.bg} text={health.text} label={(entity.health_status ?? "unknown").toLowerCase()} />
+                    {layerStyle && highestLayer && (
+                      <Badge bg={layerStyle.bg} text={layerStyle.text} label={highestLayer} />
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <Link
+                    href={`/lineage?entity_fqn=${encodeURIComponent(entity.entity_id)}`}
+                    className="text-xs font-medium hover:underline"
+                    style={{ color: "var(--color-brand)" }}
+                  >
+                    Open trace
+                  </Link>
+                  {entity.latest_run_at && (
+                    <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                      {new Date(entity.latest_run_at).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                      })}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {compact && members.length > 6 && (
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              {members.length - 6} more entities are available in this product.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ManageMembersModal({
+  product,
+  onClose,
+}: {
+  product: DataProduct;
+  onClose: () => void;
+}) {
+  const update = useUpdateDataProduct(product.data_product_id);
+  const { data } = useEntities();
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<string[]>(product.entity_ids);
+  const [error, setError] = useState<string | null>(null);
+
+  const entities = useMemo(
+    () => ((data?.data ?? []) as ProductMemberEntity[]).slice().sort((a, b) => (a.display_name ?? a.entity_id).localeCompare(b.display_name ?? b.entity_id)),
+    [data]
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return entities;
+    return entities.filter((entity) =>
+      (entity.display_name ?? "").toLowerCase().includes(q) ||
+      entity.entity_id.toLowerCase().includes(q)
+    );
+  }, [entities, query]);
+
+  const toggleEntity = (entityId: string) => {
+    setSelected((current) =>
+      current.includes(entityId)
+        ? current.filter((id) => id !== entityId)
+        : [...current, entityId]
+    );
+  };
+
+  const handleSave = async () => {
+    if (selected.length === 0) {
+      setError("Select at least one entity");
+      return;
+    }
+    setError(null);
+    try {
+      await update.mutateAsync({ entity_ids: selected });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update members");
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.4)" }}
+      onClick={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <div
+        className="w-full max-w-2xl rounded-2xl p-6 flex flex-col gap-4"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+              Manage members
+            </h2>
+            <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Add or remove entities linked to this product.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-2 py-1 text-xs"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            Close
+          </button>
+        </div>
+
+        <input
+          type="text"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search entities…"
+          className={inputCls}
+          style={inputStyle}
+        />
+
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{ border: "1px solid var(--color-border)" }}
+        >
+          <div className="max-h-[420px] overflow-y-auto">
+            {filtered.length === 0 && (
+              <div className="px-4 py-6 text-sm" style={{ color: "var(--color-text-muted)" }}>
+                No entities match your search.
+              </div>
+            )}
+            {filtered.map((entity, index) => {
+              const checked = selected.includes(entity.entity_id);
+              const health = ENTITY_HEALTH_STYLE[entity.health_status ?? "UNKNOWN"] ?? ENTITY_HEALTH_STYLE.UNKNOWN;
+              const highestLayer = getEntityHighestLayer(entity);
+              const layerStyle = highestLayer ? ENTITY_LAYER_STYLE[highestLayer] : null;
+              return (
+                <button
+                  key={entity.entity_id}
+                  type="button"
+                  onClick={() => toggleEntity(entity.entity_id)}
+                  className="w-full px-4 py-3 flex items-start gap-3 text-left"
+                  style={{
+                    background: checked ? "var(--color-surface-raised)" : "transparent",
+                    borderTop: index === 0 ? "none" : "1px solid var(--color-border)",
+                  }}
+                >
+                  <span
+                    className="mt-0.5 flex h-4 w-4 items-center justify-center rounded"
+                    style={{
+                      background: checked ? "var(--color-brand)" : "transparent",
+                      border: checked ? "none" : "1px solid var(--color-border)",
+                    }}
+                  >
+                    {checked && <CheckCircle2 className="h-3 w-3 text-white" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                      {entity.display_name || entity.entity_id}
+                    </p>
+                    <p className="mt-1 truncate text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                      {entity.entity_id}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <Badge bg={health.bg} text={health.text} label={(entity.health_status ?? "unknown").toLowerCase()} />
+                      {layerStyle && highestLayer && (
+                        <Badge bg={layerStyle.bg} text={layerStyle.text} label={highestLayer} />
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {error && <p className="text-xs" style={{ color: "#b91c1c" }}>{error}</p>}
+
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+            {selected.length} member{selected.length === 1 ? "" : "s"} selected
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium"
+              style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={update.isPending}
+              className="rounded-lg px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+              style={{ background: "var(--color-brand)" }}
+            >
+              {update.isPending ? "Saving…" : "Save members"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Edit Product Modal ────────────────────────────────────────────────────────
 
 function EditProductModal({
@@ -96,6 +483,7 @@ function EditProductModal({
   onClose: () => void;
 }) {
   const update = useUpdateDataProduct(product.data_product_id);
+  const gaps = getProductGaps(product);
   const [form, setForm] = useState({
     display_name: product.display_name,
     description:  product.description ?? "",
@@ -140,6 +528,28 @@ function EditProductModal({
         <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
           Edit product
         </h2>
+
+        {gaps.length > 0 && (
+          <div
+            className="rounded-xl px-3 py-2"
+            style={{ background: "#fff7ed", border: "1px solid #fdba74" }}
+          >
+            <p className="text-xs font-semibold" style={{ color: "#9a3412" }}>
+              Product completeness
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {gaps.map((gap) => (
+                <span
+                  key={gap}
+                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ background: "#ffedd5", color: "#c2410c" }}
+                >
+                  {gap}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Display name</label>
@@ -275,50 +685,85 @@ function OverviewTab({
   trustScore,
   refreshing,
   onRefreshTrust,
+  onManageMembers,
 }: {
   product: DataProduct;
   trustScore: TrustScoreData | null;
   refreshing: boolean;
   onRefreshTrust: () => void;
+  onManageMembers: () => void;
 }) {
   const slaStyle = product.sla_tier ? SLA_STYLE[product.sla_tier] : null;
+  const gaps = getProductGaps(product);
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      {/* Details card */}
-      <div
-        className="lg:col-span-2 rounded-xl p-4 flex flex-col gap-3"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Details</h2>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <dt style={{ color: "var(--color-text-muted)" }}>Owner</dt>
-          <dd style={{ color: "var(--color-text)" }}>{product.owner ?? "—"}</dd>
-          <dt style={{ color: "var(--color-text-muted)" }}>Domain</dt>
-          <dd style={{ color: "var(--color-text)" }}>{product.domain ?? "—"}</dd>
-          <dt style={{ color: "var(--color-text-muted)" }}>SLA tier</dt>
-          <dd>
-            {slaStyle
-              ? <Badge bg={slaStyle.bg} text={slaStyle.text} label={product.sla_tier!} />
-              : <span style={{ color: "var(--color-text-muted)" }}>—</span>}
-          </dd>
-          <dt style={{ color: "var(--color-text-muted)" }}>Entities</dt>
-          <dd style={{ color: "var(--color-text)" }}>{product.entity_count}</dd>
-          <dt style={{ color: "var(--color-text-muted)" }}>Last updated</dt>
-          <dd style={{ color: "var(--color-text)" }}>
-            {new Date(product.updated_at).toLocaleDateString("en-GB", {
-              day: "2-digit", month: "short", year: "numeric",
-            })}
-          </dd>
-        </dl>
-        {product.description && (
-          <p
-            className="text-xs leading-relaxed border-t pt-3"
-            style={{ color: "var(--color-text-muted)", borderColor: "var(--color-border)" }}
+      <div className="lg:col-span-2 flex flex-col gap-4">
+        {gaps.length > 0 && (
+          <div
+            className="rounded-xl p-4 flex flex-col gap-2"
+            style={{ background: "#fff7ed", border: "1px solid #fdba74" }}
           >
-            {product.description}
-          </p>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" style={{ color: "#c2410c" }} />
+              <h2 className="text-sm font-semibold" style={{ color: "#9a3412" }}>
+                Needs attention
+              </h2>
+            </div>
+            <p className="text-xs" style={{ color: "#9a3412" }}>
+              Complete the product basics so ownership and trust are clearer.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {gaps.map((gap) => (
+                <span
+                  key={gap}
+                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ background: "#ffedd5", color: "#c2410c" }}
+                >
+                  {gap}
+                </span>
+              ))}
+            </div>
+          </div>
         )}
+
+        {/* Details card */}
+        <div
+          className="rounded-xl p-4 flex flex-col gap-3"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Details</h2>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            <dt style={{ color: "var(--color-text-muted)" }}>Owner</dt>
+            <dd style={{ color: "var(--color-text)" }}>{product.owner ?? "—"}</dd>
+            <dt style={{ color: "var(--color-text-muted)" }}>Domain</dt>
+            <dd style={{ color: "var(--color-text)" }}>{product.domain ?? "—"}</dd>
+            <dt style={{ color: "var(--color-text-muted)" }}>SLA tier</dt>
+            <dd>
+              {slaStyle
+                ? <Badge bg={slaStyle.bg} text={slaStyle.text} label={product.sla_tier!} />
+                : <span style={{ color: "var(--color-text-muted)" }}>—</span>}
+            </dd>
+            <dt style={{ color: "var(--color-text-muted)" }}>Entities</dt>
+            <dd style={{ color: "var(--color-text)" }}>{product.entity_count}</dd>
+            <dt style={{ color: "var(--color-text-muted)" }}>Last updated</dt>
+            <dd style={{ color: "var(--color-text)" }}>
+              {new Date(product.updated_at).toLocaleDateString("en-GB", {
+                day: "2-digit", month: "short", year: "numeric",
+              })}
+            </dd>
+          </dl>
+          {product.description && (
+            <p
+              className="text-xs leading-relaxed border-t pt-3"
+              style={{ color: "var(--color-text-muted)", borderColor: "var(--color-border)" }}
+            >
+              {product.description}
+            </p>
+          )}
+        </div>
+
+        <ProductMembersPanel productId={product.data_product_id} onManageMembers={onManageMembers} />
       </div>
 
       {/* Trust score */}
@@ -366,20 +811,20 @@ function IncidentsTab({ productId }: { productId: string }) {
           className="text-xs hover:underline flex items-center gap-1"
           style={{ color: "var(--color-brand)" }}
         >
-          View all incidents <ArrowRight className="h-3 w-3" />
+          View all issues <ArrowRight className="h-3 w-3" />
         </Link>
         <Link
           href={`/incidents?new=1&product_id=${encodeURIComponent(productId)}`}
           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
           style={{ background: "var(--color-brand)", color: "#fff" }}
         >
-          <Plus className="h-3.5 w-3.5" /> Create incident
+          <Plus className="h-3.5 w-3.5" /> Report issue
         </Link>
       </div>
 
       {isLoading && (
         <div className="flex items-center gap-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading incidents…
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading issues…
         </div>
       )}
 
@@ -389,9 +834,9 @@ function IncidentsTab({ productId }: { productId: string }) {
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <CheckCircle2 className="h-7 w-7 mx-auto mb-2" style={{ color: "#16a34a" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>No open incidents</p>
+          <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>No open issues</p>
           <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-            This product has no recorded incidents.
+            This product has no recorded trust issues.
           </p>
         </div>
       )}
@@ -414,7 +859,7 @@ function IncidentsTab({ productId }: { productId: string }) {
               <Badge bg={sts.bg} text={sts.text} label={inc.status.replace("_", " ")} />
             </div>
             <span className="text-xs whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
-              {new Date(inc.opened_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+              {new Date(inc.opened_at ?? inc.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
             </span>
           </div>
         );
@@ -427,26 +872,30 @@ function IncidentsTab({ productId }: { productId: string }) {
 
 function LineageTab({ productId }: { productId: string }) {
   return (
-    <div
-      className="rounded-xl p-8 flex flex-col items-center gap-4 text-center"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <GitBranch className="h-8 w-8" style={{ color: "var(--color-text-muted)" }} />
-      <div>
-        <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-          View lineage for this product
-        </p>
-        <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-          Explore upstream sources and downstream consumers in the full lineage graph.
-        </p>
-      </div>
-      <Link
-        href={`/lineage?product_id=${encodeURIComponent(productId)}`}
-        className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg font-medium"
-        style={{ background: "var(--color-brand)", color: "#fff" }}
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
+      <ProductMembersPanel productId={productId} compact />
+
+      <div
+        className="rounded-xl p-5 flex flex-col gap-4"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
-        Open lineage graph <ArrowRight className="h-3.5 w-3.5" />
-      </Link>
+        <div className="flex items-center gap-2">
+          <GitBranch className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
+          <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Trace workflow
+          </h2>
+        </div>
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+          Start from a member entity to inspect upstream sources or downstream consumers in Trace.
+        </p>
+        <Link
+          href="/lineage"
+          className="flex items-center justify-center gap-1.5 text-xs px-4 py-2 rounded-lg font-medium"
+          style={{ background: "var(--color-brand)", color: "#fff" }}
+        >
+          Open lineage workspace <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
     </div>
   );
 }
@@ -488,6 +937,7 @@ function summarisePayload(eventType: string, payload: Record<string, unknown>): 
 }
 
 function EvidenceTab({ productId }: { productId: string }) {
+  const [eventFilter, setEventFilter] = useState<string>("all");
   const { data, isLoading } = useQuery({
     queryKey: ["evidence", productId],
     queryFn: () =>
@@ -497,6 +947,17 @@ function EvidenceTab({ productId }: { productId: string }) {
     staleTime: 30_000,
     retry: 1,
   });
+
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    if (eventFilter === "all") return data;
+    return data.filter((record) => record.event_type === eventFilter);
+  }, [data, eventFilter]);
+
+  const eventTypes = useMemo(
+    () => Array.from(new Set((data ?? []).map((record) => record.event_type))),
+    [data]
+  );
 
   if (isLoading) {
     return (
@@ -532,7 +993,37 @@ function EvidenceTab({ productId }: { productId: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      {data.map((rec) => {
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        <button
+          type="button"
+          onClick={() => setEventFilter("all")}
+          className="rounded-full px-2.5 py-1 text-[11px] font-medium"
+          style={{
+            background: eventFilter === "all" ? "var(--color-brand)" : "var(--color-surface)",
+            color: eventFilter === "all" ? "#fff" : "var(--color-text-muted)",
+            border: eventFilter === "all" ? "none" : "1px solid var(--color-border)",
+          }}
+        >
+          All events
+        </button>
+        {eventTypes.map((eventType) => (
+          <button
+            key={eventType}
+            type="button"
+            onClick={() => setEventFilter(eventType)}
+            className="rounded-full px-2.5 py-1 text-[11px] font-medium"
+            style={{
+              background: eventFilter === eventType ? "var(--color-brand)" : "var(--color-surface)",
+              color: eventFilter === eventType ? "#fff" : "var(--color-text-muted)",
+              border: eventFilter === eventType ? "none" : "1px solid var(--color-border)",
+            }}
+          >
+            {eventType.replace(/_/g, " ")}
+          </button>
+        ))}
+      </div>
+
+      {filteredData.map((rec) => {
         const style   = EVENT_COLORS[rec.event_type] ?? { bg: "#f1f5f9", text: "#475569" };
         const summary = summarisePayload(rec.event_type, rec.payload);
         return (
@@ -557,6 +1048,16 @@ function EvidenceTab({ productId }: { productId: string }) {
           </div>
         );
       })}
+      {filteredData.length === 0 && (
+        <div
+          className="rounded-xl p-6 text-center"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            No evidence records match this filter.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -577,9 +1078,19 @@ export function ProductDetail({ productId }: { productId: string }) {
   const { data: productResponse, isLoading, error } = useDataProduct(productId);
   const { data: trustData }  = useTrustScore(productId);
   const { data: incidents }  = useIncidents({ product_id: productId });
+  const { data: evidence } = useQuery({
+    queryKey: ["product-evidence-summary", productId],
+    queryFn: () =>
+      fetch(`/api/products/${encodeURIComponent(productId)}/evidence`)
+        .then((r) => r.json())
+        .then((b: { data: EvidenceRecord[] }) => b.data ?? []),
+    staleTime: 30_000,
+    retry: 1,
+  });
 
   const [showEdit,   setShowEdit]   = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showManageMembers, setShowManageMembers] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const product    = (productResponse as { data?: DataProduct } | null)?.data ?? null;
@@ -588,6 +1099,9 @@ export function ProductDetail({ productId }: { productId: string }) {
     : null;
 
   const incidentCount = incidents?.filter((i) => i.status !== "resolved").length ?? 0;
+  const criticalIncidentCount = incidents?.filter((i) => i.status !== "resolved" && i.severity === "critical").length ?? 0;
+  const evidenceCount = evidence?.length ?? 0;
+  const latestEvidenceAt = evidence?.[0]?.recorded_at ?? null;
 
   const setTab = (t: Tab) => {
     const p = new URLSearchParams(searchParams.toString());
@@ -685,6 +1199,21 @@ export function ProductDetail({ productId }: { productId: string }) {
         </div>
       </div>
 
+      <div className="grid gap-4 mb-5 md:grid-cols-2 xl:grid-cols-4">
+        <ProductSignalCard label="Open incidents" value={incidentCount} hint="Current unresolved product issues" />
+        <ProductSignalCard label="Critical" value={criticalIncidentCount} hint="Highest-priority incidents" />
+        <ProductSignalCard label="Evidence" value={evidenceCount} hint="Recorded evidence events" />
+        <ProductSignalCard
+          label="Last evidence"
+          value={
+            latestEvidenceAt
+              ? new Date(latestEvidenceAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+              : "—"
+          }
+          hint="Most recent recorded product event"
+        />
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-1 mb-5 border-b" style={{ borderColor: "var(--color-border)" }}>
         {TABS.map(({ id, label }) => (
@@ -720,6 +1249,7 @@ export function ProductDetail({ productId }: { productId: string }) {
             trustScore={trustScore}
             refreshing={refreshing}
             onRefreshTrust={handleRefreshTrust}
+            onManageMembers={() => setShowManageMembers(true)}
           />
         )}
         {tab === "incidents" && <IncidentsTab productId={productId} />}
@@ -729,6 +1259,12 @@ export function ProductDetail({ productId }: { productId: string }) {
 
       {showEdit && (
         <EditProductModal product={product} onClose={() => setShowEdit(false)} />
+      )}
+      {showManageMembers && (
+        <ManageMembersModal
+          product={product}
+          onClose={() => setShowManageMembers(false)}
+        />
       )}
       {showDelete && (
         <DeleteConfirmModal

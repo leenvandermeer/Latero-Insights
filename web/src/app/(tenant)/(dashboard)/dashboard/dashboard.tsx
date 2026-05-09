@@ -60,7 +60,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
   const { data: sharedWidgets = [] } = useSharedWidgets();
   const { installation, installations, switchInstallation, validating } = useInstallation();
   const { mutateAsync: updateSharedWidget } = useUpdateSharedWidget();
-  const { from, to, setRange } = useDateRange();
+  const { from, to, preset, setRange, setPreset, summaryLabel } = useDateRange({ scope: `dashboard:${dashboardId}`, defaultPreset: "7d" });
   const { data: health } = useHealth();
   const { toggle: togglePin, isPinned } = usePinnedDashboards(installation?.installation_id);
   const [editMode, setEditMode] = useState(false);
@@ -347,7 +347,12 @@ export function DashboardCanvas({ dashboardId }: Props) {
               return source ? <SourceIndicator source={source} /> : null;
             })()}
 
-            <DateRangePicker from={from} to={to} onChange={setRange} />
+            <div className="flex flex-col items-end gap-1">
+              <DateRangePicker from={from} to={to} preset={preset} onChange={setRange} onPresetChange={setPreset} />
+              <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                Showing {summaryLabel}
+              </span>
+            </div>
 
             {publishDone && (
               <span

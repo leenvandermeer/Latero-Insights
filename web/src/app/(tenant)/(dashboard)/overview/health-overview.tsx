@@ -3,6 +3,7 @@
 import { useEstateHealth, useDataProducts } from "@/hooks/use-data-products";
 import { useRuns } from "@/hooks/use-runs";
 import { useIncidents } from "@/hooks/use-incidents";
+import { useDateRange } from "@/hooks/use-date-range";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -16,9 +17,11 @@ import {
   Clock,
   ClipboardList,
   Shield,
+  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { DateRangePicker } from "@/components/ui";
 
 const statusIcon = (s: string) => {
   switch (s) {
@@ -59,9 +62,8 @@ function relativeTime(iso: string): string {
 export function HealthOverview() {
   const { data: healthRes, isLoading: healthLoading } = useEstateHealth();
   const { data: productsRes, isLoading: productsLoading } = useDataProducts();
-  const today = new Date().toISOString().split("T")[0]!;
-  const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString().split("T")[0]!;
-  const { data: runsRes, isLoading: runsLoading } = useRuns({ from: weekAgo, to: today, limit: 10 });
+  const { from, to, preset, setRange, setPreset, summaryLabel } = useDateRange({ scope: "monitor:overview", defaultPreset: "7d" });
+  const { data: runsRes, isLoading: runsLoading } = useRuns({ from, to, limit: 10 });
 
   const health = healthRes?.data as Record<string, unknown> | undefined;
   const products = (productsRes?.data ?? []) as Array<Record<string, unknown>>;
@@ -115,15 +117,27 @@ export function HealthOverview() {
   return (
     <div className="flex flex-col gap-6" style={{ padding: "var(--spacing-page, 24px)" }}>
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold" style={{ color: "var(--color-text)" }}>
-          Estate Health
-        </h1>
-        {!!health?.last_run_at && (
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold" style={{ color: "var(--color-text)" }}>
+            Estate Health
+          </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            Last run {relativeTime(String(health.last_run_at))}
+            Showing {summaryLabel}
           </p>
-        )}
+          {!!health?.last_run_at && (
+            <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+              Last run {relativeTime(String(health.last_run_at))}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-1 pb-0.5">
+          <DateRangePicker from={from} to={to} preset={preset} onChange={setRange} onPresetChange={setPreset} />
+          <span className="flex items-center gap-1 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+            <Calendar className="h-3 w-3" />
+            Recent runs and monitor signals use this period
+          </span>
+        </div>
       </div>
 
       {/* Stat cards */}

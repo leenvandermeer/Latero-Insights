@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Package, Plus, MoreHorizontal, Pencil, Trash2, X } from "lucide-react";
 import {
   useDataProducts,
@@ -36,11 +37,9 @@ function SlaBadge({ tier }: { tier: string | null }) {
 function DataProductCard({
   product,
   onEdit,
-  onDelete,
 }: {
   product: DataProduct;
   onEdit: () => void;
-  onDelete: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -69,9 +68,13 @@ function DataProductCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-semibold truncate" style={{ color: "var(--color-text)" }}>
+              <Link
+                href={`/products/${encodeURIComponent(product.data_product_id)}`}
+                className="text-sm font-semibold truncate hover:underline"
+                style={{ color: "var(--color-text)" }}
+              >
                 {product.display_name}
-              </span>
+              </Link>
               <SlaBadge tier={product.sla_tier} />
             </div>
             {product.domain && (
@@ -82,7 +85,7 @@ function DataProductCard({
           </div>
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="opacity-0 group-hover:opacity-100 p-1 rounded transition-opacity"
+            className="p-1 rounded transition-opacity"
             style={{ color: "var(--color-text-muted)" }}
           >
             <MoreHorizontal className="h-4 w-4" />
@@ -120,7 +123,14 @@ function DataProductCard({
         )}
 
         {/* Footer */}
-        <div className="flex items-center gap-3 text-xs" style={{ color: "var(--color-text-muted)", borderTop: "1px solid var(--color-border)", paddingTop: 8 }}>
+        <div className="flex items-center gap-3 text-xs flex-wrap" style={{ color: "var(--color-text-muted)", borderTop: "1px solid var(--color-border)", paddingTop: 8 }}>
+          <Link
+            href={`/products/${encodeURIComponent(product.data_product_id)}`}
+            className="font-medium hover:underline"
+            style={{ color: "var(--color-brand)" }}
+          >
+            Open product
+          </Link>
           <span>{product.entity_count} {product.entity_count === 1 ? "entity" : "entities"}</span>
           {product.owner && <span>· {product.owner}</span>}
           <span className="ml-auto">Updated {updatedAgo}</span>
@@ -261,7 +271,7 @@ export function DataProductList() {
       {!isLoading && !isError && products.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {products.map((p) => (
-            <DataProductCard key={p.data_product_id} product={p} onEdit={() => openEdit(p)} onDelete={() => {}} />
+            <DataProductCard key={p.data_product_id} product={p} onEdit={() => openEdit(p)} />
           ))}
         </div>
       )}

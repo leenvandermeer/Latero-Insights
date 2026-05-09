@@ -23,7 +23,7 @@ const statusIcon = (status: string) => {
 export function QualityExplorer() {
   const [status, setStatus] = useState("");
   const [dataset, setDataset] = useState("");
-  const { from, to, setRange } = useDateRange();
+  const { from, to, preset, setRange, setPreset, summaryLabel } = useDateRange({ scope: "monitor:quality", defaultPreset: "7d" });
   const { data, isLoading, isError } = useQuality(from, to);
 
   const checks = useMemo(() => {
@@ -37,21 +37,22 @@ export function QualityExplorer() {
 
   return (
     <div className="flex flex-col h-full" style={{ padding: "var(--spacing-page, 24px)" }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <ShieldCheck className="h-5 w-5" style={{ color: "var(--color-brand)" }} />
+      <div className="flex flex-col gap-3 mb-5">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4" style={{ color: "var(--color-brand)" }} />
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>Data Quality</h1>
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>DQ check results</p>
+            <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Data Quality</h1>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Showing {summaryLabel}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Status filter */}
+
+        <div
+          className="flex flex-wrap items-center gap-2"
+        >
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="text-sm rounded-md border px-2 py-1.5"
+            className="h-9 text-sm rounded-md border px-2.5 min-w-40"
             style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
           >
             <option value="">All statuses</option>
@@ -59,16 +60,21 @@ export function QualityExplorer() {
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
-          {/* Dataset filter */}
           <input
             type="text"
             placeholder="Filter by dataset…"
             value={dataset}
             onChange={(e) => setDataset(e.target.value)}
-            className="text-sm rounded-md border px-2 py-1.5 w-44"
+            className="h-9 text-sm rounded-md border px-2.5 min-w-56 flex-1"
             style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
           />
-          <DateRangePicker from={from} to={to} onChange={setRange} />
+          <DateRangePicker
+            from={from}
+            to={to}
+            preset={preset}
+            onChange={setRange}
+            onPresetChange={setPreset}
+          />
         </div>
       </div>
 

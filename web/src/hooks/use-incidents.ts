@@ -11,12 +11,16 @@ export interface Incident {
   severity: "low" | "medium" | "high" | "critical";
   status: "open" | "in_progress" | "resolved";
   source_type: string | null;
-  source_run_id: string | null;
-  assigned_to: string | null;
-  opened_at: string;
-  resolved_at: string | null;
+  source_id?: string | null;
+  source_run_id?: string | null;
+  assignee?: string | null;
+  assigned_to?: string | null;
+  opened_at?: string;
   created_at: string;
+  updated_at?: string;
+  resolved_at: string | null;
   step_count?: number;
+  steps_completed?: number;
 }
 
 export interface CreateIncidentInput {
@@ -25,7 +29,9 @@ export interface CreateIncidentInput {
   product_id?: string;
   severity?: "low" | "medium" | "high" | "critical";
   source_type?: string;
+  source_id?: string;
   source_run_id?: string;
+  assignee?: string;
   assigned_to?: string;
 }
 
