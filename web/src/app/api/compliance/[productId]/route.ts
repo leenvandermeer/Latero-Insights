@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { requireSession } from "@/lib/session-auth";
 import { getPgPool } from "@/lib/insights-saas-db";
+import { evaluatePolicy } from "@/lib/policy-engine";
+import type { Policy } from "@/lib/policy-engine";
 
 function ip(r: NextRequest) {
   return r.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -48,6 +50,73 @@ export async function GET(
     return NextResponse.json({ data: result.rows });
   } catch (err) {
     console.error("[GET /api/compliance/[productId]]", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/compliance/[productId]
+ * Voert een enkele policy-check uit voor dit product en slaat het verdict op.
+ * Body: { policy_id: string }
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ productId: string }> }
+) {
+  const { allowed } = rateLimit(ip(request));
+  if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  let installationId: string;
+  try { installationId = await resolveInstallation(request); } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { productId } = await params;
+
+  let body: Record<string, unknown>;
+  try { body = await request.json(); } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const { policy_id } = body as { policy_id?: string };
+  if (!policy_id?.trim()) {
+    return NextResponse.json({ error: "policy_id is required" }, { status: 400 });
+  }
+
+  const pool = getPgPool();
+
+  try {
+    // Load the policy
+    const policyRes = await pool.query(
+      `SELECT * FROM meta.policies WHERE installation_id = $1 AND id = $2`,
+      [installationId, policy_id.trim()]
+    );
+    if (policyRes.rows.length === 0) {
+      return NextResponse.json({ error: "Policy not found" }, { status: 404 });
+    }
+
+    // Check product exists
+    const productRes = await pool.query(
+      `SELECT 1 FROM meta.data_products WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
+      [installationId, productId]
+    );
+    if (productRes.rows.length === 0) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const policy = policyRes.rows[0] as Policy;
+    const { verdict, detail } = await evaluatePolicy(policy, productId, installationId);
+
+    // Persist verdict
+    await pool.query(
+      `INSERT INTO meta.policy_verdicts (policy_id, installation_id, product_id, verdict, detail)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [policy.id, installationId, productId, verdict, detail ? JSON.stringify(detail) : null]
+    );
+
+    return NextResponse.json({ data: { verdict, detail: detail ?? {} } });
+  } catch (err) {
+    console.error("[POST /api/compliance/[productId]]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
