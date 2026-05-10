@@ -922,6 +922,26 @@ CREATE INDEX IF NOT EXISTS idx_product_cost_records_product
   ON meta.product_cost_records (installation_id, product_id, period_start DESC);
 
 -- =============================================================================
+-- Keycloak database-gebruiker en database
+-- =============================================================================
+-- Keycloak heeft een eigen Postgres-gebruiker en database nodig.
+-- Het wachtwoord wordt hier NIET hardgecodeerd — stel het in via:
+--   ALTER ROLE keycloak WITH PASSWORD '<wachtwoord>';
+-- Dit script zorgt alleen dat de role en database bestaan.
+-- -----------------------------------------------------------------------------
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'keycloak') THEN
+    CREATE ROLE keycloak WITH LOGIN;
+  END IF;
+END
+$$;
+
+SELECT 'CREATE DATABASE keycloak OWNER keycloak'
+WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'keycloak') \gexec
+
+-- =============================================================================
 -- Helper-functies
 -- =============================================================================
 
