@@ -30,7 +30,7 @@ services:
       - "127.0.0.1:3000:3000"          # alleen intern; Caddy zit ervoor
     volumes:
       - insights_cache:/app/web/.cache  # settings.json + API response cache (process.cwd() = /app/web)
-      - insights_data:/app/data        # shared-widgets.json
+      - insights_data:/app/web/data     # shared-widgets.json
     depends_on:
       postgres:
         condition: service_healthy

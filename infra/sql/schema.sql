@@ -332,6 +332,7 @@ CREATE TABLE IF NOT EXISTS meta.datasets (
   source_system   TEXT,
   entity_id       TEXT,
   dataset_facets  JSONB,
+  dataset_name    TEXT GENERATED ALWAYS AS (split_part(dataset_id, '::', 1)) STORED,
   valid_from      TIMESTAMPTZ NOT NULL DEFAULT now(),
   valid_to        TIMESTAMPTZ,
   first_seen_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -345,6 +346,8 @@ CREATE INDEX IF NOT EXISTS idx_meta_datasets_entity
   ON meta.datasets (installation_id, entity_id);
 CREATE INDEX IF NOT EXISTS idx_datasets_temporal
   ON meta.datasets (installation_id, valid_from, valid_to);
+CREATE INDEX IF NOT EXISTS idx_meta_datasets_name
+  ON meta.datasets (installation_id, dataset_name);
 
 -- -----------------------------------------------------------------------------
 -- meta.jobs
@@ -468,14 +471,16 @@ CREATE TABLE IF NOT EXISTS meta.lineage_edges (
   target_layer          TEXT,
   first_observed_run    UUID  REFERENCES meta.runs (run_id),
   last_observed_run     UUID  REFERENCES meta.runs (run_id),
+  source_kind           TEXT  NOT NULL DEFAULT 'dataset'
+                              CHECK (source_kind IN ('dataset', 'entity')),
+  target_kind           TEXT  NOT NULL DEFAULT 'dataset'
+                              CHECK (target_kind IN ('dataset', 'entity')),
   first_observed_at     TIMESTAMPTZ NOT NULL,
   last_observed_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   observation_count     INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY (edge_id),
   CONSTRAINT meta_lineage_edges_unique_hop
-    UNIQUE (installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer),
-  CONSTRAINT lineage_no_self_loop
-    CHECK (source_dataset_id <> target_dataset_id OR source_layer IS DISTINCT FROM target_layer)
+    UNIQUE (installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer)
 );
 
 CREATE INDEX IF NOT EXISTS idx_meta_lineage_edges_source
@@ -525,6 +530,7 @@ CREATE TABLE IF NOT EXISTS meta.data_products (
   owner           TEXT,
   domain          TEXT,
   tags            JSONB       NOT NULL DEFAULT '{}',
+  sla_tier        TEXT        CHECK (sla_tier IN ('bronze', 'silver', 'gold')),
   sla             JSONB,
   contract_ver    TEXT,
   deprecated_at   TIMESTAMPTZ,
@@ -576,14 +582,20 @@ CREATE INDEX IF NOT EXISTS idx_entities_temporal
 -- meta.entity_sources
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meta.entity_sources (
+  id                UUID        NOT NULL DEFAULT gen_random_uuid(),
   installation_id   TEXT        NOT NULL REFERENCES insights_installations (installation_id),
   entity_id         TEXT        NOT NULL,
   source_dataset_id TEXT        NOT NULL,
-  source_layer      TEXT,
+  source_layer      TEXT        NOT NULL
+                                CHECK (source_layer IN ('bronze', 'silver')),
   first_observed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_observed_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (installation_id, entity_id, source_dataset_id),
-  FOREIGN KEY (installation_id, entity_id) REFERENCES meta.entities (installation_id, entity_id) ON DELETE CASCADE
+  PRIMARY KEY (id),
+  UNIQUE (installation_id, entity_id, source_dataset_id),
+  CONSTRAINT meta_entity_sources_entity_fk
+    FOREIGN KEY (installation_id, entity_id)
+    REFERENCES meta.entities (installation_id, entity_id)
+    ON DELETE CASCADE
 );
 
 -- -----------------------------------------------------------------------------
