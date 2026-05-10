@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
   const cacheOnly = isCacheOnly();
   const databricksEnabled = settings.connectionMode === "databricks";
   const adapter = new DatabricksAdapter(installationId ?? undefined);
-  const connected = cacheOnly || !databricksEnabled ? false : await adapter.testConnection();
+  const connected = cacheOnly || !databricksEnabled
+    ? false
+    : await adapter.testConnection().catch(() => false);
   const cache = getCacheStatus();
 
   const configured = Boolean(
