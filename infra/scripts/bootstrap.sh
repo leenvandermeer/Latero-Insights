@@ -123,6 +123,7 @@ VALUES (
   TRUE
 )
 ON CONFLICT (email) DO UPDATE SET
+  password_hash  = crypt('${ADMIN_PASSWORD}', gen_salt('bf', 12)),
   is_admin       = TRUE,
   is_break_glass = TRUE,
   active         = TRUE,

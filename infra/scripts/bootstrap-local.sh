@@ -51,6 +51,7 @@ VALUES (
   TRUE, TRUE, TRUE
 )
 ON CONFLICT (email) DO UPDATE SET
+  password_hash  = crypt('Admin1234!', gen_salt('bf', 12)),
   is_admin       = TRUE,
   is_break_glass = TRUE,
   active         = TRUE,
