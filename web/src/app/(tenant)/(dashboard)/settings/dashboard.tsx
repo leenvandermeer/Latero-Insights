@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHealth } from "@/hooks";
+import { useInstallation } from "@/contexts/installation-context";
 import { fetchSettings, updateSettings } from "@/lib/api";
 import type { ApiHealthResponse } from "@/lib/api";
 import { PageHeader } from "@/components/ui";
@@ -61,6 +62,8 @@ function SummaryTile({ label, value, meta }: { label: string; value: string; met
 
 export function SettingsDashboard() {
   const { data: health, refetch: refetchHealth } = useHealth();
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -83,9 +86,10 @@ export function SettingsDashboard() {
     cacheOnly: false,
   });
 
-  const { data: settingsData } = useQuery({
-    queryKey: ["settings"],
+  const { data: settingsData, isLoading: isLoadingSettings } = useQuery({
+    queryKey: ["settings", installationId],
     queryFn: fetchSettings,
+    staleTime: 0,
   });
 
   useEffect(() => {
@@ -276,12 +280,14 @@ export function SettingsDashboard() {
                 <button
                   key={mode}
                   type="button"
+                  disabled={isLoadingSettings}
                   onClick={() => setForm((p) => ({ ...p, connectionMode: mode }))}
                   className="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
                   style={{
-                    border: `1px solid ${form.connectionMode === mode ? "var(--color-brand, #1B3B6B)" : "var(--color-border)"}`,
-                    background: form.connectionMode === mode ? "var(--color-brand-subtle, rgba(27,59,107,0.08))" : "transparent",
-                    color: form.connectionMode === mode ? "var(--color-brand, #1B3B6B)" : "var(--color-text-muted)",
+                    border: `1px solid ${!isLoadingSettings && form.connectionMode === mode ? "var(--color-brand, #1B3B6B)" : "var(--color-border)"}`,
+                    background: !isLoadingSettings && form.connectionMode === mode ? "var(--color-brand-subtle, rgba(27,59,107,0.08))" : "transparent",
+                    color: !isLoadingSettings && form.connectionMode === mode ? "var(--color-brand, #1B3B6B)" : "var(--color-text-muted)",
+                    opacity: isLoadingSettings ? 0.5 : 1,
                   }}
                 >
                   {mode === "databricks" ? "Databricks sync" : "API ingest"}
