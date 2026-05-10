@@ -11,7 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - insights_postgres_data:/var/lib/postgresql/data
-      - ../sql/init:/docker-entrypoint-initdb.d:ro
+      - ../sql/schema.sql:/docker-entrypoint-initdb.d/000_schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U insights -d insights"]
       interval: 10s
