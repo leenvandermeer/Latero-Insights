@@ -28,10 +28,11 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs
 
-# Standalone build output (Next.js standalone schrijft naar web/.next/standalone)
+# Standalone build output — workspace-structuur blijft behouden in de standalone dir
+# server.js staat op /app/web/server.js, static files op /app/web/.next/static
 COPY --from=builder /app/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./.next/static
-COPY --from=builder /app/web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
+COPY --from=builder /app/web/public ./web/public
 
 # Persistent state directories — mounted as volumes in production
 RUN mkdir -p /app/.cache /app/data \
@@ -40,4 +41,4 @@ RUN mkdir -p /app/.cache /app/data \
 USER nextjs
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["node", "web/server.js"]
