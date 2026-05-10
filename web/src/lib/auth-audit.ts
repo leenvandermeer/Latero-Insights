@@ -72,5 +72,17 @@ export async function logAuthEvent(params: AuditEventParams): Promise<void> {
 export function validateOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
   if (!origin) return true; // Geen Origin → geen browser cross-origin request
-  return origin === request.nextUrl.origin;
+
+  // Achter een reverse proxy kan request.nextUrl.origin afwijken van de publieke URL.
+  // Vergelijk ook met X-Forwarded-Host + X-Forwarded-Proto als die aanwezig zijn.
+  if (origin === request.nextUrl.origin) return true;
+
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+  if (forwardedHost) {
+    const publicOrigin = `${forwardedProto}://${forwardedHost}`;
+    if (origin === publicOrigin) return true;
+  }
+
+  return false;
 }
