@@ -87,17 +87,38 @@ END $$;
 --     dus DROP ... CASCADE is veilig.
 DO $$
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'meta_datasets_pkey'
-  ) THEN
-    ALTER TABLE meta.datasets DROP CONSTRAINT meta_datasets_pkey CASCADE;
-  END IF;
+  -- Verwijder alle bestaande primary keys op de datasets-tabel (ongeacht naam)
+  EXECUTE (
+    SELECT string_agg(
+      'ALTER TABLE meta.datasets DROP CONSTRAINT ' || quote_ident(conname) || ' CASCADE;',
+      ' '
+    )
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE c.contype = 'p'
+      AND t.relname = 'datasets'
+      AND n.nspname = 'meta'
+  );
+EXCEPTION WHEN OTHERS THEN
+  NULL; -- geen PK gevonden, doorgaan
 END $$;
 
-ALTER TABLE meta.datasets
-  ADD CONSTRAINT meta_datasets_pkey
-    PRIMARY KEY (installation_id, dataset_id, layer);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE c.contype = 'p'
+      AND t.relname = 'datasets'
+      AND n.nspname = 'meta'
+  ) THEN
+    ALTER TABLE meta.datasets
+      ADD CONSTRAINT meta_datasets_pkey
+        PRIMARY KEY (installation_id, dataset_id, layer);
+  END IF;
+END $$;
 
 -- 2d. meta.run_io: UNIQUE uitbreiden met layer zodat (run, entity, layer, role) uniek is
 DO $$
