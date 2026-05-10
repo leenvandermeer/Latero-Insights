@@ -35,8 +35,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/stat
 COPY --from=builder /app/web/public ./web/public
 
 # Persistent state directories — mounted as volumes in production
-RUN mkdir -p /app/.cache /app/data \
- && chown nextjs:nodejs /app/.cache /app/data
+RUN mkdir -p /app/.cache /app/web/.cache /app/data \
+ && chown nextjs:nodejs /app/.cache /app/web/.cache /app/data
 
 USER nextjs
 EXPOSE 3000
