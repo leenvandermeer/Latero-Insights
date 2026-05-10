@@ -24,7 +24,8 @@
     "prod:up": "docker compose -f infra/docker/docker-compose.prod.yml -f infra/docker/docker-compose.prod-sso.yml --env-file infra/.env.prod up -d",
     "prod:down": "docker compose -f infra/docker/docker-compose.prod.yml -f infra/docker/docker-compose.prod-sso.yml --env-file infra/.env.prod down",
     "prod:logs": "docker compose -f infra/docker/docker-compose.prod.yml -f infra/docker/docker-compose.prod-sso.yml --env-file infra/.env.prod logs -f",
-    "prod:build": "docker build -f infra/docker/Dockerfile -t meta-insights:latest ."
+    "prod:build": "docker build -f infra/docker/Dockerfile -t meta-insights:latest .",
+    "deploy": "bash infra/scripts/deploy-remote.sh"
   },
   "dependencies": {
     "date-fns": "^4.1.0"

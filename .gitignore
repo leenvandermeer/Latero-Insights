@@ -14,6 +14,7 @@ build/
 .env*.local
 web/.env*.local
 infra/.env.prod
+infra/.env.deploy
 infra/keycloak/realm-latero-prod.rendered.json
 
 # debug
