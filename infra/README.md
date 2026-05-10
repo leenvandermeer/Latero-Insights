@@ -32,10 +32,9 @@ de volledige OIDC-flow lokaal testen, inclusief HTTPS.
 
 ### Test users
 
-| Gebruiker           | Wachtwoord | Groep           |
-|---------------------|------------|-----------------|
-| alice@acme.test     | Test1234!  | latero-users    |
-| bob@acme.test       | Test1234!  | latero-admins   |
+| Gebruiker           | Wachtwoord  | Groep           |
+|---------------------|-------------|-----------------|
+| leen@latero.nl      | Latero1234! | latero-admins   |
 
 Keycloak admin: `http://localhost:8080` — gebruiker `admin` / `admin`
 
