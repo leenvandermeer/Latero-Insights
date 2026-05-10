@@ -228,5 +228,70 @@ npm run infra:reset-db
 npm run dev:docker:up    # Web + infra in Docker for development
 npm run dev:docker:logs
 npm run dev:docker:down
+
+npm run deploy           # Deploy naar productie (zie hieronder)
 ```
+
+## Production deployment
+
+Latero Control draait in productie op een Hetzner VPS (SSH alias `latero-prod`).
+De deploy pipeline gebruikt Docker Compose en wordt getriggerd met één commando vanuit de repository root.
+
+### Vereisten
+
+- SSH-toegang tot `latero-prod` (`root@195.201.99.215`) — configureer dit als SSH-alias
+- Repository staat op de server onder `/opt/latero-control`
+- `infra/.env.prod` met productie-omgevingsvariabelen (niet in git)
+
+### Deployen
+
+```bash
+npm run deploy
+```
+
+Dit voert `infra/scripts/deploy-remote.sh` uit, dat:
+
+1. **Git pull** op de productieserver — haalt de laatste commit op
+2. **Docker build** — bouwt een nieuwe `meta-insights:latest` image (Next.js standalone)
+3. **DB-migraties** — voert alle `sql/init/*.sql` idempotent uit op de productie-Postgres
+4. **Containers herstarten** — herstart `insights-app` en `insights-caddy` via Docker Compose
+5. **Health check** — verifieert dat `/api/health` HTTP 200 teruggeeft
+
+### Productie-omgeving
+
+| Component | Details |
+|-----------|---------|
+| Server | Hetzner VPS, Ubuntu |
+| URL | `https://control.latero.nl` (via Caddy reverse proxy) |
+| App container | `insights-app` (Next.js standalone, poort 3000 intern) |
+| Database | `insights-postgres` (PostgreSQL 16, schema `meta` + `public`) |
+| Caddy | `insights-caddy` (TLS-terminatie, reverse proxy) |
+
+### Persistente volumes
+
+| Volume | Mount | Bevat |
+|--------|-------|-------|
+| `insights_cache` | `/app/.cache` | Runtime settings per installatie (`settings.json`) |
+| `insights_data` | `/app/data` | Shared widget library (`shared-widgets.json`) |
+| `insights_postgres_data` | Postgres data dir | Alle pipeline-, quality- en lineage-data |
+
+> **Let op:** De `insights_cache` volume overleeft deploys. Databricks-credentials die je via
+> Settings UI hebt ingevoerd en opgeslagen, blijven bewaard na een nieuwe deploy.
+
+### Eerste keer opzetten (fresh server)
+
+```bash
+ssh latero-prod
+cd /opt/latero-control
+cp infra/.env.prod.example infra/.env.prod   # vul productiewaarden in
+docker compose -f infra/docker/docker-compose.prod.yml --env-file infra/.env.prod up -d
+```
+
+Daarna vanuit lokaal:
+
+```bash
+npm run deploy
+```
+
+Na de eerste deploy: open `https://control.latero.nl/settings`, sla Databricks-credentials op en trigger een eerste sync.
 
