@@ -26,10 +26,10 @@ export default async function AdminLoginPage() {
 
   return (
     <div
-      className="min-h-screen px-4 py-10"
+      className="admin-theme min-h-screen px-4 py-10"
       style={{
         background:
-          "radial-gradient(circle at 12% 12%, rgba(200,137,42,0.16), transparent 20%), radial-gradient(circle at 88% 84%, rgba(27,59,107,0.16), transparent 26%), var(--color-bg)",
+          "radial-gradient(ellipse at 0% 0%, rgba(200,137,42,0.28) 0%, transparent 45%), radial-gradient(ellipse at 100% 100%, rgba(27,59,107,0.28) 0%, transparent 45%), var(--color-bg)",
       }}
     >
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-sm flex-col items-center justify-center gap-6">
