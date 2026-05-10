@@ -61,7 +61,7 @@ PG_CONTAINER="insights-postgres"
 PG_USER="insights"
 PG_DB="insights"
 
-for sql_file in "${SQL_DIR}"/*.sql; do
+for sql_file in $(ls -v "${SQL_DIR}"/*.sql); do
   filename="$(basename "${sql_file}")"
   docker exec -i "${PG_CONTAINER}" \
     psql -U "${PG_USER}" -d "${PG_DB}" \
