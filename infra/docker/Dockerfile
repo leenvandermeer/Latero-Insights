@@ -1,14 +1,14 @@
 # ── Stage 1: install deps ─────────────────────────────────────────────────────
-# Build context: repo root (npm workspace — package-lock.json zit in de root)
-FROM node:20-alpine AS deps
+# Gebruik node:20 (Debian/glibc) voor de build-stages zodat native binaries
+# zoals lightningcss correct resolven. Alpine runtime heeft ze niet nodig.
+FROM node:20 AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY web/package.json ./web/
-# Forceer Alpine (musl) platform-binaries voor native deps zoals lightningcss
-RUN npm_config_os=linux npm_config_cpu=x64 npm_config_libc=musl npm ci
+RUN npm ci
 
 # ── Stage 2: build ────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:20 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/web/node_modules ./web/node_modules
