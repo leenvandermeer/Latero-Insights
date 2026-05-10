@@ -252,14 +252,20 @@ export async function GET(request: NextRequest) {
       ? redirect_after
       : "/pipelines";
 
-  const response = NextResponse.redirect(new URL(safeRedirect, request.nextUrl.origin));
+  const response = NextResponse.redirect(new URL(safeRedirect, getPublicOrigin(request)));
   attachSessionCookie(response, rawToken, request);
   clearOidcFlowCookie(response, request);
   return response;
 }
 
+function getPublicOrigin(request: NextRequest): string {
+  const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
+  const host = request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
+  return `${proto}://${host}`;
+}
+
 function redirectError(request: NextRequest, code: string): NextResponse {
-  const url = new URL(`/login?error=${encodeURIComponent(code)}`, request.nextUrl.origin);
+  const url = new URL(`/login?error=${encodeURIComponent(code)}`, getPublicOrigin(request));
   const response = NextResponse.redirect(url);
   // Wis de flow state cookie ook bij fout (single-use nonce)
   clearOidcFlowCookie(response, request);

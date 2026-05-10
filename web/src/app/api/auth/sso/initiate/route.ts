@@ -40,10 +40,15 @@ export async function GET(request: NextRequest) {
   // Valideer next-pad om open-redirect te voorkomen
   const safeNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/pipelines";
 
+  // Publieke origin: gebruik X-Forwarded-* headers als beschikbaar (achter reverse proxy)
+  const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
+  const host = request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
+  const publicOrigin = `${proto}://${host}`;
+
   // Bepaal domein uit hint
   const domain = hint.includes("@") ? hint.split("@")[1] ?? "" : hint;
   if (!domain || !domain.includes(".")) {
-    return NextResponse.redirect(new URL("/login?error=sso_config_missing", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/login?error=sso_config_missing", publicOrigin));
   }
 
   // Zoek installatie op basis van domein (server-side, FP-003)
@@ -51,17 +56,17 @@ export async function GET(request: NextRequest) {
   try {
     policy = await getAuthPolicyByDomain(domain);
   } catch {
-    return NextResponse.redirect(new URL("/login?error=sso_config_missing", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/login?error=sso_config_missing", publicOrigin));
   }
 
   if (!policy.installation_id || !policy.sso_available) {
-    return NextResponse.redirect(new URL("/login?error=sso_config_missing", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/login?error=sso_config_missing", publicOrigin));
   }
 
   // Haal SSO-configuratie op
   const ssoConfig = await getSsoConfig(policy.installation_id);
   if (!ssoConfig || !ssoConfig.enabled) {
-    return NextResponse.redirect(new URL("/login?error=sso_config_missing", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/login?error=sso_config_missing", publicOrigin));
   }
 
   // Verifieer dat client secret beschikbaar is vóór redirect
@@ -70,7 +75,7 @@ export async function GET(request: NextRequest) {
     clientSecret = resolveClientSecret(policy.installation_id);
     void clientSecret; // gebruikt bij token exchange (callback)
   } catch {
-    return NextResponse.redirect(new URL("/login?error=sso_config_missing", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/login?error=sso_config_missing", publicOrigin));
   }
 
   // Genereer PKCE, state, nonce
