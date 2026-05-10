@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { STATIC_FIELD_REFERENCES, mergeFieldReferences, getFieldValues, type FieldReference, type FieldValueEntry } from "@/lib/widget-field-reference";
 import type { ApiResponse } from "@/lib/api";
+import { useInstallation } from "@/contexts/installation-context";
 
 async function fetchFieldValues(): Promise<ApiResponse<FieldReference[]>> {
   const res = await fetch("/api/field-values");
@@ -11,8 +12,10 @@ async function fetchFieldValues(): Promise<ApiResponse<FieldReference[]>> {
 }
 
 export function useFieldValues() {
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   const { data } = useQuery<ApiResponse<FieldReference[]>>({
-    queryKey: ["field-values"],
+    queryKey: ["field-values", installationId],
     queryFn: fetchFieldValues,
     staleTime: 5 * 60 * 1000,
     retry: false,

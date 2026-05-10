@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInstallation } from "@/contexts/installation-context";
 
 export interface Incident {
   id: number;
@@ -49,6 +50,8 @@ export function useIncidents(params?: {
   severity?: string;
   product_id?: string;
 }) {
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   const searchParams = new URLSearchParams();
   if (params?.status) searchParams.set("status", params.status);
   if (params?.severity) searchParams.set("severity", params.severity);
@@ -56,7 +59,7 @@ export function useIncidents(params?: {
   const qs = searchParams.toString();
 
   return useQuery({
-    queryKey: ["incidents", params],
+    queryKey: ["incidents", installationId, params],
     queryFn: () =>
       apiFetch<{ data: Incident[] }>(`/api/incidents${qs ? `?${qs}` : ""}`)
         .then((r) => r.data ?? []),
@@ -87,6 +90,6 @@ export function useUpdateIncident() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["incidents"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["incidents"] }),  // invalidates all installation variants
   });
 }

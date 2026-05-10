@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInstallation } from "@/contexts/installation-context";
 import {
   listPolicies,
   getComplianceMatrix,
@@ -20,8 +21,10 @@ import type { Policy, PolicyPack, ComplianceMatrix } from "@/lib/api/policies";
 export type { Policy, PolicyPack, ComplianceMatrix };
 
 export function usePolicies() {
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   return useQuery({
-    queryKey: ["policies"],
+    queryKey: ["policies", installationId],
     queryFn: listPolicies,
     staleTime: 60_000,
     retry: 1,
@@ -29,8 +32,10 @@ export function usePolicies() {
 }
 
 export function useComplianceMatrix() {
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   return useQuery({
-    queryKey: ["compliance"],
+    queryKey: ["compliance", installationId],
     queryFn: getComplianceMatrix,
     staleTime: 30_000,
     retry: 1,
@@ -72,8 +77,10 @@ export function useDeletePolicy() {
 }
 
 export function usePolicyPacks() {
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
   return useQuery({
-    queryKey: ["policy-packs"],
+    queryKey: ["policy-packs", installationId],
     queryFn: listPolicyPacks,
     staleTime: 60_000,
     retry: 1,
