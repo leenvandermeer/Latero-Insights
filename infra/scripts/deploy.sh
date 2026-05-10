@@ -54,8 +54,26 @@ docker build \
   "${REPO_DIR}"
 echo ""
 
-# ── Stap 3: Containers herstarten ─────────────────────────────────────────
-echo "▶  3/4  Containers herstarten (app + caddy)..."
+# ── Stap 3: DB-migraties ───────────────────────────────────────────────────
+echo "▶  3/5  DB-migraties uitvoeren..."
+SQL_DIR="${REPO_DIR}/infra/sql/init"
+PG_CONTAINER="insights-postgres"
+PG_USER="insights"
+PG_DB="insights"
+
+for sql_file in "${SQL_DIR}"/*.sql; do
+  filename="$(basename "${sql_file}")"
+  docker exec -i "${PG_CONTAINER}" \
+    psql -U "${PG_USER}" -d "${PG_DB}" \
+    -v ON_ERROR_STOP=0 \
+    < "${sql_file}" > /dev/null 2>&1 \
+    && echo "   ✓  ${filename}" \
+    || echo "   ⚠  ${filename} (mogelijk al uitgevoerd)"
+done
+echo ""
+
+# ── Stap 4: Containers herstarten ─────────────────────────────────────────
+echo "▶  4/5  Containers herstarten (app + caddy)..."
 docker compose \
   -f "${COMPOSE_BASE}" \
   -f "${COMPOSE_SSO}" \
@@ -63,8 +81,8 @@ docker compose \
   up -d --no-deps app caddy
 echo ""
 
-# ── Stap 4: Health check ───────────────────────────────────────────────────
-echo "▶  4/4  Health check..."
+# ── Stap 5: Health check ───────────────────────────────────────────────────
+echo "▶  5/5  Health check..."
 sleep 4
 
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
