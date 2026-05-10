@@ -1,0 +1,15 @@
+node_modules
+web/node_modules
+web/.next
+.git
+.DS_Store
+npm-debug.log*
+web/coverage
+web/build
+web/out
+web/tsconfig.tsbuildinfo
+web/.env*.local
+infra/.env.prod
+infra/keycloak/realm-latero-prod.rendered.json
+.cache
+web/.cache
