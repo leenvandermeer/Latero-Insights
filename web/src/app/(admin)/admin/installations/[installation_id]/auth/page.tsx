@@ -379,6 +379,36 @@ export default function AdminInstallationAuthPage() {
 
               <div>
                 <label className="block text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
+                  Allowed domains <span style={{ color: "var(--color-error)" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={policy.allowed_domains?.join(", ") ?? ""}
+                  onChange={(e) => {
+                    const raw = e.target.value
+                      .split(",")
+                      .map((segment) => segment.trim().toLowerCase())
+                      .filter(Boolean);
+                    handlePolicyChange("allowed_domains", raw.length ? raw : null);
+                  }}
+                  placeholder="example.com, acme.org"
+                  className={`${fieldClassName} font-mono`}
+                  style={fieldStyle}
+                />
+                {!policy.allowed_domains?.length && (
+                  <p className="mt-2 text-xs" style={{ color: "var(--color-error)" }}>
+                    Vereist voor SSO-domeinherkenning op de loginpagina.
+                  </p>
+                )}
+                {!!policy.allowed_domains?.length && (
+                  <p className="mt-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    Kommagescheiden. Gebruikers met dit domein krijgen de SSO-knop te zien.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
                   Allowed groups / roles
                 </label>
                 <input
@@ -492,28 +522,7 @@ export default function AdminInstallationAuthPage() {
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
-                Allowed domains
-              </label>
-              <input
-                type="text"
-                value={policy.allowed_domains?.join(", ") ?? ""}
-                onChange={(e) => {
-                  const raw = e.target.value
-                    .split(",")
-                    .map((segment) => segment.trim().toLowerCase())
-                    .filter(Boolean);
-                  handlePolicyChange("allowed_domains", raw.length ? raw : null);
-                }}
-                placeholder="example.com, acme.org"
-                className={`${fieldClassName} max-w-sm font-mono`}
-                style={fieldStyle}
-              />
-              <p className="mt-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                Used for domain-based SSO discovery.
-              </p>
-            </div>
+
           </div>
         </AdminSurface>
 
