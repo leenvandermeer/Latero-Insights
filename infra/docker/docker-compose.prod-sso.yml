@@ -12,14 +12,12 @@
 # App: control.latero.nl | IDP: sso.latero.nl
 
 services:
-  # ── Postgres: extra initialisatie voor Keycloak DB ──────────────────────────
-  # Voegt het keycloak-init shell-script toe aan initdb.d.
-  # Alleen uitgevoerd bij eerste opstart (lege volume).
+  # ── Postgres: extra env var voor Keycloak DB wachtwoord ─────────────────────
+  # Het init-script infra/sql/init/999_keycloak_db.sh wordt automatisch
+  # uitgevoerd via de bestaande volume mount in docker-compose.prod.yml.
   postgres:
     environment:
       KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
-    volumes:
-      - ../sql/keycloak-init.sh:/docker-entrypoint-initdb.d/999_keycloak_db.sh:ro
 
   # ── Keycloak ─────────────────────────────────────────────────────────────────
   keycloak:
