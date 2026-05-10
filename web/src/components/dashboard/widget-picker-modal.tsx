@@ -10,6 +10,7 @@ import { useSharedWidgets } from "@/hooks/use-shared-widgets";
 import { useFieldValues } from "@/hooks";
 import { executeQuery, DATA_SOURCE_LABELS, DATA_SOURCE_FIELDS, FIELD_LABELS, NUMERIC_FIELDS } from "@/lib/query-engine";
 import { WidgetRenderer } from "@/app/(tenant)/(dashboard)/dashboard/widgets/widget-renderer";
+import { WIDGET_REGISTRY } from "@/app/(tenant)/(dashboard)/dashboard/registry";
 import type { WidgetCategory } from "@/types/dashboard";
 import type { DataSource, GroupBy, MeasureType, QueryConfig, QueryFilter, VisualType } from "@/types/dashboard";
 
@@ -279,6 +280,9 @@ export function WidgetPickerDrawer({ open, onAdd, onCreateCustom, onClose }: Dra
   const q = search.toLowerCase();
   useEffect(() => { if (q) setActiveTab("all"); }, [q]);
 
+  const filteredRegistry = WIDGET_REGISTRY.filter(
+    (w) => w.label.toLowerCase().includes(q) || w.description.toLowerCase().includes(q)
+  );
   const filteredShared = sharedWidgets.filter(
     (w) => w.label.toLowerCase().includes(q) || (w.description ?? "").toLowerCase().includes(q)
   );
@@ -288,8 +292,9 @@ export function WidgetPickerDrawer({ open, onAdd, onCreateCustom, onClose }: Dra
 
   const CATEGORIES: WidgetCategory[] = ["counter", "charts", "tables", "overview"];
   const sharedByCategory = (cat: WidgetCategory) => filteredShared.filter((w) => w.category === cat);
+  const registryByCategory = (cat: WidgetCategory) => filteredRegistry.filter((w) => w.category === cat);
 
-  const noResults = !filteredShared.length && !filteredCustom.length;
+  const noResults = !filteredRegistry.length && !filteredShared.length && !filteredCustom.length;
   const fields = DATA_SOURCE_FIELDS[dataSource] ?? [];
   const numericFields = NUMERIC_FIELDS[dataSource] ?? [];
   const selectedMeasure = MEASURE_OPTIONS.find((option) => option.type === measureType)!;
@@ -456,12 +461,19 @@ export function WidgetPickerDrawer({ open, onAdd, onCreateCustom, onClose }: Dra
             {view === "library" ? (
               <>
                 {CATEGORIES.map((cat) => {
-                  const items = sharedByCategory(cat);
-                  if (!items.length || (activeTab !== "all" && activeTab !== cat)) return null;
+                  const registryItems = registryByCategory(cat);
+                  const sharedItems = sharedByCategory(cat);
+                  if (!registryItems.length && !sharedItems.length) return null;
+                  if (activeTab !== "all" && activeTab !== cat) return null;
                   const catLabel = cat === "counter" ? "Counters" : cat === "charts" ? "Charts" : cat === "tables" ? "Tables" : "Overview";
                   return (
                     <DrawerSection key={cat} label={catLabel}>
-                      {items.map((sw) => (
+                      {registryItems.map((w) => (
+                        <DrawerWidgetRow key={w.type} label={w.label} description={w.description}
+                          badge="Built-in" added={justAdded.has(w.type)}
+                          onAdd={() => handleAdd(w.type, undefined, w.defaultSize)} />
+                      ))}
+                      {sharedItems.map((sw) => (
                         <DrawerWidgetRow key={sw.id} label={sw.label} description={sw.description ?? ""}
                           badge="Shared" added={justAdded.has(sw.id)}
                           onAdd={() => handleAdd("shared", sw.id, sw.defaultSize)} />
