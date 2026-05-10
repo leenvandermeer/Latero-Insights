@@ -10,6 +10,11 @@ export interface SyncResult {
   dq_checks: number;
   lineage: number;
   column_lineage: number;
+  diagnostics?: {
+    environment_filter: string | null;
+    date_range: { from: string; to: string };
+    rows_from_databricks: { runs: number; dq_checks: number; lineage: number; column_lineage: number };
+  };
 }
 
 function assertDate(value: string): string {
@@ -51,15 +56,22 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
   const adapter = new DatabricksAdapter(installationId);
   const pool = getPgPool();
 
-  const [runs, checks, hops] = await Promise.all([
+  const [runs, checks, hops, environmentFilter] = await Promise.all([
     adapter.getPipelineRuns({ from, to }),
     adapter.getDataQualityChecks({ from, to }),
     adapter.getLineageHops({ from, to }),
+    adapter.getActiveEnvironmentScope(),
   ]);
 
   // Column lineage: snapshot uit lineage_attributes_current (niet tijdgebonden)
   // Wordt geparallel opgehaald want onafhankelijk van date range
   const attributes = await adapter.getLineageAttributes();
+
+  if (runs.length === 0 && checks.length === 0 && hops.length === 0) {
+    console.warn(
+      `[sync/databricks] 0 records van Databricks — range: ${from}→${to}, environment_filter: ${environmentFilter ?? "(geen)"}`,
+    );
+  }
 
   for (const run of runs) {
     await writeMetaPipelineRun(pool, {
@@ -129,5 +141,15 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
     dq_checks: checks.length,
     lineage: hops.length,
     column_lineage: attributes.length,
+    diagnostics: {
+      environment_filter: environmentFilter,
+      date_range: { from, to },
+      rows_from_databricks: {
+        runs: runs.length,
+        dq_checks: checks.length,
+        lineage: hops.length,
+        column_lineage: attributes.length,
+      },
+    },
   };
 }

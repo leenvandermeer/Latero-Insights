@@ -193,6 +193,11 @@ async function scopedWhereClause(table: string, columns: string[], basePredicate
 export class DatabricksAdapter implements DataAdapter {
   constructor(private installationId?: string) {}
 
+  async getActiveEnvironmentScope(): Promise<string | null> {
+    const columns = await describeColumns("runs", this.installationId);
+    return resolveEnvironmentScope("runs", columns, this.installationId);
+  }
+
   async getLineageSchemaInventory(): Promise<LineageSchemaInventory> {
     const id = this.installationId;
     const [entities, attributes, hops] = await Promise.all([

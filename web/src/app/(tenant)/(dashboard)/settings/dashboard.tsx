@@ -174,17 +174,29 @@ export function SettingsDashboard() {
     setSyncResult(null);
     try {
       const res = await fetch("/api/sync/databricks", { method: "POST", credentials: "include" });
-      const data = await res.json() as { synced?: Record<string, number>; duration_ms?: number; error?: string; range?: { from: string; to: string } };
+      const data = await res.json() as {
+        synced?: Record<string, number>;
+        duration_ms?: number;
+        error?: string;
+        range?: { from: string; to: string };
+        diagnostics?: { environment_filter: string | null; date_range: { from: string; to: string } };
+      };
       if (!res.ok) {
         setSyncResult({ ok: false, message: data.error ?? "Sync failed." });
       } else {
         const counts = data.synced ?? {};
-        const total = Object.values(counts).reduce((s, n) => s + n, 0);
+        const total = Object.values(counts).reduce((s, n) => s + (typeof n === "number" ? n : 0), 0);
         if (total === 0) {
+          const envInfo = data.diagnostics?.environment_filter
+            ? ` • environment filter: "${data.diagnostics.environment_filter}"`
+            : "";
+          const rangeInfo = data.diagnostics?.date_range
+            ? ` • range: ${data.diagnostics.date_range.from} → ${data.diagnostics.date_range.to}`
+            : "";
           setSyncResult({
             ok: true,
             empty: true,
-            message: `Sync complete — no new records found. Existing data unchanged. (${Math.round((data.duration_ms ?? 0) / 1000)}s)`,
+            message: `Sync complete — 0 records from Databricks. (${Math.round((data.duration_ms ?? 0) / 1000)}s${envInfo}${rangeInfo})`,
           });
         } else {
           setSyncResult({ ok: true, message: `Synced ${total} records in ${Math.round((data.duration_ms ?? 0) / 1000)}s` });

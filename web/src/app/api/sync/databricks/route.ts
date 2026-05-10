@@ -66,7 +66,12 @@ export async function POST(request: NextRequest) {
     const synced = await syncFromDatabricks({ from, to }, session.active_installation_id ?? undefined);
     const duration_ms = Date.now() - started;
 
-    const response = NextResponse.json({ synced, duration_ms, range: { from, to } });
+    const response = NextResponse.json({
+      synced,
+      duration_ms,
+      range: { from, to },
+      diagnostics: synced.diagnostics,
+    });
     response.headers.set("X-RateLimit-Remaining", String(remaining));
     return response;
   } catch (err) {
