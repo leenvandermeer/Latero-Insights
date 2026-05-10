@@ -4,9 +4,8 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY web/package.json ./web/
-# npm ci zonder --workspace installeert root + alle workspace packages correct
-# inclusief gehoiste native binaries zoals lightningcss
-RUN npm ci
+# Forceer Alpine (musl) platform-binaries voor native deps zoals lightningcss
+RUN npm_config_os=linux npm_config_cpu=x64 npm_config_libc=musl npm ci
 
 # ── Stage 2: build ────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
