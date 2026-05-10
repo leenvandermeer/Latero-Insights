@@ -15,6 +15,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+### Fixed (2026-05-10) — Installatie-isolatie TanStack Query
+
+- **Cross-installatie cache-bleed volledig opgelost**: alle TanStack Query keys zijn nu gescopeerd op `installationId`. Switchen tussen installaties (bijv. `local_dev` → `prod`) toont nooit meer stale data van een andere installatie.
+- **`use-health`**: query key `["health"]` → `["health", installationId]`.
+- **`use-incidents`**: query key `["incidents", params]` → `["incidents", installationId, params]`.
+- **`use-compliance`**: query keys `["policies"]`, `["compliance"]`, `["policy-packs"]` allen uitgebreid met `installationId`.
+- **`use-field-values`**: query key `["field-values"]` → `["field-values", installationId]`.
+- **`settings/dashboard.tsx`**: query key `["settings"]` → `["settings", installationId]`. Mode-selector (Databricks sync / API ingest) is disabled en gedempt zolang de settings nog laden — voorkomt flash naar verkeerde modus bij installatie-switch.
+
+### Added (2026-05-10) — Widget bibliotheek uitbreiding
+
+- **4 nieuwe built-in widgets** toegevoegd aan de widget registry:
+  - `monitored-entities` (counter): toont aantal geobserveerde entiteiten in het data estate.
+  - `open-incidents` (counter): toont aantal openstaande incidenten.
+  - `pipeline-health-table` (table): toont de laatste run-status per pipeline, gegroepeerd op dataset.
+  - `open-incidents-table` (table): toont open incidenten met severity- en status-badges.
+- **Category-fix registry**: `WidgetCategory` aligned op plural-form (`"charts"`, `"tables"`) conform `types/dashboard.ts` — charts- en tables-tab in widget picker toonden voorheen niets.
+- **Widget picker drawer** toont nu built-in registry widgets met "Built-in" badge naast shared en custom widgets. "No widgets yet" verscheen voorheen altijd omdat `WIDGET_REGISTRY` niet werd ingeladen.
+
 ### Added (2026-05-06) — LADR-064 Dataset vs Entity Split
 
 - **Structurele scheiding dataset ↔ entiteit** (`infra/sql/init/020_dataset_entity_split.sql`): Postgres-migratie die het conceptuele verschil tussen *datasets* (technische landing/raw/bronze objecten) en *entiteiten* (business objecten silver/gold) formaliseert. Voegt toe: `dataset_name` (generated column), `entity_name`, `meta.entity_sources` (brug-tabel voor 1-op-veel relaties), `source_kind`/`target_kind` op `lineage_edges`.
