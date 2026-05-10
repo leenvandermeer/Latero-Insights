@@ -124,3 +124,29 @@ Als je Caddy niet wilt gebruiken, kun je Keycloak direct aanspreken op
 > **Let op:** Keycloak in dev mode staat HTTP redirect URIs toe voor localhost.
 > Gebruik dit nooit buiten een lokale testomgeving.
 
+---
+
+## Database migraties
+
+De SQL-scripts in `infra/sql/init/` worden **alleen bij eerste initialisatie** automatisch uitgevoerd door de Postgres Docker image (via het `docker-entrypoint-initdb.d/` mechanisme). Bij bestaande databases (volumes) worden nieuwe scripts **niet** automatisch toegepast.
+
+### Migratie handmatig uitvoeren
+
+Voor bestaande productie-databases voer je nieuwe migraties handmatig uit:
+
+```bash
+# Lokaal
+docker exec -i insights-local-postgres psql -U insights -d insights < infra/sql/init/<script>.sql
+
+# Productie
+docker exec -i insights-postgres psql -U insights -d insights < infra/sql/init/<script>.sql
+```
+
+Of voor een losse SQL-statement:
+
+```bash
+docker exec -it insights-postgres psql -U insights -d insights -c "ALTER TABLE ..."
+```
+
+> **Let op:** De scripts zijn idempotent (`IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`) — ze zijn veilig om meerdere keren uit te voeren.
+

@@ -5,11 +5,14 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS insights_installations (
   installation_id TEXT PRIMARY KEY,
-  environment TEXT NOT NULL,
-  token_hash TEXT NOT NULL,
-  active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  label           TEXT,
+  environment     TEXT NOT NULL,
+  tier            TEXT NOT NULL DEFAULT 'pro',
+  contact_email   TEXT,
+  token_hash      TEXT NOT NULL,
+  active          BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS ingest_audit (

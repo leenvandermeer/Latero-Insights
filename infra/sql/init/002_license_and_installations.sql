@@ -5,9 +5,13 @@
 ALTER TABLE insights_installations
   ADD COLUMN IF NOT EXISTS label TEXT;
 
--- Subscription tier for license validation (LLIC-002)
+-- Tier (was 'subscription_tier' in early schema — correct column name is 'tier')
 ALTER TABLE insights_installations
-  ADD COLUMN IF NOT EXISTS subscription_tier TEXT NOT NULL DEFAULT 'trial';
+  ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'pro';
+
+-- contact_email for tenant operator contact
+ALTER TABLE insights_installations
+  ADD COLUMN IF NOT EXISTS contact_email TEXT;
 
 -- License expiry for 403 response (LLIC-002)
 ALTER TABLE insights_installations
