@@ -244,6 +244,43 @@ export async function createInstallation(
      VALUES ($1, $2, crypt($3, gen_salt('bf')), $4, $5)`,
     [installationId, environment, rawToken, label ?? null, subscriptionTier],
   );
+  await seedSystemPolicies(pool, installationId);
+}
+
+async function seedSystemPolicies(pool: Pool, installationId: string): Promise<void> {
+  const packs = [
+    { id: "system-esg-csrd",  name: "ESG / CSRD Compliance",          description: "Policies for ESG and Corporate Sustainability Reporting Directive compliance", framework: "CSRD"      },
+    { id: "system-bcbs239",   name: "BCBS-239",                       description: "Basel Committee on Banking Supervision Principle 239 — Risk Data Aggregation",  framework: "BCBS-239"  },
+    { id: "system-data-mesh", name: "Data Mesh Governance",           description: "Data Mesh federated computational governance policies",                          framework: "Data Mesh" },
+  ];
+  const policies: { id: string; packId: string; name: string; description: string; rule: object; action: string }[] = [
+    { id: "system-esg-owner",    packId: "system-esg-csrd",  name: "Data Product Owner Required",   description: "Every data product used for ESG reporting must have an owner",                      rule: { condition: "owner_missing" },                       action: "warn"   },
+    { id: "system-esg-quality",  packId: "system-esg-csrd",  name: "Quality Pass Rate ≥ 95%",       description: "ESG data products must maintain a quality pass rate of at least 95%",               rule: { condition: "quality_below_threshold", threshold: 0.95 }, action: "warn" },
+    { id: "system-esg-lineage",  packId: "system-esg-csrd",  name: "Full Lineage Required",         description: "ESG data products must have documented lineage",                                    rule: { condition: "no_lineage" },                          action: "warn"   },
+    { id: "system-bcbs-owner",   packId: "system-bcbs239",   name: "Data Owner Required",           description: "All risk data products must have a named owner per BCBS-239 principle 3",          rule: { condition: "owner_missing" },                       action: "block"  },
+    { id: "system-bcbs-sla",     packId: "system-bcbs239",   name: "SLA Definition Required",       description: "Risk data products must have a defined SLA per BCBS-239 principle 6",              rule: { condition: "sla_missing" },                         action: "block"  },
+    { id: "system-bcbs-contract",packId: "system-bcbs239",   name: "Data Contract Required",        description: "Risk data products must be governed by a versioned data contract",                  rule: { condition: "contract_missing" },                    action: "warn"   },
+    { id: "system-bcbs-incidents",packId:"system-bcbs239",   name: "No Open Critical Incidents",    description: "Risk data products must not have open critical incidents",                          rule: { condition: "open_incidents", severity: "critical" }, action: "block" },
+    { id: "system-mesh-owner",   packId: "system-data-mesh", name: "Domain Owner Required",         description: "Each data product must have a domain team owner",                                  rule: { condition: "owner_missing" },                       action: "warn"   },
+    { id: "system-mesh-quality", packId: "system-data-mesh", name: "Quality Pass Rate ≥ 90%",       description: "Data products must meet minimum quality standards",                                 rule: { condition: "quality_below_threshold", threshold: 0.90 }, action: "warn" },
+    { id: "system-mesh-contract",packId: "system-data-mesh", name: "Data Contract Required",        description: "Data products must expose a versioned data contract for consumers",                 rule: { condition: "contract_missing" },                    action: "notify" },
+    { id: "system-mesh-lineage", packId: "system-data-mesh", name: "Lineage Required",              description: "Data products must expose lineage to their sources",                               rule: { condition: "no_lineage" },                          action: "warn"   },
+  ];
+
+  for (const pack of packs) {
+    await pool.query(
+      `INSERT INTO meta.policy_packs (id, installation_id, name, description, framework)
+       VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+      [pack.id, installationId, pack.name, pack.description, pack.framework],
+    );
+  }
+  for (const p of policies) {
+    await pool.query(
+      `INSERT INTO meta.policies (id, installation_id, pack_id, name, description, rule, scope, action, active)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, '{"all":true}'::jsonb, $7, true) ON CONFLICT DO NOTHING`,
+      [p.id, installationId, p.packId, p.name, p.description, JSON.stringify(p.rule), p.action],
+    );
+  }
 }
 
 export async function updateInstallation(
