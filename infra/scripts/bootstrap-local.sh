@@ -78,7 +78,18 @@ ON CONFLICT (installation_id) DO UPDATE SET
   updated_at  = NOW();
 SQL
 
-# ── Stap 4: SSO configureren (voor lokale Keycloak SSO stack) ─────────────────
+# ── Stap 4: SQL-migraties uitvoeren (infra/sql/init/*.sql) ───────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MIGRATIONS_DIR="$SCRIPT_DIR/../sql/init"
+log "SQL-migraties uitvoeren vanuit $MIGRATIONS_DIR..."
+for f in $(ls -v "$MIGRATIONS_DIR"/*.sql 2>/dev/null); do
+  fname="$(basename "$f")"
+  docker exec -i "$POSTGRES_CONTAINER" psql -U insights -d insights < "$f" > /dev/null 2>&1 && \
+    log "  ✓ $fname" || \
+    warn "  ⚠ $fname (mogelijke fout, controleer handmatig)"
+done
+
+# ── Stap 5: SSO configureren (voor lokale Keycloak SSO stack) ─────────────────
 log "SSO configureren voor latero.nl..."
 psql -d insights <<'SQL'
 UPDATE installation_auth_policy SET
