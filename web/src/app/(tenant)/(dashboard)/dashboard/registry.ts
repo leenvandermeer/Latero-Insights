@@ -17,6 +17,10 @@ import { DqChecksTableWidget } from "./widgets/dq-checks-table-widget";
 import { EventLogWidget } from "./widgets/event-log-widget";
 import { DatasetOverviewWidget } from "./widgets/dataset-overview-widget";
 import { FailingDatasetsWidget } from "./widgets/failing-datasets-widget";
+import { MonitoredEntitiesWidget } from "./widgets/monitored-entities-widget";
+import { OpenIncidentsWidget } from "./widgets/open-incidents-widget";
+import { OpenIncidentsTableWidget } from "./widgets/open-incidents-table-widget";
+import { PipelineHealthTableWidget } from "./widgets/pipeline-health-table-widget";
 
 export interface WidgetProps {
   from: string;
@@ -24,7 +28,7 @@ export interface WidgetProps {
   titleOverride?: string;
 }
 
-export type WidgetCategory = "counter" | "chart" | "table" | "overview";
+export type WidgetCategory = "counter" | "charts" | "tables" | "overview";
 
 export interface WidgetDef {
   type: string;
@@ -36,6 +40,7 @@ export interface WidgetDef {
 }
 
 export const WIDGET_REGISTRY: WidgetDef[] = [
+  // ── Counters ────────────────────────────────────────────────────────────
   {
     type: "total-runs",
     label: "Total Runs",
@@ -93,10 +98,27 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     component: Bcbs239ScoreWidget,
   },
   {
+    type: "monitored-entities",
+    label: "Monitored Entities",
+    description: "Total number of data entities monitored in this installation",
+    category: "counter",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: MonitoredEntitiesWidget,
+  },
+  {
+    type: "open-incidents",
+    label: "Open Incidents",
+    description: "Number of currently open data incidents",
+    category: "counter",
+    defaultSize: { w: 3, h: 2, minW: 2, minH: 2 },
+    component: OpenIncidentsWidget,
+  },
+  // ── Charts ──────────────────────────────────────────────────────────────
+  {
     type: "pipeline-status",
     label: "Run Status Trend",
     description: "Stacked bar chart of SUCCESS / WARNING / FAILED runs per day",
-    category: "chart",
+    category: "charts",
     defaultSize: { w: 6, h: 4, minW: 4, minH: 3 },
     component: PipelineStatusWidget,
   },
@@ -104,7 +126,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     type: "dq-trend",
     label: "DQ Pass Rate Trend",
     description: "Line chart of data quality pass rate over time",
-    category: "chart",
+    category: "charts",
     defaultSize: { w: 6, h: 4, minW: 4, minH: 3 },
     component: DqTrendWidget,
   },
@@ -112,7 +134,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     type: "severity-category",
     label: "Results by Category",
     description: "Bar chart of DQ check results grouped by category",
-    category: "chart",
+    category: "charts",
     defaultSize: { w: 6, h: 4, minW: 4, minH: 3 },
     component: SeverityCategoryWidget,
   },
@@ -120,7 +142,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     type: "step-duration",
     label: "Avg Duration by Step",
     description: "Horizontal bar chart of average pipeline step duration",
-    category: "chart",
+    category: "charts",
     defaultSize: { w: 6, h: 4, minW: 4, minH: 3 },
     component: StepDurationWidget,
   },
@@ -128,7 +150,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     type: "runs-by-pipeline",
     label: "Runs by Pipeline",
     description: "Horizontal bar chart of run counts per pipeline (top 10)",
-    category: "chart",
+    category: "charts",
     defaultSize: { w: 6, h: 4, minW: 4, minH: 3 },
     component: RunsByPipelineWidget,
   },
@@ -136,15 +158,32 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     type: "dq-by-category",
     label: "DQ Checks by Category",
     description: "Donut chart of data quality check distribution by category",
-    category: "chart",
+    category: "charts",
     defaultSize: { w: 4, h: 4, minW: 3, minH: 3 },
     component: DqByCategoryWidget,
   },
   {
+    type: "event-log",
+    label: "Event Log",
+    description: "Timeline of recent pipeline run events with status and duration",
+    category: "charts",
+    defaultSize: { w: 4, h: 4, minW: 3, minH: 3 },
+    component: EventLogWidget,
+  },
+  {
+    type: "failing-datasets",
+    label: "Failing Datasets",
+    description: "Top datasets ranked by DQ failure rate in the selected period",
+    category: "charts",
+    defaultSize: { w: 6, h: 4, minW: 4, minH: 3 },
+    component: FailingDatasetsWidget,
+  },
+  // ── Tables ──────────────────────────────────────────────────────────────
+  {
     type: "pipeline-runs-table",
     label: "Recent Pipeline Runs",
     description: "Table of latest pipeline run results with status and duration",
-    category: "table",
+    category: "tables",
     defaultSize: { w: 12, h: 4, minW: 6, minH: 3 },
     component: PipelineRunsTableWidget,
   },
@@ -152,18 +191,27 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     type: "dq-checks-table",
     label: "DQ Check Results",
     description: "Table of latest data quality check results per check ID",
-    category: "table",
+    category: "tables",
     defaultSize: { w: 8, h: 3, minW: 4, minH: 2 },
     component: DqChecksTableWidget,
   },
   {
-    type: "event-log",
-    label: "Event Log",
-    description: "Timeline of recent pipeline run events with status and duration",
-    category: "chart",
-    defaultSize: { w: 4, h: 4, minW: 3, minH: 3 },
-    component: EventLogWidget,
+    type: "pipeline-health-table",
+    label: "Pipeline Health",
+    description: "Latest run status per pipeline — snel zien welke pipelines groen of rood staan",
+    category: "tables",
+    defaultSize: { w: 8, h: 4, minW: 4, minH: 3 },
+    component: PipelineHealthTableWidget,
   },
+  {
+    type: "open-incidents-table",
+    label: "Open Incidents",
+    description: "Overzicht van actieve data-incidenten met severity en status",
+    category: "tables",
+    defaultSize: { w: 8, h: 4, minW: 4, minH: 3 },
+    component: OpenIncidentsTableWidget,
+  },
+  // ── Overview ────────────────────────────────────────────────────────────
   {
     type: "dataset-overview",
     label: "Dataset Health",
@@ -172,16 +220,10 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     defaultSize: { w: 4, h: 4, minW: 3, minH: 2 },
     component: DatasetOverviewWidget,
   },
-  {
-    type: "failing-datasets",
-    label: "Failing Datasets",
-    description: "Top datasets ranked by DQ failure rate in the selected period",
-    category: "chart",
-    defaultSize: { w: 6, h: 4, minW: 4, minH: 3 },
-    component: FailingDatasetsWidget,
-  },
 ];
 
 export function getWidgetDef(type: string): WidgetDef | undefined {
   return WIDGET_REGISTRY.find((w) => w.type === type);
 }
+
+
