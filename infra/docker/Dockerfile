@@ -5,7 +5,10 @@ FROM node:20 AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY web/package.json ./web/
-RUN npm ci
+RUN npm ci && \
+    # lightningcss-linux-x64-gnu staat als optional dep in de lockfile maar zonder
+    # resolved entry — npm ci slaat hem over. Expliciet installeren voor de build.
+    npm install --no-save lightningcss-linux-x64-gnu@1.32.0
 
 # ── Stage 2: build ────────────────────────────────────────────────────────────
 FROM node:20 AS builder
