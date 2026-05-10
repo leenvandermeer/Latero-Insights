@@ -9,8 +9,8 @@ function getTtl(): number {
   return loadSettings().cacheTtlSeconds;
 }
 
-function isCacheOnly(): boolean {
-  return loadSettings().cacheOnly;
+function isCacheOnly(installationId?: string | null): boolean {
+  return loadSettings(installationId ?? undefined).cacheOnly;
 }
 
 function ensureCacheDir(): void {

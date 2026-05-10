@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   };
   triggerAutoSyncIfDue("/api/lineage", installationId);
 
-  if (isCacheOnly()) {
+  if (isCacheOnly(installationId)) {
     // Cache-only mode: serve from cache or return 503
     const cached = getFromCache("lineage", cacheParams);
     if (cached) {

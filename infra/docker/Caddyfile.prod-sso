@@ -1,0 +1,52 @@
+# Caddyfile.prod-sso — productie TLS voor control.latero.nl + sso.latero.nl
+#
+# Caddy haalt automatisch TLS-certificaten op via Let's Encrypt (ACME).
+# Vereist: DNS A-records voor beide (sub)domeinen wijzen naar het server-IP.
+#   control.latero.nl  →  <server-ip>
+#   sso.latero.nl      →  <server-ip>
+#
+# Poort 80 en 443 moeten open zijn in de Hetzner firewall.
+
+# ── Applicatie ────────────────────────────────────────────────────────────────
+control.latero.nl {
+    reverse_proxy app:3000
+
+    encode gzip
+
+    header {
+        -Server
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), camera=(), microphone=()"
+    }
+
+    log {
+        output file /var/log/caddy/app-access.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+    }
+}
+
+# ── Keycloak SSO ──────────────────────────────────────────────────────────────
+sso.latero.nl {
+    reverse_proxy keycloak:8080
+
+    encode gzip
+
+    header {
+        -Server
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+    }
+
+    log {
+        output file /var/log/caddy/sso-access.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+    }
+}
+

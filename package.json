@@ -20,7 +20,11 @@
     "sso:up": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.sso.yml up -d",
     "sso:down": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.sso.yml down",
     "sso:logs": "docker compose -f infra/docker/docker-compose.local.yml -f infra/docker/docker-compose.sso.yml logs -f keycloak caddy-sso",
-    "sso:seed": "docker exec insights-local-postgres psql -U insights -d insights -f /dev/stdin < infra/sql/sso-test-seed.sql"
+    "sso:seed": "docker exec insights-local-postgres psql -U insights -d insights -f /dev/stdin < infra/sql/sso-test-seed.sql",
+    "prod:up": "docker compose -f infra/docker/docker-compose.prod.yml -f infra/docker/docker-compose.prod-sso.yml --env-file infra/.env.prod up -d",
+    "prod:down": "docker compose -f infra/docker/docker-compose.prod.yml -f infra/docker/docker-compose.prod-sso.yml --env-file infra/.env.prod down",
+    "prod:logs": "docker compose -f infra/docker/docker-compose.prod.yml -f infra/docker/docker-compose.prod-sso.yml --env-file infra/.env.prod logs -f",
+    "prod:build": "docker build -f infra/docker/Dockerfile -t meta-insights:latest web/"
   },
   "dependencies": {
     "date-fns": "^4.1.0"

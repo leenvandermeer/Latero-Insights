@@ -13,6 +13,8 @@ build/
 # env files
 .env*.local
 web/.env*.local
+infra/.env.prod
+infra/keycloak/realm-latero-prod.rendered.json
 
 # debug
 npm-debug.log*

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     ? { scope: "current", installationId }
     : { scope: "current" };
 
-  if (isCacheOnly()) {
+  if (isCacheOnly(installationId)) {
     const cached = getFromCache<LineageAttribute[]>(CACHE_KEY, cacheParams);
     if (cached) {
       const response = NextResponse.json({ data: cached.data, cachedAt: cached.cachedAt, source: "cache" });
