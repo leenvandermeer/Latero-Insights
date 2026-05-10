@@ -30,8 +30,16 @@ export function AdminShell({ children, sessionEmail }: AdminShellProps) {
   ];
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    window.location.href = "/admin/login";
+    try {
+      const res = await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      if (!res.ok) {
+        console.error("[logout] server responded with", res.status);
+      }
+    } catch (err) {
+      console.error("[logout] fetch failed", err);
+    } finally {
+      window.location.replace("/admin/login");
+    }
   };
 
   const toggleTheme = () => {

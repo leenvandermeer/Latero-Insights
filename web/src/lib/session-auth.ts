@@ -274,6 +274,7 @@ export function clearSessionCookie(response: NextResponse, request: NextRequest)
     secure: shouldUseSecureCookie(request),
     path: "/",
     maxAge: 0,
+    expires: new Date(0),
   });
 }
 
