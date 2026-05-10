@@ -32,21 +32,16 @@ export default async function AdminLoginPage() {
           "radial-gradient(circle at 12% 12%, rgba(200,137,42,0.16), transparent 20%), radial-gradient(circle at 88% 84%, rgba(27,59,107,0.16), transparent 26%), var(--color-bg)",
       }}
     >
-      <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="hidden lg:block">
-          <div
-            className="rounded-[32px] border p-10"
-            style={{ background: "var(--color-card)", borderColor: "var(--color-border)", boxShadow: "var(--shadow-card)" }}
-          >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-subtle)" }}>
-              Latero Control
-            </p>
-            <h1 className="mt-3 text-4xl font-semibold leading-tight" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
-              Platform admin
-            </h1>
-          </div>
+      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-sm flex-col items-center justify-center gap-6">
+        <div className="text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-subtle)" }}>
+            Latero Control
+          </p>
+          <h1 className="mt-1 text-3xl font-semibold leading-tight" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
+            Platform admin
+          </h1>
         </div>
-        <div className="flex justify-center lg:justify-end">
+        <div className="w-full">
           <AdminLoginForm />
         </div>
       </div>

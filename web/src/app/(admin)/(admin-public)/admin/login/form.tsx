@@ -90,7 +90,8 @@ export function AdminLoginForm() {
     color: "var(--color-text)",
     outline: "none",
     borderRadius: 12,
-    padding: "0.625rem 0.75rem",
+    paddingTop: "0.625rem",
+    paddingBottom: "0.625rem",
   });
 
   return (
