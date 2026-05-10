@@ -13,8 +13,8 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Skip auth for health, settings, and test-connection endpoints
-  if (path === "/api/health" || path === "/api/settings" || path === "/api/test-connection" || path === "/api/cache/seed") {
+  // Skip auth for health check only — all other routes handle their own auth or are protected below
+  if (path === "/api/health") {
     return NextResponse.next();
   }
 

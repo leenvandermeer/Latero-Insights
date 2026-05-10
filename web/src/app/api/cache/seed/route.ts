@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { writeToCache } from "@/lib/cache";
 import { loadSettings, saveSettings } from "@/lib/settings";
+import { requireSession } from "@/lib/session-auth";
 
 // --- Config ---
 
@@ -240,7 +241,13 @@ function generateLineage(): unknown[] {
 
 // --- Route handler ---
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  try {
+    await requireSession(request);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const params = { from: FROM, to: TO };
 
