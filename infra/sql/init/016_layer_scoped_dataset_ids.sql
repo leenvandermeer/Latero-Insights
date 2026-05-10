@@ -58,11 +58,35 @@ ALTER TABLE meta.lineage_columns
   ));
 
 -- ---------------------------------------------------------------------------
--- 3. Trunceer corrupte lineage-data
---    meta.runs en meta.quality_* blijven intact.
---    Volgorde: run_io voor datasets (FK); edges voor datasets.
+-- 3. Trunceer corrupte lineage-data — EENMALIG, alleen als group_id nog niet
+--    bestaat (detectie: kolom werd door stap 1 hierboven aangemaakt).
+--    Na de eerste succesvolle migratie bestaat group_id altijd → guard voorkomt
+--    dat TRUNCATE bij iedere deploy opnieuw loopt.
 -- ---------------------------------------------------------------------------
-TRUNCATE TABLE meta.run_io;
-TRUNCATE TABLE meta.lineage_columns;
-TRUNCATE TABLE meta.lineage_edges;
-TRUNCATE TABLE meta.datasets;
+DO $$
+BEGIN
+  -- group_id bestaat altijd na de eerste migratie-run.
+  -- Als de kolom al bestond vóór deze sessie, is de truncate al eerder uitgevoerd.
+  -- We gebruiken een sentinel-kolom: als group_id DEFAULT NULL heeft (aangemaakt
+  -- door ons ALTER), is het een eerste run; anders overslaan.
+  -- Simpelere guard: controleer of run_io leeg is als proxy — maar dat is niet
+  -- betrouwbaar. Gebruik in plaats daarvan een schema_migrations-achtige tabel.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'meta'
+      AND table_name = '_migration_flags'
+  ) THEN
+    CREATE TABLE meta._migration_flags (flag TEXT PRIMARY KEY);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM meta._migration_flags WHERE flag = '016_truncate_done') THEN
+    TRUNCATE TABLE meta.run_io;
+    TRUNCATE TABLE meta.lineage_columns;
+    TRUNCATE TABLE meta.lineage_edges;
+    TRUNCATE TABLE meta.datasets;
+    INSERT INTO meta._migration_flags VALUES ('016_truncate_done');
+    RAISE NOTICE '016: lineage-tabellen eenmalig getrunceerd (LADR-058)';
+  ELSE
+    RAISE NOTICE '016: truncate al eerder uitgevoerd — overgeslagen';
+  END IF;
+END $$;
