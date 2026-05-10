@@ -250,10 +250,10 @@ export function SettingsDashboard() {
             </span>
           </div>
           <h2 className="text-lg font-medium" style={{ color: "var(--color-text)" }}>
-            Connection, sync, and snapshot behavior
+            Connection and sync
           </h2>
           <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-            Configure how Latero Control connects to upstream metadata sources and how cached snapshots are handled for this installation.
+            Configure how Latero Control connects to upstream metadata sources. Data is read from the Postgres Insights store — kept up to date by Databricks sync or API ingest.
           </p>
         </div>
 
@@ -268,14 +268,14 @@ export function SettingsDashboard() {
             meta={isDatabricks ? "Based on latest health check" : "Not applicable in API mode"}
           />
           <SummaryTile
-            label="Snapshot cache"
+            label="Fallback snapshot"
             value={cacheFiles > 0 ? `${cacheFiles} files` : "No snapshot"}
-            meta={cacheAge != null ? formatAge(cacheAge) : "No recent cache age available"}
+            meta={cacheAge != null ? `Last written ${formatAge(cacheAge)}` : "Written on each successful read"}
           />
           <SummaryTile
-            label="TTL"
+            label="Fallback TTL"
             value={`${form.cacheTtlSeconds}s`}
-            meta={form.cacheOnly ? "Snapshot-only mode enabled" : "Live reads with cache fallback"}
+            meta={form.cacheOnly ? "Offline demo mode active" : "Used only if Postgres is unavailable"}
           />
         </div>
       </section>
@@ -378,12 +378,12 @@ export function SettingsDashboard() {
 
         <div className="space-y-4">
           <SectionCard
-            title="Cache and snapshot behavior"
+            title="Resilience & offline demo"
             icon={FileArchive}
-            subtitle="Control how long snapshots stay valid and whether this installation should run in snapshot-only mode."
+            subtitle="Each successful Postgres read is automatically written to a disk snapshot. If Postgres becomes unavailable, the snapshot is served as a fallback. Enable offline demo mode only for air-gapped demos without a live database."
           >
             <div className="flex flex-wrap items-center gap-4">
-              <Field label="TTL (seconds)" inline>
+              <Field label="Fallback TTL (seconds)" inline>
                 <input
                   type="number"
                   min={0}
@@ -399,9 +399,14 @@ export function SettingsDashboard() {
                   checked={form.cacheOnly}
                   onChange={(e) => setForm((p) => ({ ...p, cacheOnly: e.target.checked }))}
                 />
-                Snapshot-only mode
+                Offline demo mode
               </label>
             </div>
+            {form.cacheOnly && (
+              <p className="mt-3 text-xs" style={{ color: "var(--color-warning, #f59e0b)" }}>
+                Offline demo mode is active — all reads are served from the disk snapshot. Postgres and Databricks are not queried.
+              </p>
+            )}
           </SectionCard>
 
           <SectionCard
