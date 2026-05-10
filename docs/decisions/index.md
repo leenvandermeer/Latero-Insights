@@ -46,7 +46,7 @@ Naming note:
 | [LADR-038](20260503-installation-switcher-env-default.md) | 2026-05-03 | Installation switcher: environment indicator en default-installatie | ACCEPTED |
 | [LADR-039](20260503-admin-tenant-layout-css-isolation.md) | 2026-05-03 | Admin/Tenant layout- en CSS-isolatie via Next.js route group root layouts | ACCEPTED |
 | [LADR-040](20260504-meta-schema-datamodel.md) | 2026-05-04 | meta.* schema: gestructureerd operationeel datamodel (OpenLineage-gebaseerd) | ACCEPTED |
-| [LADR-041](20260504-drop-public-event-tables.md) | 2026-05-04 | Drop public.* event-tabellen na volledige migratie naar meta.* | ACCEPTED |
+| [LADR-041](20260504-drop-public-event-tables.md) | 2026-05-04 | Drop public.\* event-tabellen na volledige migratie naar meta.\* | ACCEPTED |
 | [LADR-058](20260504-lineage-layer-scoped-entity-model.md) | 2026-05-04 | Lineage layer-scoped entity model: dataset_id als {entity}::{layer} compound key | ACCEPTED |
 | [LADR-059](LADR-059-20260504-v2-run-centric-observability.md) | 2026-05-04 | V2: Run als primaire observability-anchor (run detail, I/O, DQ context) | PROPOSED |
 | [LADR-060](LADR-060-20260504-v2-data-product-hierarchy.md) | 2026-05-04 | V2: Data Product / Entity / Dataset hiërarchie — drietal voor status-aggregatie | PROPOSED |
@@ -60,3 +60,4 @@ Naming note:
 | [LADR-068](20260508-dashboard-ux-overhaul.md) | 2026-05-08 | Dashboard Navigation & Widget UX Overhaul: OOTB widgets, sidebar nav, pinning, simplified home | ACCEPTED |
 | [LADR-069](20260510-schema-maintenance-gap-fix.md) | 2026-05-10 | Schema Maintenance: init-scripts niet automatisch toegepast — source_kind/target_kind, sla_tier, entity_sources fix | ACCEPTED |
 | [LADR-070](20260510-environment-id-mismatch-fix.md) | 2026-05-10 | Environment-ID mismatch: latero.yml environment vs Control databricksEnvironment — sync gaf 0 rijen door onjuist environment-label | ACCEPTED |
+| [LADR-071](20260510-schema-migration-tracking.md) | 2026-05-10 | Schema Migration Tracking: schema_migrations tabel, eenmalige uitvoering, fatale fouten — vervangt idempotent-alles aanpak | ACCEPTED |
