@@ -26,7 +26,7 @@ if [[ -z "${OIDC_CLIENT_SECRET:-}" ]]; then
   exit 1
 fi
 
-sed "s/REPLACE_WITH_OIDC_CLIENT_SECRET/${OIDC_CLIENT_SECRET}/g" "$REALM_SRC" > "$REALM_OUT"
+sed "s|REPLACE_WITH_OIDC_CLIENT_SECRET|${OIDC_CLIENT_SECRET}|g" "$REALM_SRC" > "$REALM_OUT"
 
 echo "✅  Realm JSON gegenereerd: $REALM_OUT"
 echo "    Zorg dat dit bestand NIET wordt gecommit (staat in .gitignore)."
