@@ -59,3 +59,4 @@ Naming note:
 | [LADR-067](20260508-lineage-map-vs-trace-ux.md) | 2026-05-08 | Lineage UX split: Map for topology, Trace for investigation | PROPOSED |
 | [LADR-068](20260508-dashboard-ux-overhaul.md) | 2026-05-08 | Dashboard Navigation & Widget UX Overhaul: OOTB widgets, sidebar nav, pinning, simplified home | ACCEPTED |
 | [LADR-069](20260510-schema-maintenance-gap-fix.md) | 2026-05-10 | Schema Maintenance: init-scripts niet automatisch toegepast — source_kind/target_kind, sla_tier, entity_sources fix | ACCEPTED |
+| [LADR-070](20260510-environment-id-mismatch-fix.md) | 2026-05-10 | Environment-ID mismatch: latero.yml environment vs Control databricksEnvironment — sync gaf 0 rijen door onjuist environment-label | ACCEPTED |
