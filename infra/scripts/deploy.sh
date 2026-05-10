@@ -61,14 +61,41 @@ PG_CONTAINER="insights-postgres"
 PG_USER="insights"
 PG_DB="insights"
 
+# Zorg dat de tracking-tabel bestaat (altijd idempotent)
+docker exec -i "${PG_CONTAINER}" \
+  psql -U "${PG_USER}" -d "${PG_DB}" -v ON_ERROR_STOP=1 \
+  < "${SQL_DIR}/000_schema_migrations.sql" > /dev/null 2>&1
+
 for sql_file in $(ls -v "${SQL_DIR}"/*.sql); do
   filename="$(basename "${sql_file}")"
-  docker exec -i "${PG_CONTAINER}" \
+
+  # Sla 000 over — is al hierboven gedraaid
+  [[ "${filename}" == "000_schema_migrations.sql" ]] && continue
+
+  # Controleer of dit script al is toegepast
+  already_applied=$(docker exec "${PG_CONTAINER}" \
+    psql -U "${PG_USER}" -d "${PG_DB}" -tAq \
+    -c "SELECT 1 FROM schema_migrations WHERE filename = '${filename}' LIMIT 1;" 2>/dev/null)
+
+  if [[ "${already_applied}" == "1" ]]; then
+    echo "   –  ${filename} (al toegepast, overgeslagen)"
+    continue
+  fi
+
+  # Voer het script uit
+  if docker exec -i "${PG_CONTAINER}" \
     psql -U "${PG_USER}" -d "${PG_DB}" \
-    -v ON_ERROR_STOP=0 \
-    < "${sql_file}" > /dev/null 2>&1 \
-    && echo "   ✓  ${filename}" \
-    || echo "   ⚠  ${filename} (mogelijk al uitgevoerd)"
+    -v ON_ERROR_STOP=1 \
+    < "${sql_file}" > /dev/null 2>&1; then
+    # Registreer als succesvol toegepast
+    docker exec "${PG_CONTAINER}" \
+      psql -U "${PG_USER}" -d "${PG_DB}" -tAq \
+      -c "INSERT INTO schema_migrations (filename) VALUES ('${filename}') ON CONFLICT DO NOTHING;" > /dev/null 2>&1
+    echo "   ✓  ${filename}"
+  else
+    echo "   ✗  ${filename} — FOUT (deploy gestopt)"
+    exit 1
+  fi
 done
 echo ""
 
