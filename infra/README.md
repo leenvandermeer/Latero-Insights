@@ -126,27 +126,30 @@ Als je Caddy niet wilt gebruiken, kun je Keycloak direct aanspreken op
 
 ---
 
-## Database migraties
+## Database schema
 
-De SQL-scripts in `infra/sql/init/` worden **alleen bij eerste initialisatie** automatisch uitgevoerd door de Postgres Docker image (via het `docker-entrypoint-initdb.d/` mechanisme). Bij bestaande databases (volumes) worden nieuwe scripts **niet** automatisch toegepast.
+**Gezaghebbend schema-bestand:** `infra/sql/schema.sql`
 
-### Migratie handmatig uitvoeren
+Dit is het enige bestand dat het volledige, productiewaardig schema definieert.
+De afzonderlijke scripts in `infra/sql/init/` zijn historische migraties en worden
+**alleen bij eerste initialisatie** automatisch uitgevoerd door de Postgres Docker image
+(via `docker-entrypoint-initdb.d/`). Bij bestaande databases worden ze niet automatisch toegepast.
 
-Voor bestaande productie-databases voer je nieuwe migraties handmatig uit:
+### Nieuwe installatie (leeg volume)
+
+De Docker-image pikt `infra/sql/init/` automatisch op. Geen extra actie nodig.
+
+### Bestaande database updaten
+
+Voer het canonieke schema-bestand uit — alle statements zijn idempotent:
 
 ```bash
 # Lokaal
-docker exec -i insights-local-postgres psql -U insights -d insights < infra/sql/init/<script>.sql
+docker exec -i insights-local-postgres psql -U insights -d insights < infra/sql/schema.sql
 
 # Productie
-docker exec -i insights-postgres psql -U insights -d insights < infra/sql/init/<script>.sql
+docker exec -i insights-postgres psql -U insights -d insights < infra/sql/schema.sql
 ```
 
-Of voor een losse SQL-statement:
-
-```bash
-docker exec -it insights-postgres psql -U insights -d insights -c "ALTER TABLE ..."
-```
-
-> **Let op:** De scripts zijn idempotent (`IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`) — ze zijn veilig om meerdere keren uit te voeren.
+> **Let op:** `schema.sql` gebruikt `IF NOT EXISTS` en `ADD COLUMN IF NOT EXISTS` — veilig om meerdere keren uit te voeren op een bestaande database.
 
