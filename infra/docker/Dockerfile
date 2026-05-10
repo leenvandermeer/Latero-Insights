@@ -4,7 +4,12 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY web/package.json ./web/
-RUN npm ci --workspace web
+# Configureer npm voor het Alpine (musl) platform zodat native binaries
+# zoals lightningcss correct worden geïnstalleerd (lockfile is gegenereerd op macOS)
+RUN npm config set os linux && \
+    npm config set cpu x64 && \
+    npm config set libc musl && \
+    npm ci --workspace web
 
 # ── Stage 2: build ────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
