@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS insights_installations (
   contact_email   TEXT,
   token_hash      TEXT NOT NULL,
   active          BOOLEAN NOT NULL DEFAULT TRUE,
+  last_synced_at  TIMESTAMPTZ,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
