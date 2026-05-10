@@ -91,7 +91,7 @@ function DashboardRow({
 export default function DashboardListPage() {
   const router = useRouter();
   const { installation } = useInstallation();
-  const { userDashboards, createDash } = useDashboards();
+  const { userDashboards, systemDashboards, createDash } = useDashboards();
   const { pinnedIds, toggle: togglePin, isPinned } = usePinnedDashboards(installation?.installation_id);
   const [newDashOpen, setNewDashOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("all");
@@ -147,6 +147,24 @@ export default function DashboardListPage() {
             <Plus className="h-4 w-4" />
             New dashboard
           </button>
+        </div>
+      </div>
+
+      {/* System dashboards */}
+      <div>
+        <p className="mb-3 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+          System
+        </p>
+        <div className="space-y-2">
+          {systemDashboards.map((dashboard) => (
+            <DashboardRow
+              key={dashboard.id}
+              dashboard={dashboard}
+              href={`/dashboard/${dashboard.id}`}
+              isPinned={isPinned(dashboard.id)}
+              onTogglePin={() => togglePin(dashboard.id)}
+            />
+          ))}
         </div>
       </div>
 
