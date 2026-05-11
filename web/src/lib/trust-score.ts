@@ -167,6 +167,38 @@ export async function calculateTrustScore(
     link: `/incidents?severity=critical&product_id=${productId}`,
   });
 
+  // --- Factor 6: Policy compliance (−15 bij falende actieve policies) ---
+  const policyRes = await pool.query(
+    `SELECT
+       COUNT(*)::int AS total_policies,
+       COUNT(CASE WHEN v.verdict = 'FAIL' THEN 1 END)::int AS failing_policies
+     FROM meta.policies p
+     LEFT JOIN LATERAL (
+       SELECT verdict FROM meta.policy_verdicts
+       WHERE installation_id = p.installation_id AND policy_id = p.id
+         AND product_id = $2
+       ORDER BY evaluated_at DESC LIMIT 1
+     ) v ON true
+     WHERE p.installation_id = $1 AND p.active = true`,
+    [installationId, productId]
+  );
+  const totalPolicies  = policyRes.rows[0]?.total_policies ?? 0;
+  const failingPolicies = policyRes.rows[0]?.failing_policies ?? 0;
+  const complianceRate = totalPolicies > 0 ? (totalPolicies - failingPolicies) / totalPolicies : 1;
+  const compliancePassed = complianceRate >= 1;
+  const complianceDelta = compliancePassed ? 0 : -Math.round(15 * (1 - complianceRate));
+  deduction += Math.abs(complianceDelta);
+  factors.push({
+    id: "policy_compliance",
+    label: totalPolicies > 0
+      ? `Policy compliance (${failingPolicies} of ${totalPolicies} failing)`
+      : "Policy compliance (no policies)",
+    weight: 15,
+    delta: complianceDelta,
+    passed: compliancePassed,
+    link: `/compliance`,
+  });
+
   const score = Math.max(0, MAX_SCORE - deduction) as number;
   const calculatedAt = new Date();
 

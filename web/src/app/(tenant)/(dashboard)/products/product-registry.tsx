@@ -4,31 +4,19 @@ import { useState, useMemo, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3, PlusCircle, Pencil, Loader2 } from "lucide-react";
-import { useDataProducts, useUpdateDataProduct } from "@/hooks/use-data-products";
+import { useDataProducts, useUpdateDataProduct, type DataProduct } from "@/hooks/use-data-products";
 import { useTrustScore } from "@/hooks/use-trust-score";
 import { TrustScoreBadge } from "@/components/trust/trust-score-badge";
 import { DataProductSlideOver } from "@/app/(tenant)/(dashboard)/catalog/data-product-slide-over";
 
-interface Product {
-  data_product_id: string;
-  display_name: string;
-  description: string | null;
-  owner: string | null;
-  data_steward: string | null;
-  domain: string | null;
-  classification: "public" | "internal" | "confidential" | "restricted" | null;
-  retention_days: number | null;
-  sla_tier: "bronze" | "silver" | "gold" | null;
-  entity_count: number;
-  updated_at: string;
-}
+type Product = DataProduct;
 
 // ── SLA badge ─────────────────────────────────────────────────────────────────
 
 const SLA_STYLE: Record<string, { bg: string; text: string }> = {
-  bronze: { bg: "#fed7aa", text: "#c2410c" },
-  silver: { bg: "#cffafe", text: "#0e7490" },
-  gold:   { bg: "#fef9c3", text: "#a16207" },
+  bronze: { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
+  silver: { bg: "var(--color-brand-subtle)",   text: "var(--color-brand)" },
+  gold:   { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
 };
 
 function SlaBadge({ tier }: { tier: string | null }) {
@@ -69,9 +57,9 @@ function StatusPill({
 }) {
   const style =
     tone === "success"
-      ? { background: "#dcfce7", color: "#166534" }
+      ? { background: "var(--color-success-subtle)", color: "var(--color-success)" }
       : tone === "warning"
-      ? { background: "#fef3c7", color: "#b45309" }
+      ? { background: "var(--color-warning-subtle)", color: "var(--color-warning)" }
       : { background: "var(--color-surface-alt)", color: "var(--color-text-muted)" };
   return (
     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={style}>
