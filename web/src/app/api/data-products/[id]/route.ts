@@ -9,7 +9,10 @@ const PRODUCT_SELECT = `
   dp.display_name,
   dp.description,
   dp.owner,
+  dp.data_steward,
   dp.domain,
+  dp.classification,
+  dp.retention_days,
   dp.sla_tier,
   dp.sla,
   dp.contract_ver,
@@ -31,7 +34,8 @@ const PRODUCT_FROM = `
 
 const PRODUCT_GROUP = `
   GROUP BY dp.data_product_id, dp.display_name, dp.description,
-           dp.owner, dp.domain, dp.sla_tier, dp.sla, dp.contract_ver,
+           dp.owner, dp.data_steward, dp.domain, dp.classification, dp.retention_days,
+           dp.sla_tier, dp.sla, dp.contract_ver,
            dp.deprecated_at, dp.tags, dp.created_at, dp.updated_at
 `;
 
@@ -95,12 +99,24 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { display_name, description, owner, domain, sla_tier, entity_ids, sla, contract_ver } = body as {
+  const { display_name, description, owner, domain, sla_tier, entity_ids, sla, contract_ver,
+          classification, data_steward, retention_days } = body as {
     display_name?: string; description?: string; owner?: string;
     domain?: string; sla_tier?: string | null; entity_ids?: string[];
     sla?: { freshness_minutes?: number; quality_threshold?: number } | null;
     contract_ver?: string | null;
+    classification?: string | null;
+    data_steward?: string | null;
+    retention_days?: number | null;
   };
+
+  const VALID_CLASSIFICATION = new Set(["public", "internal", "confidential", "restricted"]);
+  if (classification && !VALID_CLASSIFICATION.has(classification)) {
+    return NextResponse.json({ error: "Invalid classification" }, { status: 400 });
+  }
+  if (retention_days !== undefined && retention_days !== null && (typeof retention_days !== "number" || retention_days <= 0)) {
+    return NextResponse.json({ error: "retention_days must be a positive number" }, { status: 400 });
+  }
 
   if (display_name !== undefined && !display_name.trim()) {
     return NextResponse.json({ error: "display_name cannot be empty" }, { status: 400 });
@@ -127,14 +143,17 @@ export async function PUT(
 
     await client.query(
       `UPDATE meta.data_products SET
-         display_name  = COALESCE($3, display_name),
-         description   = $4,
-         owner         = $5,
-         domain        = $6,
-         sla_tier      = $7,
-         sla           = CASE WHEN $8::text IS NULL THEN sla ELSE $8::jsonb END,
-         contract_ver  = CASE WHEN $9::text IS NULL THEN contract_ver ELSE $9 END,
-         updated_at    = now()
+         display_name    = COALESCE($3, display_name),
+         description     = $4,
+         owner           = $5,
+         domain          = $6,
+         sla_tier        = $7,
+         sla             = CASE WHEN $8::text IS NULL THEN sla ELSE $8::jsonb END,
+         contract_ver    = CASE WHEN $9::text IS NULL THEN contract_ver ELSE $9 END,
+         classification  = CASE WHEN $10::text IS NULL THEN classification ELSE $10 END,
+         data_steward    = CASE WHEN $11::text IS NULL THEN data_steward ELSE $11 END,
+         retention_days  = CASE WHEN $12::text IS NULL THEN retention_days ELSE $12::integer END,
+         updated_at      = now()
        WHERE installation_id = $1 AND data_product_id = $2`,
       [installationId, id,
        display_name?.trim() ?? null,
@@ -143,7 +162,10 @@ export async function PUT(
        domain ?? null,
        sla_tier ?? null,
        sla !== undefined ? JSON.stringify(sla) : null,
-       contract_ver !== undefined ? contract_ver : null]
+       contract_ver !== undefined ? contract_ver : null,
+       classification !== undefined ? classification : null,
+       data_steward !== undefined ? data_steward : null,
+       retention_days !== undefined ? String(retention_days) : null]
     );
 
     if (Array.isArray(entity_ids)) {

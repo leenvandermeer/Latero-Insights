@@ -245,7 +245,7 @@ export function DataProductSlideOver({ open, onClose, initialValues }: Props) {
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!form.display_name.trim()) errs.display_name = "Name is required";
-    if (form.entity_ids.length === 0) errs.entity_ids = "Select at least one entity";
+    if ((form.entity_ids ?? []).length === 0) errs.entity_ids = "Select at least one entity";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -387,7 +387,7 @@ export function DataProductSlideOver({ open, onClose, initialValues }: Props) {
 
           <Field label="Entities" required error={errors.entity_ids}>
             <EntityPicker
-              selected={form.entity_ids}
+              selected={form.entity_ids ?? []}
               onChange={(ids) => set("entity_ids", ids)}
             />
           </Field>

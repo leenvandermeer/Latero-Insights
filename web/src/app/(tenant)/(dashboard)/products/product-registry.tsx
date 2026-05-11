@@ -3,8 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3, PlusCircle } from "lucide-react";
-import { useDataProducts } from "@/hooks/use-data-products";
+import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3, PlusCircle, Pencil, Loader2 } from "lucide-react";
+import { useDataProducts, useUpdateDataProduct } from "@/hooks/use-data-products";
 import { useTrustScore } from "@/hooks/use-trust-score";
 import { TrustScoreBadge } from "@/components/trust/trust-score-badge";
 import { DataProductSlideOver } from "@/app/(tenant)/(dashboard)/catalog/data-product-slide-over";
@@ -14,7 +14,10 @@ interface Product {
   display_name: string;
   description: string | null;
   owner: string | null;
+  data_steward: string | null;
   domain: string | null;
+  classification: "public" | "internal" | "confidential" | "restricted" | null;
+  retention_days: number | null;
   sla_tier: "bronze" | "silver" | "gold" | null;
   entity_count: number;
   updated_at: string;
@@ -99,54 +102,180 @@ function ProductCardSkeleton() {
   );
 }
 
+// ── Governance Edit Modal ─────────────────────────────────────────────────────
+
+const INPUT_STYLE: React.CSSProperties = {
+  background: "var(--color-surface-alt)",
+  border: "1px solid var(--color-border)",
+  color: "var(--color-text)",
+};
+const inputCls = "w-full rounded-lg px-3 py-2 text-sm outline-none";
+
+function GovernanceModal({ product, onClose }: { product: Product; onClose: () => void }) {
+  const update = useUpdateDataProduct(product.data_product_id);
+  const [owner, setOwner]             = useState(product.owner ?? "");
+  const [steward, setSteward]         = useState(product.data_steward ?? "");
+  const [classification, setClass]    = useState(product.classification ?? "");
+  const [retention, setRetention]     = useState(product.retention_days !== null ? String(product.retention_days) : "");
+  const [error, setError]             = useState<string | null>(null);
+
+  const handleSave = async () => {
+    setError(null);
+    const retDays = retention.trim() ? Number(retention) : null;
+    if (retDays !== null && (isNaN(retDays) || retDays <= 0)) {
+      setError("Retention days must be a positive number");
+      return;
+    }
+    try {
+      await update.mutateAsync({
+        owner:          owner.trim() || null,
+        data_steward:   steward.trim() || null,
+        classification: (classification || null) as "public" | "internal" | "confidential" | "restricted" | null,
+        retention_days: retDays,
+      });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.4)" }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl p-6 flex flex-col gap-4"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <div>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Governance — {product.display_name}
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+            These fields are evaluated by compliance policies.
+          </p>
+        </div>
+
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Owner</label>
+          <input value={owner} onChange={(e) => setOwner(e.target.value)}
+            className={inputCls} style={INPUT_STYLE} placeholder="e.g. team-data-platform" />
+        </div>
+
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Data steward</label>
+          <input value={steward} onChange={(e) => setSteward(e.target.value)}
+            className={inputCls} style={INPUT_STYLE} placeholder="e.g. jane.doe@bank.nl" />
+        </div>
+
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Classification</label>
+          <select value={classification} onChange={(e) => setClass(e.target.value)}
+            className={inputCls} style={INPUT_STYLE}>
+            <option value="">— Not set —</option>
+            <option value="public">Public</option>
+            <option value="internal">Internal</option>
+            <option value="confidential">Confidential</option>
+            <option value="restricted">Restricted</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Retention (days)</label>
+          <input type="number" value={retention} onChange={(e) => setRetention(e.target.value)}
+            className={inputCls} style={INPUT_STYLE} placeholder="e.g. 365" min={1} />
+        </div>
+
+        {error && <p className="text-xs" style={{ color: "var(--color-error)" }}>{error}</p>}
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm"
+            style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={update.isPending}
+            className="flex-1 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5"
+            style={{ background: "var(--color-accent)", color: "#fff", opacity: update.isPending ? 0.6 : 1 }}>
+            {update.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Product card ──────────────────────────────────────────────────────────────
 
 function ProductCard({ product }: { product: Product }) {
   const { data: trustData } = useTrustScore(product.data_product_id);
   const issues = getProductIssues(product);
   const readiness = getReadinessState(product);
+  const [editOpen, setEditOpen] = useState(false);
 
   return (
-    <Link
-      href={`/products/${encodeURIComponent(product.data_product_id)}`}
-      className="text-left rounded-xl p-4 flex flex-col gap-3 hover:shadow-sm transition-shadow block"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold truncate" style={{ color: "var(--color-text)" }}>
-              {product.display_name}
-            </span>
-            <SlaBadge tier={product.sla_tier} />
+    <>
+      {editOpen && <GovernanceModal product={product} onClose={() => setEditOpen(false)} />}
+      <div
+        className="rounded-xl p-4 flex flex-col gap-3 hover:shadow-sm transition-shadow relative group"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        {/* Edit governance button — top-right, visible on hover */}
+        <button
+          onClick={() => setEditOpen(true)}
+          className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+          title="Edit governance"
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
+
+        <Link
+          href={`/products/${encodeURIComponent(product.data_product_id)}`}
+          className="flex flex-col gap-3"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold truncate" style={{ color: "var(--color-text)" }}>
+                  {product.display_name}
+                </span>
+                <SlaBadge tier={product.sla_tier} />
+              </div>
+              {product.domain && (
+                <span className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+                  {product.domain}
+                </span>
+              )}
+            </div>
+            <TrustScoreBadge score={(trustData as { score?: number } | undefined)?.score} />
           </div>
-          {product.domain && (
-            <span className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-              {product.domain}
-            </span>
+
+          {product.description && (
+            <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "var(--color-text-muted)" }}>
+              {product.description}
+            </p>
           )}
-        </div>
-        <TrustScoreBadge score={(trustData as { score?: number } | undefined)?.score} />
-      </div>
 
-      {product.description && (
-        <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "var(--color-text-muted)" }}>
-          {product.description}
-        </p>
-      )}
+          <div className="flex flex-wrap gap-1.5">
+            <StatusPill label={readiness === "ready" ? "Ready" : "Needs attention"} tone={readiness === "ready" ? "success" : "warning"} />
+            {issues.slice(0, 2).map((issue) => (
+              <StatusPill key={issue} label={issue} tone="neutral" />
+            ))}
+          </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        <StatusPill label={readiness === "ready" ? "Ready" : "Needs attention"} tone={readiness === "ready" ? "success" : "warning"} />
-        {issues.slice(0, 2).map((issue) => (
-          <StatusPill key={issue} label={issue} tone="neutral" />
-        ))}
+          <div className="flex items-center gap-3 mt-auto text-xs" style={{ color: "var(--color-text-muted)" }}>
+            {product.owner && <span>Owner: {product.owner}</span>}
+            {product.classification && (
+              <span className="capitalize">{product.classification}</span>
+            )}
+            <span>{product.entity_count ?? 0} entities</span>
+          </div>
+        </Link>
       </div>
-
-      <div className="flex items-center gap-3 mt-auto text-xs" style={{ color: "var(--color-text-muted)" }}>
-        {product.owner && <span>Owner: {product.owner}</span>}
-        <span>{product.entity_count ?? 0} entities</span>
-      </div>
-    </Link>
+    </>
   );
 }
 

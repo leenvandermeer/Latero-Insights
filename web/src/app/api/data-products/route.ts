@@ -9,7 +9,10 @@ const PRODUCT_SELECT = `
   dp.display_name,
   dp.description,
   dp.owner,
+  dp.data_steward,
   dp.domain,
+  dp.classification,
+  dp.retention_days,
   dp.sla_tier,
   dp.sla,
   dp.contract_ver,
@@ -31,7 +34,8 @@ const PRODUCT_FROM = `
 
 const PRODUCT_GROUP = `
   GROUP BY dp.data_product_id, dp.display_name, dp.description,
-           dp.owner, dp.domain, dp.sla_tier, dp.sla, dp.contract_ver,
+           dp.owner, dp.data_steward, dp.domain, dp.classification, dp.retention_days,
+           dp.sla_tier, dp.sla, dp.contract_ver,
            dp.deprecated_at, dp.tags, dp.created_at, dp.updated_at
 `;
 

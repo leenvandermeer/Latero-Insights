@@ -8,7 +8,10 @@ export interface DataProduct {
   display_name: string;
   description: string | null;
   owner: string | null;
+  data_steward: string | null;
   domain: string | null;
+  classification: "public" | "internal" | "confidential" | "restricted" | null;
+  retention_days: number | null;
   sla_tier: "bronze" | "silver" | "gold" | null;
   tags: Record<string, unknown>;
   entity_ids: string[];
@@ -19,11 +22,14 @@ export interface DataProduct {
 
 export interface DataProductInput {
   display_name: string;
-  description?: string;
-  owner?: string;
-  domain?: string;
+  description?: string | null;
+  owner?: string | null;
+  data_steward?: string | null;
+  domain?: string | null;
+  classification?: "public" | "internal" | "confidential" | "restricted" | null;
+  retention_days?: number | null;
   sla_tier?: "bronze" | "silver" | "gold" | null;
-  entity_ids: string[];
+  entity_ids?: string[];
 }
 
 async function apiFetch(path: string, options?: RequestInit) {
