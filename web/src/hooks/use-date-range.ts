@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export type DateRangePreset = "today" | "3d" | "7d" | "30d" | "custom";
+const DATE_RANGE_EVENT = "latero:date-range-change";
 
 interface UseDateRangeOptions {
   scope?: string;
@@ -51,6 +52,10 @@ function getStorageKey(scope?: string) {
   return `latero-date-range:${scope ?? "monitor"}`;
 }
 
+function buildEventName(scope?: string) {
+  return `${DATE_RANGE_EVENT}:${scope ?? "monitor"}`;
+}
+
 function readStoredRange(scope?: string): StoredDateRange | null {
   if (typeof window === "undefined") return null;
   try {
@@ -71,6 +76,11 @@ function readStoredRange(scope?: string): StoredDateRange | null {
 function writeStoredRange(scope: string | undefined, value: StoredDateRange) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(getStorageKey(scope), JSON.stringify(value));
+  window.dispatchEvent(
+    new CustomEvent<StoredDateRange>(buildEventName(scope), {
+      detail: value,
+    })
+  );
 }
 
 export function today(): string {
@@ -137,6 +147,42 @@ export function useDateRange(
   }, [defaultPreset, initialFrom, initialTo, scope]);
 
   const [state, setState] = useState<StoredDateRange>(initialState);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const syncFromStorage = () => {
+      const stored = readStoredRange(scope);
+      if (!stored) return;
+      setState((current) => {
+        if (
+          current.from === stored.from &&
+          current.to === stored.to &&
+          current.preset === stored.preset
+        ) {
+          return current;
+        }
+        return stored;
+      });
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key && event.key !== getStorageKey(scope)) return;
+      syncFromStorage();
+    };
+
+    const handleInternalSync = () => {
+      syncFromStorage();
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener(buildEventName(scope), handleInternalSync as EventListener);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(buildEventName(scope), handleInternalSync as EventListener);
+    };
+  }, [scope]);
 
   const persist = useCallback(
     (next: StoredDateRange) => {
