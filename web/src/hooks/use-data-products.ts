@@ -49,7 +49,8 @@ export function useDataProducts() {
     queryKey: ["data-products", installationId],
     queryFn: () => apiFetch("/api/data-products"),
     enabled: !!installationId,
-    staleTime: 60_000,
+    staleTime: 10_000,
+    refetchOnMount: true,
     retry: 1,
   });
 }
