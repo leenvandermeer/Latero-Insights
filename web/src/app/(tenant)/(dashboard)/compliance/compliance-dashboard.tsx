@@ -591,213 +591,233 @@ export function ComplianceDashboard() {
 
   return (
     <div className="page-content flex h-full flex-col overflow-x-hidden">
-      <div className="mb-6 flex items-start justify-end gap-4 pt-3">
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {showMatrixToggle && (
-            <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid var(--color-border)" }}>
-              {(["list", "matrix"] as ViewMode[]).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setViewMode(m)}
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5"
-                  style={{
-                    background: viewMode === m ? "var(--color-brand)" : "var(--color-surface)",
-                    color: viewMode === m ? "var(--color-text-on-dark)" : "var(--color-text-muted)",
-                  }}
-                >
-                  {m === "list" ? <List className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
-                  {m === "list" ? "Policies" : "Matrix"}
-                </button>
-              ))}
-            </div>
-          )}
-          <button
-            onClick={() => setShowPacksModal(true)}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-          >
-            <Tag className="h-3.5 w-3.5" />
-            Packs
-          </button>
-          <button
-            onClick={() => setModalState({ open: true })}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
-          >
-            <PlusCircle className="h-3.5 w-3.5" />
-            New policy
-          </button>
-          <button
-            onClick={handleRunAll}
-            disabled={runAll.isPending || !hasData}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-40 transition-opacity"
-            style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
-          >
-            {runAll.isPending
-              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />&nbsp;Running…</>
-              : <><RefreshCw className="h-3.5 w-3.5" />&nbsp;Run all checks</>
-            }
-          </button>
-        </div>
-      </div>
 
-      {/* Stats — product-centric */}
+      {/* ── Stats hero ──────────────────────────────────────────────────────── */}
       {hasData && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 mb-4">
           {[
-            { label: "Active policies",  value: policies.length,         color: "var(--color-text)"    },
-            { label: "Products in scope", value: products.length,        color: "var(--color-text)"    },
-            { label: "Compliant",         value: productsCompliant.length, color: "var(--color-success)" },
-            { label: "Failing",           value: productsFailing.length,   color: productsFailing.length > 0 ? "var(--color-error)" : "var(--color-text)" },
+            { label: "Active policies",   value: policies.length,           color: "var(--color-text)"    },
+            { label: "Products in scope", value: products.length,           color: "var(--color-text)"    },
+            { label: "Compliant",         value: productsCompliant.length,  color: "var(--color-success)" },
+            { label: "Failing",           value: productsFailing.length,    color: productsFailing.length > 0 ? "var(--color-error)" : "var(--color-text)" },
           ].map(({ label, value, color }) => (
-            <div key={label} className="rounded-xl p-4"
+            <div key={label} className="rounded-xl px-4 py-3"
               style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{label}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>{label}</p>
               <p className="text-2xl font-bold tabular-nums mt-1" style={{ color }}>{value}</p>
             </div>
           ))}
         </div>
       )}
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="flex items-center gap-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-        </div>
-      )}
-
-      {/* ── Policy list view ──────────────────────────────────────────────── */}
-      {!isLoading && hasData && viewMode === "list" && (
-        <div className="flex flex-col gap-2 overflow-auto flex-1">
-          {Array.from(policyByPack.entries()).map(([packId, packPolicies]) => {
-            const pack = packs.find((pk) => pk.id === packId);
-            return (
-              <React.Fragment key={packId ?? "__none__"}>
-                {pack && (
-                  <p className="text-[10px] font-semibold uppercase tracking-wide px-1 mt-2 mb-1"
-                    style={{ color: "var(--color-text-subtle)" }}>
-                    {pack.name}{pack.framework && <span className="ml-2 opacity-60">{pack.framework}</span>}
-                  </p>
-                )}
-                {packPolicies.map((pol) => (
-                  <PolicyRow
-                    key={pol.id}
-                    policy={pol}
-                    products={products}
-                    verdictMap={verdictMap}
-                    packs={packs}
-                    onEdit={() => setModalState({ open: true, policy: pol })}
-                  />
-                ))}
-              </React.Fragment>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Matrix view ───────────────────────────────────────────────────── */}
-      {!isLoading && hasData && viewMode === "matrix" && products.length > 0 && (
-        <div className="flex-1 overflow-auto rounded-xl border" style={{ borderColor: "var(--color-border)" }}>
-          <table className="w-full text-xs border-collapse" style={{ minWidth: `${200 + products.length * 110}px` }}>
-            <thead>
-              <tr style={{ background: "var(--color-surface)" }}>
-                <th className="sticky left-0 z-10 text-left px-4 py-3 font-medium"
-                  style={{ color: "var(--color-text-muted)", background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)", minWidth: 220 }}>
-                  Policy
-                </th>
-                {products.map((p) => (
-                  <th key={p.data_product_id} className="px-3 py-3 font-medium text-center"
-                    style={{ color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)", minWidth: 110 }}>
-                    <span className="block max-w-[100px] truncate mx-auto" title={p.display_name}>
-                      {p.display_name}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from(policyByPack.entries()).map(([packId, packPolicies]) => {
-                const pack = packs.find((pk) => pk.id === packId);
-                return (
-                  <React.Fragment key={packId ?? "__none__"}>
-                    {pack && (
-                      <tr>
-                        <td colSpan={products.length + 1}
-                          className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wide"
-                          style={{ background: "var(--color-surface-alt)", color: "var(--color-text-muted)" }}>
-                          {pack.name}{pack.framework && <span className="ml-2 opacity-60">{pack.framework}</span>}
-                        </td>
-                      </tr>
-                    )}
-                    {packPolicies.map((pol) => (
-                      <tr key={pol.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                        <td className="sticky left-0 z-10 px-4 py-2"
-                          style={{ background: "var(--color-surface)", color: "var(--color-text)" }}>
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="truncate text-xs font-medium flex-1" title={pol.name}>{pol.name}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 capitalize"
-                              style={ACTION_BADGE_STYLE[pol.action] ?? ACTION_BADGE_STYLE.notify}>
-                              {pol.action}
-                            </span>
-                            <button onClick={() => setModalState({ open: true, policy: pol })}
-                              className="p-1 rounded flex-shrink-0"
-                              style={{ color: "var(--color-text-subtle)" }} title="Edit">
-                              <Pencil className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </td>
-                        {products.map((prod) => {
-                          const key = `${pol.id}:${prod.data_product_id}`;
-                          return (
-                            <td key={prod.data_product_id} className="px-1 py-0.5">
-                              <MatrixCell
-                                verdict={verdictMap.get(key) ?? "unknown"}
-                                running={runningCells.has(key)}
-                                onRun={() => runCell(pol.id, prod.data_product_id)}
-                              />
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Matrix: no products yet */}
-      {!isLoading && hasData && viewMode === "matrix" && products.length === 0 && (
-        <div className="flex flex-col items-center justify-center flex-1 gap-2">
-          <Shield className="h-8 w-8" style={{ color: "var(--color-text-muted)" }} />
-          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No data products in scope yet.</p>
-        </div>
-      )}
-
-      {/* Empty — no policies */}
-      {!isLoading && !hasData && (
-        <div className="flex flex-col items-center justify-center flex-1 gap-4 max-w-sm mx-auto text-center">
-          <Shield className="h-10 w-10" style={{ color: "var(--color-text-muted)" }} />
-          <div>
-            <p className="text-sm font-medium mb-1" style={{ color: "var(--color-text)" }}>No policies yet</p>
-            <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-              Policies define checks that run against your data products — e.g. "owner required",
-              "quality pass-rate ≥ 95%", or "no open incidents". Once policies exist, run all
-              checks to populate the compliance matrix.
-            </p>
+      {/* ── Content card ────────────────────────────────────────────────────── */}
+      <div
+        className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-xl border"
+        style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+      >
+        {/* Card header: tabs left, actions right */}
+        <div
+          className="flex shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2"
+          style={{ borderBottom: "1px solid var(--color-border)" }}
+        >
+          {/* Tabs */}
+          <div className="flex items-center gap-1">
+            {showMatrixToggle && (["list", "matrix"] as ViewMode[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => setViewMode(m)}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                style={{
+                  background: viewMode === m ? "var(--color-accent)" : "transparent",
+                  color: viewMode === m ? "#fff" : "var(--color-text-muted)",
+                }}
+              >
+                {m === "list" ? <List className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
+                {m === "list" ? "Policies" : "Matrix"}
+              </button>
+            ))}
+            {!showMatrixToggle && (
+              <span className="px-3 py-1.5 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Policies</span>
+            )}
           </div>
-          <button
-            onClick={() => setModalState({ open: true })}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
-            style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
-          >
-            <PlusCircle className="h-3.5 w-3.5" />
-            Create first policy
-          </button>
+
+          {/* Actions */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setShowPacksModal(true)}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-medium"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+            >
+              <Tag className="h-3.5 w-3.5" />
+              Packs
+            </button>
+            <button
+              onClick={() => setModalState({ open: true })}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-medium"
+              style={{ border: "1px solid var(--color-border)", color: "var(--color-text)", background: "var(--color-surface)" }}
+            >
+              <PlusCircle className="h-3.5 w-3.5" />
+              New policy
+            </button>
+            <button
+              onClick={handleRunAll}
+              disabled={runAll.isPending || !hasData}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-medium disabled:opacity-40 transition-opacity"
+              style={{ background: "var(--color-accent)", color: "#fff" }}
+            >
+              {runAll.isPending
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Running…</>
+                : <><RefreshCw className="h-3.5 w-3.5" />Run all checks</>
+              }
+            </button>
+          </div>
         </div>
-      )}
+
+        {/* Loading */}
+        {isLoading && (
+          <div className="flex items-center gap-2 p-6 text-sm" style={{ color: "var(--color-text-muted)" }}>
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          </div>
+        )}
+
+        {/* ── Policy list view ──────────────────────────────────────────────── */}
+        {!isLoading && hasData && viewMode === "list" && (
+          <div className="flex flex-col gap-2 overflow-auto flex-1 p-4">
+            {Array.from(policyByPack.entries()).map(([packId, packPolicies]) => {
+              const pack = packs.find((pk) => pk.id === packId);
+              return (
+                <React.Fragment key={packId ?? "__none__"}>
+                  {pack && (
+                    <p className="text-[10px] font-semibold uppercase tracking-wide px-1 mt-2 mb-1"
+                      style={{ color: "var(--color-text-subtle)" }}>
+                      {pack.name}{pack.framework && <span className="ml-2 opacity-60">{pack.framework}</span>}
+                    </p>
+                  )}
+                  {packPolicies.map((pol) => (
+                    <PolicyRow
+                      key={pol.id}
+                      policy={pol}
+                      products={products}
+                      verdictMap={verdictMap}
+                      packs={packs}
+                      onEdit={() => setModalState({ open: true, policy: pol })}
+                    />
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Matrix view ───────────────────────────────────────────────────── */}
+        {!isLoading && hasData && viewMode === "matrix" && products.length > 0 && (
+          <div className="flex-1 overflow-auto">
+            <table className="w-full text-xs border-collapse" style={{ minWidth: `${200 + products.length * 110}px` }}>
+              <thead>
+                <tr style={{ background: "var(--color-surface)" }}>
+                  <th className="sticky left-0 z-10 text-left px-4 py-3 font-medium"
+                    style={{ color: "var(--color-text-muted)", background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)", minWidth: 220 }}>
+                    Policy
+                  </th>
+                  {products.map((p) => (
+                    <th key={p.data_product_id} className="px-3 py-3 font-medium text-center"
+                      style={{ color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)", minWidth: 110 }}>
+                      <span className="block max-w-[100px] truncate mx-auto" title={p.display_name}>
+                        {p.display_name}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from(policyByPack.entries()).map(([packId, packPolicies]) => {
+                  const pack = packs.find((pk) => pk.id === packId);
+                  return (
+                    <React.Fragment key={packId ?? "__none__"}>
+                      {pack && (
+                        <tr>
+                          <td colSpan={products.length + 1}
+                            className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wide"
+                            style={{ background: "var(--color-surface-alt)", color: "var(--color-text-muted)" }}>
+                            {pack.name}{pack.framework && <span className="ml-2 opacity-60">{pack.framework}</span>}
+                          </td>
+                        </tr>
+                      )}
+                      {packPolicies.map((pol) => (
+                        <tr key={pol.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                          <td className="sticky left-0 z-10 px-4 py-2"
+                            style={{ background: "var(--color-surface)", color: "var(--color-text)" }}>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="truncate text-xs font-medium flex-1" title={pol.name}>{pol.name}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 capitalize"
+                                style={ACTION_BADGE_STYLE[pol.action] ?? ACTION_BADGE_STYLE.notify}>
+                                {pol.action}
+                              </span>
+                              <button onClick={() => setModalState({ open: true, policy: pol })}
+                                className="p-1 rounded flex-shrink-0"
+                                style={{ color: "var(--color-text-subtle)" }} title="Edit">
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </td>
+                          {products.map((prod) => {
+                            const key = `${pol.id}:${prod.data_product_id}`;
+                            return (
+                              <td key={prod.data_product_id} className="px-1 py-0.5">
+                                <MatrixCell
+                                  verdict={verdictMap.get(key) ?? "unknown"}
+                                  running={runningCells.has(key)}
+                                  onRun={() => runCell(pol.id, prod.data_product_id)}
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Matrix: no products yet */}
+        {!isLoading && hasData && viewMode === "matrix" && products.length === 0 && (
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 p-8">
+            <Shield className="h-8 w-8" style={{ color: "var(--color-text-muted)" }} />
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No data products in scope yet.</p>
+          </div>
+        )}
+
+        {/* Empty — no policies */}
+        {!isLoading && !hasData && (
+          <div className="flex flex-col items-center justify-center flex-1 gap-4 max-w-sm mx-auto text-center p-8">
+            <div
+              className="flex items-center justify-center w-12 h-12 rounded-xl"
+              style={{ background: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)" }}
+            >
+              <Shield className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-base font-semibold mb-1.5" style={{ color: "var(--color-text)" }}>No policies yet</p>
+              <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                Policies define checks that run against your data products — e.g. "owner required",
+                "quality pass-rate ≥ 95%", or "no open incidents". Once policies exist, run all
+                checks to populate the compliance matrix.
+              </p>
+            </div>
+            <button
+              onClick={() => setModalState({ open: true })}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
+              style={{ background: "var(--color-accent)", color: "#fff" }}
+            >
+              <PlusCircle className="h-3.5 w-3.5" />
+              Create first policy
+            </button>
+          </div>
+        )}
+      </div>
 
       {modalState.open && (
         <PolicyModal
