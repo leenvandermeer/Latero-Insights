@@ -124,7 +124,9 @@ async function ingestLineage(event: AdapterEvent, pool: ReturnType<typeof getPgP
 async function ingestDataProduct(event: AdapterEvent, pool: ReturnType<typeof getPgPool>) {
   validateSchemaVersion(event.schema_version);
   const installationId = requireString(event.installation_id, "installation_id");
-  const dataProductId  = requireString(event.data_product_id, "data_product_id");
+  // data_product_id from the event becomes the external_id in Latero.
+  // Latero assigns its own internal UUID — callers never own the PK.
+  const externalId     = requireString(event.data_product_id, "data_product_id");
   const displayName    = requireString(event.display_name,    "display_name");
 
   const tags = event.tags && typeof event.tags === "object" && !Array.isArray(event.tags)
@@ -137,11 +139,11 @@ async function ingestDataProduct(event: AdapterEvent, pool: ReturnType<typeof ge
 
   await writeMetaDataProduct(pool, {
     installationId,
-    dataProductId,
+    externalId,
     displayName,
     description:    optionalString(event.description),
     owner:          optionalString(event.owner),
-    dataS_steward:  optionalString(event.data_steward),
+    dataSteward:  optionalString(event.data_steward),
     domain:         optionalString(event.domain),
     classification: optionalString(event.classification),
     retentionDays:  retentionDays !== null && !isNaN(retentionDays) ? retentionDays : null,

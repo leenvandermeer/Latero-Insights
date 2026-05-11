@@ -5,6 +5,9 @@ import { useInstallation } from "@/contexts/installation-context";
 
 export interface DataProduct {
   data_product_id: string;
+  /** Identifier provided by an external system (Databricks, API event).
+   *  Null for products created via the UI. */
+  external_id: string | null;
   display_name: string;
   description: string | null;
   owner: string | null;

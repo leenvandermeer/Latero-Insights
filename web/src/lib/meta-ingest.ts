@@ -634,11 +634,15 @@ export async function writeMetaColumnLineage(
 
 export interface MetaDataProductParams {
   installationId: string;
-  dataProductId: string;
+  /** External identifier provided by the caller (Databricks, API event, etc.).
+   *  Latero assigns its own internal UUID (data_product_id). The externalId is
+   *  stored in the external_id column and used for upsert lookup only.
+   *  Never used as the primary key. */
+  externalId: string;
   displayName: string;
   description?: string | null;
   owner?: string | null;
-  dataS_steward?: string | null;
+  dataSteward?: string | null;
   domain?: string | null;
   classification?: string | null;
   retentionDays?: number | null;
@@ -666,14 +670,16 @@ export async function writeMetaDataProduct(
 
   const client = await pool.connect();
   try {
+    // Upsert by external_id: Latero assigns the internal UUID on first encounter.
+    // If a record with this external_id already exists, update metadata only.
     await client.query(
       `INSERT INTO meta.data_products (
-         installation_id, data_product_id, display_name, description,
+         installation_id, data_product_id, external_id, display_name, description,
          owner, data_steward, domain, classification,
          retention_days, sla_tier, contract_ver, tags,
          valid_from, updated_at
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())
-       ON CONFLICT (installation_id, data_product_id) DO UPDATE SET
+       ) VALUES ($1, gen_random_uuid(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())
+       ON CONFLICT (installation_id, external_id) WHERE external_id IS NOT NULL AND valid_to IS NULL DO UPDATE SET
          display_name    = COALESCE(EXCLUDED.display_name,    meta.data_products.display_name),
          description     = COALESCE(EXCLUDED.description,     meta.data_products.description),
          owner           = COALESCE(EXCLUDED.owner,           meta.data_products.owner),
@@ -688,15 +694,14 @@ export async function writeMetaDataProduct(
                              THEN meta.data_products.tags || EXCLUDED.tags
                              ELSE meta.data_products.tags
                            END,
-         updated_at      = now()
-       WHERE meta.data_products.valid_to IS NULL`,
+         updated_at      = now()`,
       [
         params.installationId,
-        params.dataProductId,
+        params.externalId,
         params.displayName,
         params.description ?? null,
         params.owner ?? null,
-        params.dataS_steward ?? null,
+        params.dataSteward ?? null,
         params.domain ?? null,
         classification,
         params.retentionDays ?? null,
