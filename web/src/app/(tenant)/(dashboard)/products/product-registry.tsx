@@ -41,6 +41,8 @@ function getProductIssues(product: Product) {
   if (!product.sla_tier) issues.push("Missing SLA");
   if (!product.domain) issues.push("Missing domain");
   if ((product.entity_count ?? 0) === 0) issues.push("No members");
+  if (!product.classification) issues.push("No classification");
+  if (!product.data_steward) issues.push("No steward");
   return issues;
 }
 

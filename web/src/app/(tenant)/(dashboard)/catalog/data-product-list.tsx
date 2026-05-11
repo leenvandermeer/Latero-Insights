@@ -133,6 +133,7 @@ function DataProductCard({
           </Link>
           <span>{product.entity_count} {product.entity_count === 1 ? "entity" : "entities"}</span>
           {product.owner && <span>· {product.owner}</span>}
+          {product.classification && <span className="capitalize">· {product.classification}</span>}
           <span className="ml-auto">Updated {updatedAgo}</span>
         </div>
 
@@ -154,7 +155,7 @@ function DataProductCard({
               <button
                 onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left"
-                style={{ color: "#ef4444" }}
+                style={{ color: "var(--color-error)" }}
               >
                 <Trash2 className="h-3.5 w-3.5" /> Delete
               </button>
@@ -188,7 +189,7 @@ function DataProductCard({
                 onClick={handleDelete}
                 disabled={deleteMutation.isPending}
                 className="rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-                style={{ background: "#ef4444" }}
+                style={{ background: "var(--color-error)" }}
               >
                 {deleteMutation.isPending ? "Deleting…" : "Delete"}
               </button>

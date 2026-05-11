@@ -154,10 +154,10 @@ function Field({
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium" style={{ color: "var(--color-text)" }}>
-        {label}{required && <span style={{ color: "#ef4444" }}> *</span>}
+        {label}{required && <span style={{ color: "var(--color-error)" }}> *</span>}
       </label>
       {children}
-      {error && <p className="text-xs" style={{ color: "#ef4444" }}>{error}</p>}
+      {error && <p className="text-xs" style={{ color: "var(--color-error)" }}>{error}</p>}
     </div>
   );
 }
@@ -208,7 +208,10 @@ const EMPTY: DataProductInput = {
   display_name: "",
   description: "",
   owner: "",
+  data_steward: "",
   domain: "",
+  classification: null,
+  retention_days: null,
   sla_tier: null,
   entity_ids: [],
 };
@@ -226,12 +229,15 @@ export function DataProductSlideOver({ open, onClose, initialValues }: Props) {
       setForm(
         initialValues
           ? {
-              display_name: initialValues.display_name,
-              description: initialValues.description ?? "",
-              owner: initialValues.owner ?? "",
-              domain: initialValues.domain ?? "",
-              sla_tier: initialValues.sla_tier ?? null,
-              entity_ids: initialValues.entity_ids,
+              display_name:   initialValues.display_name,
+              description:    initialValues.description ?? "",
+              owner:          initialValues.owner ?? "",
+              data_steward:   initialValues.data_steward ?? "",
+              domain:         initialValues.domain ?? "",
+              classification: initialValues.classification ?? null,
+              retention_days: initialValues.retention_days ?? null,
+              sla_tier:       initialValues.sla_tier ?? null,
+              entity_ids:     initialValues.entity_ids,
             }
           : EMPTY
       );
@@ -255,12 +261,15 @@ export function DataProductSlideOver({ open, onClose, initialValues }: Props) {
     if (!validate()) return;
 
     const payload: DataProductInput = {
-      display_name: form.display_name.trim(),
-      description: form.description || undefined,
-      owner: form.owner || undefined,
-      domain: form.domain || undefined,
-      sla_tier: form.sla_tier ?? null,
-      entity_ids: form.entity_ids,
+      display_name:   form.display_name.trim(),
+      description:    form.description || undefined,
+      owner:          (form.owner ?? "").trim() || null,
+      data_steward:   (form.data_steward ?? "").trim() || null,
+      domain:         (form.domain ?? "").trim() || undefined,
+      classification: form.classification ?? null,
+      retention_days: form.retention_days ?? null,
+      sla_tier:       form.sla_tier ?? null,
+      entity_ids:     form.entity_ids,
     };
 
     try {
@@ -348,6 +357,16 @@ export function DataProductSlideOver({ open, onClose, initialValues }: Props) {
                 placeholder="team or person"
               />
             </Field>
+            <Field label="Data steward">
+              <TextInput
+                value={form.data_steward ?? ""}
+                onChange={(v) => set("data_steward", v)}
+                placeholder="e.g. jane.doe@bank.nl"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Domain">
               <TextInput
                 value={form.domain ?? ""}
@@ -355,7 +374,33 @@ export function DataProductSlideOver({ open, onClose, initialValues }: Props) {
                 placeholder="e.g. HR"
               />
             </Field>
+            <Field label="Classification">
+              <select
+                value={form.classification ?? ""}
+                onChange={(e) => set("classification", (e.target.value as DataProductInput["classification"]) || null)}
+                className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+              >
+                <option value="">— Not set —</option>
+                <option value="public">Public</option>
+                <option value="internal">Internal</option>
+                <option value="confidential">Confidential</option>
+                <option value="restricted">Restricted</option>
+              </select>
+            </Field>
           </div>
+
+          <Field label="Retention (days)">
+            <input
+              type="number"
+              min={1}
+              value={form.retention_days ?? ""}
+              onChange={(e) => set("retention_days", e.target.value ? Number(e.target.value) : null)}
+              placeholder="e.g. 365"
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+            />
+          </Field>
 
           <Field label="SLA tier">
             <div className="flex gap-2">
@@ -367,11 +412,7 @@ export function DataProductSlideOver({ open, onClose, initialValues }: Props) {
                   className="flex-1 rounded-lg py-1.5 text-xs font-semibold capitalize transition-colors"
                   style={
                     form.sla_tier === tier
-                      ? tier === "bronze"
-                        ? { background: "#fed7aa", color: "#c2410c", border: "none" }
-                        : tier === "silver"
-                        ? { background: "#cffafe", color: "#0e7490", border: "none" }
-                        : { background: "#fef9c3", color: "#a16207", border: "none" }
+                      ? { background: "var(--color-warning-subtle)", color: "var(--color-warning)", border: "none" }
                       : {
                           background: "var(--color-surface)",
                           border: "1px solid var(--color-border)",
@@ -393,7 +434,7 @@ export function DataProductSlideOver({ open, onClose, initialValues }: Props) {
           </Field>
 
           {mutationError && (
-            <p className="text-xs" style={{ color: "#ef4444" }}>{mutationError}</p>
+            <p className="text-xs" style={{ color: "var(--color-error)" }}>{mutationError}</p>
           )}
         </form>
 
