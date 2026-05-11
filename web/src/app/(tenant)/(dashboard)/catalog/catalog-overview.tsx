@@ -1,12 +1,13 @@
 "use client";
 
 import { AlertTriangle, ArrowRight, Boxes, Database, Package, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { useDataProducts, useEstateHealth } from "@/hooks/use-data-products";
 import { useEntities } from "@/hooks/use-entities";
 import { useDatasets } from "@/hooks/use-datasets";
 
 type CatalogOverviewProps = {
-  onOpenTab: (tab: "products" | "entities" | "datasets") => void;
+  onOpenTab: (tab: "entities" | "datasets") => void;
   onOpenEntitiesWithFilter?: (query: string) => void;
 };
 
@@ -128,15 +129,14 @@ export function CatalogOverview({ onOpenTab, onOpenEntitiesWithFilter }: Catalog
               Open products, entities, or datasets.
             </h2>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => onOpenTab("products")}
+              <Link
+                href="/products"
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold"
                 style={{ background: "var(--color-accent)", color: "#fff" }}
               >
                 Open data products
                 <ArrowRight className="h-4 w-4" />
-              </button>
+              </Link>
               <button
                 type="button"
                 onClick={() => onOpenTab("entities")}
@@ -227,15 +227,14 @@ export function CatalogOverview({ onOpenTab, onOpenEntitiesWithFilter }: Catalog
         >
           <div className="flex items-center justify-between gap-3 px-4 py-3" style={{ borderBottom: "1px solid var(--color-border)" }}>
             <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Recently maintained products</h3>
-            <button
-              type="button"
-              onClick={() => onOpenTab("products")}
+            <Link
+              href="/products"
               className="inline-flex items-center gap-1 text-xs font-semibold"
               style={{ color: "var(--color-brand)" }}
             >
               Open products
               <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+            </Link>
           </div>
           <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
             {productRows.length === 0 ? (

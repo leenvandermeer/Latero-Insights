@@ -3,10 +3,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3 } from "lucide-react";
+import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3, PlusCircle } from "lucide-react";
 import { useDataProducts } from "@/hooks/use-data-products";
 import { useTrustScore } from "@/hooks/use-trust-score";
 import { TrustScoreBadge } from "@/components/trust/trust-score-badge";
+import { DataProductSlideOver } from "@/app/(tenant)/(dashboard)/catalog/data-product-slide-over";
 
 interface Product {
   data_product_id: string;
@@ -200,6 +201,7 @@ export function ProductRegistry() {
   const [domain, setDomain] = useState(searchParams.get("domain") ?? "");
   const [sortBy, setSortBy] = useState<SortKey>((searchParams.get("sort") as SortKey) || "name_asc");
   const [readiness, setReadiness] = useState<ReadinessFilter>((searchParams.get("readiness") as ReadinessFilter) || "all");
+  const [slideOverOpen, setSlideOverOpen] = useState(false);
 
   const products = (response as { data?: Product[] } | null)?.data ?? [];
 
@@ -281,14 +283,17 @@ export function ProductRegistry() {
             </p>
           )}
         </div>
-        <Link
-          href="/catalog?tab=products"
+        <button
+          onClick={() => setSlideOverOpen(true)}
           className="inline-flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-opacity hover:opacity-90 sm:min-h-0 sm:w-auto sm:justify-start sm:py-1.5 sm:text-xs"
           style={{ background: "var(--color-brand)", color: "#fff" }}
         >
-          + New Product
-        </Link>
+          <PlusCircle className="h-3.5 w-3.5" />
+          New product
+        </button>
       </div>
+
+      <DataProductSlideOver open={slideOverOpen} onClose={() => setSlideOverOpen(false)} />
 
       <div className="grid gap-4 mb-6 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard label="Products" value={products.length} hint="Registered in this tenant" icon={Layers3} />

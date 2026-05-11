@@ -65,3 +65,4 @@ Naming note:
 | [LADR-073](20260511-keycloak-admin-exposure-without-new-subdomain.md) | 2026-05-11 | Keycloak admin exposure hardening without introducing a new public subdomain | PROPOSED |
 | [LADR-074](20260511-lineage-default-map-and-advanced-trace.md) | 2026-05-11 | Lineage default map with preserved advanced trace | PROPOSED |
 | [LADR-075](20260511-lineage-ux-hardening.md) | 2026-05-11 | Lineage Explorer UX hardening: naamgeving, inline controls, tab-pariteit, verwijdering graph-view.tsx | ACCEPTED |
+| [LADR-076](20260511-catalog-products-separation.md) | 2026-05-11 | Catalog/Products separation: één eigenaar per domein — Data Products tab verwijderd uit Catalog | ACCEPTED |

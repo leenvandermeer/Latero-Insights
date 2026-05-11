@@ -2,19 +2,17 @@
 
 import { useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { LayoutDashboard, Package, Boxes, Database } from "lucide-react";
+import { LayoutDashboard, Boxes, Database } from "lucide-react";
 import { CatalogOverview } from "./catalog-overview";
-import { DataProductList } from "./data-product-list";
 import { EntityTab } from "./entity-tab";
 import { DatasetTab } from "./dataset-tab";
 
-type Tab = "overview" | "products" | "entities" | "datasets";
+type Tab = "overview" | "entities" | "datasets";
 
 const TABS: { id: Tab; label: string; Icon: React.ElementType }[] = [
-  { id: "overview",  label: "Overview",      Icon: LayoutDashboard },
-  { id: "datasets",  label: "Datasets",      Icon: Database },
-  { id: "entities",  label: "Entities",      Icon: Boxes },
-  { id: "products",  label: "Data Products", Icon: Package },
+  { id: "overview",  label: "Overview",  Icon: LayoutDashboard },
+  { id: "datasets",  label: "Datasets",  Icon: Database },
+  { id: "entities",  label: "Entities",  Icon: Boxes },
 ];
 
 export function CatalogHub() {
@@ -23,7 +21,7 @@ export function CatalogHub() {
   const searchParams = useSearchParams();
   const tab = useMemo<Tab>(() => {
     const value = searchParams.get("tab");
-    return value === "products" || value === "entities" || value === "datasets" ? value : "overview";
+    return value === "entities" || value === "datasets" ? value : "overview";
   }, [searchParams]);
   const entityQuery = searchParams.get("entity_q") ?? "";
   const entityLayer = searchParams.get("entity_layer") ?? "";
@@ -73,7 +71,6 @@ export function CatalogHub() {
             onOpenEntitiesWithFilter={(query) => updateParams({ tab: "entities", entity_q: query })}
           />
         )}
-        {tab === "products"  && <DataProductList />}
         {tab === "entities"  && (
           <EntityTab
             q={entityQuery}
