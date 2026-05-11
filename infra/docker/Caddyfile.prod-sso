@@ -18,9 +18,11 @@ latero.nl {
     header {
         -Server
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; upgrade-insecure-requests"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "SAMEORIGIN"
         Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), camera=(), microphone=()"
     }
 
     log {
@@ -49,6 +51,7 @@ control.latero.nl {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
+        X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "geolocation=(), camera=(), microphone=()"
         Cross-Origin-Opener-Policy "same-origin"
@@ -73,6 +76,7 @@ sso.latero.nl {
         -Server
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
+        X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
     }
 
     log {

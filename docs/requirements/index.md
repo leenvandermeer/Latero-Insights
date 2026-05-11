@@ -10,6 +10,7 @@
 - [SQL Schema Reference](./sql-schema-reference.md)
 - [English-Only UI Requirement](./LINS-ENG-english-only-ui.md)
 - [Security Guidelines](./security-guidelines.md)
+- [Microsoft Defender SmartScreen Checklist](./smartscreen-checklist.md)
 - [Go-Live Checklist](./go-live-checklist.md)
 
 ### V2
