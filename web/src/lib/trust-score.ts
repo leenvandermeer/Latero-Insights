@@ -43,7 +43,7 @@ export async function calculateTrustScore(
   const factors: TrustFactor[] = [];
   let deduction = 0;
 
-  // --- Factor 1: Owner assigned (−15 indien ontbreekt) ---
+  // --- Factor 1: Owner assigned (−25 indien ontbreekt) ---
   const ownerRes = await pool.query(
     `SELECT owner FROM meta.data_products
      WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
@@ -51,38 +51,37 @@ export async function calculateTrustScore(
   );
   const ownerTeam = ownerRes.rows[0]?.owner ?? null;
   const ownerPassed = !!ownerTeam;
-  const ownerDelta = ownerPassed ? 0 : -15;
+  const ownerDelta = ownerPassed ? 0 : -25;
   deduction += Math.abs(ownerDelta);
   factors.push({
     id: "owner_assigned",
-    label: "Owner team assigned",
-    weight: 15,
+    label: "Owner assigned",
+    weight: 25,
     delta: ownerDelta,
     passed: ownerPassed,
     link: `/products/${productId}`,
   });
 
-  // --- Factor 2: Freshness SLA defined (−10 indien ontbreekt) ---
+  // --- Factor 2: SLA tier defined (−10 indien ontbreekt) ---
   const slaRes = await pool.query(
-    `SELECT sla_tier, sla FROM meta.data_products
+    `SELECT sla_tier FROM meta.data_products
      WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
     [installationId, productId]
   );
   const slaTier = slaRes.rows[0]?.sla_tier ?? null;
-  const sla = slaRes.rows[0]?.sla ?? null;
-  const slaPassed = !!(slaTier || sla);
+  const slaPassed = !!slaTier;
   const slaDelta = slaPassed ? 0 : -10;
   deduction += Math.abs(slaDelta);
   factors.push({
     id: "sla_defined",
-    label: slaTier ? `SLA tier defined (${slaTier})` : "Freshness SLA defined",
+    label: slaTier ? `SLA tier (${slaTier})` : "SLA tier (not set)",
     weight: 10,
     delta: slaDelta,
     passed: slaPassed,
     link: `/products/${productId}`,
   });
 
-  // --- Factor 3: Lineage coverage (−7 indien < 80%) ---
+  // --- Factor 3: Lineage coverage (−15 indien < 80%) ---
   // Gebaseerd op datasets van entiteiten die tot dit product behoren
   const lineageRes = await pool.query(
     `SELECT
@@ -103,18 +102,18 @@ export async function calculateTrustScore(
   const linkedDatasets = lineageRes.rows[0]?.linked_datasets ?? 0;
   const lineageCoverage = totalDatasets > 0 ? linkedDatasets / totalDatasets : 1;
   const lineagePassed = lineageCoverage >= 0.8;
-  const lineageDelta = lineagePassed ? 0 : -7;
+  const lineageDelta = lineagePassed ? 0 : -15;
   deduction += Math.abs(lineageDelta);
   factors.push({
     id: "lineage_coverage",
     label: `Lineage coverage (${Math.round(lineageCoverage * 100)}%)`,
-    weight: 7,
+    weight: 15,
     delta: lineageDelta,
     passed: lineagePassed,
     link: `/lineage`,
   });
 
-  // --- Factor 4: Quality check pass rate (−10 indien < 95%) ---
+  // --- Factor 3: Quality check pass rate (−25 indien < 95%) ---
   // Via: product → entities → datasets → quality_rules → quality_results (laatste 7d)
   const qcRes = await pool.query(
     `SELECT
@@ -136,18 +135,18 @@ export async function calculateTrustScore(
   const passedChecks = qcRes.rows[0]?.passed_checks ?? 0;
   const qcRate = totalChecks > 0 ? passedChecks / totalChecks : 1;
   const qcPassed = qcRate >= 0.95;
-  const qcDelta = qcPassed ? 0 : -10;
+  const qcDelta = qcPassed ? 0 : -25;
   deduction += Math.abs(qcDelta);
   factors.push({
     id: "quality_pass_rate",
     label: `Quality check pass rate (${Math.round(qcRate * 100)}%)`,
-    weight: 10,
+    weight: 25,
     delta: qcDelta,
     passed: qcPassed,
     link: `/quality`,
   });
 
-  // --- Factor 5: Open critical incidents (−5 per stuk, max −20) ---
+  // --- Factor 5: Open critical incidents (−5 per stuk, max −25) ---
   const incidentRes = await pool.query(
     `SELECT COUNT(*)::int AS critical_count
      FROM meta.incidents
@@ -156,13 +155,13 @@ export async function calculateTrustScore(
     [installationId, productId]
   );
   const criticalCount = incidentRes.rows[0]?.critical_count ?? 0;
-  const incidentDeduction = Math.min(criticalCount * 5, 20);
+  const incidentDeduction = Math.min(criticalCount * 5, 25);
   const incidentPassed = criticalCount === 0;
   deduction += incidentDeduction;
   factors.push({
     id: "open_critical_incidents",
     label: `Open critical incidents (${criticalCount})`,
-    weight: 20,
+    weight: 25,
     delta: -incidentDeduction,
     passed: incidentPassed,
     link: `/incidents?severity=critical&product_id=${productId}`,

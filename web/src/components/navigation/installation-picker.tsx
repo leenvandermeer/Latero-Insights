@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { Building2, Mail, ChevronDown, Check, Star } from "lucide-react";
+import { Building2, ChevronDown, Check, Star } from "lucide-react";
 import { useInstallation } from "@/contexts/installation-context";
 import { cn } from "@/lib/utils";
 import type { Installation } from "@/contexts/installation-context";
@@ -117,8 +117,8 @@ export function InstallationPicker({ collapsed }: Props) {
         </div>
 
         {user?.email && (
-          <p className="mt-2 text-[10px] truncate flex items-center gap-1" style={{ color: "var(--color-sidebar-muted)" }} title={user.email}>
-            <Mail className="h-3 w-3" /> {user.email}
+          <p className="mt-1 text-[10px] truncate" style={{ color: "var(--color-sidebar-muted)" }} title={user.email}>
+            {user.is_admin ? "Admin" : "Member"} · {installation.environment}
           </p>
         )}
       </div>

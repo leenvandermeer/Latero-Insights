@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
   Activity,
@@ -15,39 +15,32 @@ import {
   TrendingUp,
   Users,
   ClipboardList,
-  BellRing,
-  Settings,
-  Sun,
-  Moon,
   ChevronLeft,
   Plus,
-  LogOut,
-  UserCircle,
   Star,
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInstallation } from "@/contexts/installation-context";
 import { NewDashboardModal } from "@/components/dashboard/new-dashboard-modal";
-import { InstallationPicker } from "@/components/navigation/installation-picker";
 import { useBreakpoint, usePinnedDashboards } from "@/hooks";
 import { useDashboards } from "@/contexts/dashboard-context";
 
 const MONITOR_NAV = [
-  { label: "Overview", href: "/overview", icon: LayoutDashboard },
-  { label: "Runs", href: "/runs", icon: Activity },
-  { label: "Data Quality", href: "/quality", icon: ShieldCheck },
-  { label: "Issues", href: "/incidents", icon: AlertTriangle },
-  { label: "Compliance", href: "/compliance", icon: ClipboardList },
+  { label: "Overview",     href: "/overview",    icon: LayoutDashboard },
+  { label: "Runs",         href: "/runs",         icon: Activity },
+  { label: "Data Quality", href: "/quality",      icon: ShieldCheck },
+  { label: "Issues",       href: "/incidents",    icon: AlertTriangle },
+  { label: "Compliance",   href: "/compliance",   icon: ClipboardList },
 ];
 
 const EXPLORE_NAV = [
-  { label: "Products", href: "/products", icon: Layers },
-  { label: "Catalog", href: "/catalog", icon: Package },
-  { label: "Lineage", href: "/lineage", icon: GitBranch },
-  { label: "Changes", href: "/changes", icon: GitCommit },
-  { label: "Impact", href: "/impact", icon: TrendingUp },
-  { label: "Consumers", href: "/consumers", icon: Users },
+  { label: "Products",   href: "/products",   icon: Layers },
+  { label: "Catalog",    href: "/catalog",    icon: Package },
+  { label: "Lineage",    href: "/lineage",    icon: GitBranch },
+  { label: "Changes",    href: "/changes",    icon: GitCommit },
+  { label: "Impact",     href: "/impact",     icon: TrendingUp },
+  { label: "Consumers",  href: "/consumers",  icon: Users },
 ];
 
 const MAX_PINNED_IN_NAV = 3;
@@ -58,14 +51,12 @@ function NavItem({
   Icon,
   active,
   collapsed,
-  helper,
 }: {
   href: string;
   label: string;
   Icon: React.ComponentType<{ className?: string }>;
   active: boolean;
   collapsed: boolean;
-  helper?: string;
 }) {
   return (
     <Link
@@ -73,9 +64,15 @@ function NavItem({
       prefetch={false}
       className={cn(
         "rounded-lg text-sm font-medium transition-colors",
-        collapsed ? "flex items-center justify-center px-2 py-2.5" : "flex items-center gap-3 px-3 py-2.5"
+        collapsed
+          ? "flex items-center justify-center px-2 py-2.5"
+          : "flex items-center gap-3 px-3 py-2.5"
       )}
-      style={active ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
+      style={
+        active
+          ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" }
+          : { color: "var(--color-sidebar-muted)" }
+      }
       onMouseEnter={(e) => {
         if (!active) {
           (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)";
@@ -91,28 +88,16 @@ function NavItem({
       title={collapsed ? label : undefined}
     >
       <Icon className="h-4 w-4 shrink-0" />
-      {!collapsed && (
-        <div className="min-w-0">
-          <span className="block truncate">{label}</span>
-          {helper ? (
-            <span className="block text-[11px]" style={{ color: active ? "inherit" : "var(--color-text-subtle)" }}>
-              {helper}
-            </span>
-          ) : null}
-        </div>
-      )}
+      {!collapsed && <span className="truncate">{label}</span>}
     </Link>
   );
 }
 
 export function Sidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname    = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [newDashOpen, setNewDashOpen] = useState(false);
-  const { user, installation } = useInstallation();
-  const isAdmin = user?.is_admin ?? false;
+  const { installation } = useInstallation();
   const { isTablet, isSmallDesktop } = useBreakpoint();
   const isAutoCollapsed = isTablet || isSmallDesktop;
   const { userDashboards } = useDashboards();
@@ -122,16 +107,10 @@ export function Sidebar() {
     .slice(0, MAX_PINNED_IN_NAV);
 
   useEffect(() => {
-    const stored = (localStorage.getItem("theme") as "light" | "dark") ?? "light";
-    setTheme(stored);
-  }, []);
-
-  useEffect(() => {
     if (isAutoCollapsed) {
       setCollapsed(true);
     } else {
-      const storedCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
-      setCollapsed(storedCollapsed);
+      setCollapsed(localStorage.getItem("sidebar-collapsed") === "true");
     }
   }, [isAutoCollapsed]);
 
@@ -143,24 +122,9 @@ export function Sidebar() {
     }
   }, [collapsed, isAutoCollapsed]);
 
-  const toggleTheme = () => {
-    const next = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    localStorage.setItem("theme", next);
-    document.documentElement.setAttribute("data-theme", next);
-  };
-
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    router.push("/");
-    router.refresh();
-  };
-
   const handleCollapseToggle = (next: boolean) => {
     setCollapsed(next);
-    if (!isAutoCollapsed) {
-      localStorage.setItem("sidebar-collapsed", String(next));
-    }
+    if (!isAutoCollapsed) localStorage.setItem("sidebar-collapsed", String(next));
   };
 
   return (
@@ -176,30 +140,47 @@ export function Sidebar() {
           color: "var(--color-sidebar-foreground)",
         }}
       >
-        <div className="flex h-14 items-center px-3 shrink-0" style={{ borderBottom: "1px solid var(--color-sidebar-border)" }}>
+        {/* Header */}
+        <div
+          className="flex h-14 shrink-0 items-center px-3"
+          style={{ borderBottom: "1px solid var(--color-sidebar-border)" }}
+        >
           {!collapsed ? (
-            <div className="flex w-full items-center justify-between">
-              <Link href="/" className="flex h-14 min-w-0 flex-1 items-center gap-2.5 transition-opacity hover:opacity-80" aria-label="Latero Control">
+            <>
+              <Link
+                href="/"
+                className="flex h-14 min-w-0 flex-1 items-center gap-2.5 transition-opacity hover:opacity-80"
+                aria-label="Latero Control"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo/latero-mark-light.svg" alt="Latero" width={28} height={28} className="shrink-0" />
+                <img src="/logo/latero-mark-light.svg" alt="Latero" width={26} height={26} className="shrink-0" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold leading-none tracking-tight" style={{ color: "var(--color-brand, #1B3B6B)" }}>Latero</p>
                   <p className="mt-0.5 truncate text-xs leading-none" style={{ color: "var(--color-text-subtle)" }}>Control</p>
                 </div>
               </Link>
               {!isTablet && (
-                <button onClick={() => handleCollapseToggle(true)} className="rounded-md p-1.5" style={{ color: "var(--color-sidebar-muted)" }} aria-label="Collapse">
+                <button
+                  onClick={() => handleCollapseToggle(true)}
+                  className="rounded-md p-1.5 shrink-0 transition-colors"
+                  style={{ color: "var(--color-sidebar-muted)" }}
+                  aria-label="Collapse sidebar"
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
               )}
-            </div>
+            </>
           ) : (
             <button
               onClick={() => handleCollapseToggle(false)}
-              className="mx-auto flex h-8 w-8 items-center justify-center rounded-md"
-              style={{ color: "var(--color-brand, #1B3B6B)", cursor: "pointer" }}
-              aria-label="Expand"
+              className="mx-auto flex h-8 w-8 items-center justify-center rounded-md transition-colors"
+              style={{ cursor: "pointer" }}
+              aria-label="Expand sidebar"
               title="Expand sidebar"
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo/latero-mark-light.svg" alt="Latero" width={22} height={22} />
@@ -207,30 +188,32 @@ export function Sidebar() {
           )}
         </div>
 
+        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-2">
-          <InstallationPicker collapsed={collapsed} />
-
           {collapsed ? (
             <div className="flex flex-col items-center gap-0.5 px-2">
-              {/* Monitor */}
-              {MONITOR_NAV.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <NavItem key={item.href} href={item.href} label={item.label} Icon={item.icon} active={active} collapsed />
-                );
-              })}
-              {/* Divider */}
+              {MONITOR_NAV.map((item) => (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  Icon={item.icon}
+                  active={pathname === item.href || pathname.startsWith(item.href + "/")}
+                  collapsed
+                />
+              ))}
               <div className="my-1 w-8" style={{ borderTop: "1px solid var(--color-sidebar-border)" }} />
-              {/* Explore */}
-              {EXPLORE_NAV.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <NavItem key={item.href} href={item.href} label={item.label} Icon={item.icon} active={active} collapsed />
-                );
-              })}
-              {/* Divider */}
+              {EXPLORE_NAV.map((item) => (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  Icon={item.icon}
+                  active={pathname === item.href || pathname.startsWith(item.href + "/")}
+                  collapsed
+                />
+              ))}
               <div className="my-1 w-8" style={{ borderTop: "1px solid var(--color-sidebar-border)" }} />
-              {/* Dashboards */}
               <NavItem href="/dashboard" label="Dashboards" Icon={LayoutDashboard} active={pathname.startsWith("/dashboard")} collapsed />
               <button
                 onClick={() => { setCollapsed(false); setNewDashOpen(true); }}
@@ -281,7 +264,6 @@ export function Sidebar() {
                 </div>
               </div>
 
-              {/* Dashboards section — system + pinned */}
               <div>
                 <div className="flex items-center justify-between px-3 pb-1 pt-1">
                   <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-sidebar-muted)" }}>
@@ -299,18 +281,15 @@ export function Sidebar() {
                   </button>
                 </div>
                 <div className="space-y-0.5">
-                  {/* Pinned user dashboards */}
                   {pinnedDashboards.map((dash) => {
-                    const href = `/dashboard/${dash.id}`;
+                    const href   = `/dashboard/${dash.id}`;
                     const active = pathname === href;
                     return (
                       <div key={dash.id} className="group/pinned flex items-center gap-0.5">
                         <Link
                           href={href}
                           prefetch={false}
-                          className={cn(
-                            "flex flex-1 min-w-0 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                          )}
+                          className="flex flex-1 min-w-0 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
                           style={active
                             ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" }
                             : { color: "var(--color-sidebar-muted)" }}
@@ -331,8 +310,6 @@ export function Sidebar() {
                       </div>
                     );
                   })}
-
-                  {/* All dashboards link */}
                   <Link
                     href="/dashboard"
                     prefetch={false}
@@ -351,55 +328,6 @@ export function Sidebar() {
             </>
           )}
         </nav>
-
-        <div className="space-y-0.5 px-2 pb-3 pt-3" style={{ borderTop: "1px solid var(--color-sidebar-border)" }}>
-          <Link
-            href="/account"
-            className={cn("text-sm font-medium transition-colors", collapsed ? "flex items-center justify-center rounded-lg px-2 py-2.5" : "flex items-center gap-3 rounded-lg px-3 py-2.5")}
-            style={pathname === "/account" ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
-            onMouseEnter={(e) => { if (pathname !== "/account") { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
-            onMouseLeave={(e) => { if (pathname !== "/account") { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
-            title={collapsed ? "Account" : undefined}
-          >
-            <UserCircle className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Account</span>}
-          </Link>
-          {isAdmin && (
-            <Link
-              href="/settings"
-              className={cn("text-sm font-medium transition-colors", collapsed ? "flex items-center justify-center rounded-lg px-2 py-2.5" : "flex items-center gap-3 rounded-lg px-3 py-2.5")}
-              style={pathname === "/settings" ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" } : { color: "var(--color-sidebar-muted)" }}
-              onMouseEnter={(e) => { if (pathname !== "/settings") { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; } }}
-              onMouseLeave={(e) => { if (pathname !== "/settings") { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; } }}
-              title={collapsed ? "Settings" : undefined}
-            >
-              <Settings className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>Settings</span>}
-            </Link>
-          )}
-          <button
-            onClick={toggleTheme}
-            className={cn("w-full text-sm font-medium transition-colors", collapsed ? "flex items-center justify-center rounded-lg px-2 py-2.5" : "flex items-center gap-3 rounded-lg px-3 py-2.5")}
-            style={{ color: "var(--color-sidebar-muted)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-sidebar-foreground)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-sidebar-muted)"; }}
-            title={collapsed ? (theme === "light" ? "Dark mode" : "Light mode") : undefined}
-          >
-            {theme === "light" ? <Moon className="h-4 w-4 shrink-0" /> : <Sun className="h-4 w-4 shrink-0" />}
-            {!collapsed && <span>{theme === "light" ? "Dark mode" : "Light mode"}</span>}
-          </button>
-          <button
-            onClick={handleLogout}
-            className={cn("w-full text-sm font-medium transition-colors", collapsed ? "flex items-center justify-center rounded-lg px-2 py-2.5" : "flex items-center gap-3 rounded-lg px-3 py-2.5")}
-            style={{ color: "var(--color-error, #dc2626)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-            title={collapsed ? "Log out" : undefined}
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Log out</span>}
-          </button>
-        </div>
       </aside>
 
       <NewDashboardModal open={newDashOpen} onClose={() => setNewDashOpen(false)} />
