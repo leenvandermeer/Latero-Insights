@@ -15,6 +15,9 @@ import {
   LayoutGrid,
   List,
   Tag,
+  Search,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   usePolicies,
@@ -542,12 +545,14 @@ function MatrixCell({
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-type ViewMode = "list" | "matrix";
+type ViewMode = "explorer" | "list" | "matrix";
 
 export function ComplianceDashboard() {
   const [modalState, setModalState] = useState<{ open: boolean; policy?: Policy }>({ open: false });
   const [showPacksModal, setShowPacksModal] = useState(false);
-  const [viewMode, setViewMode]     = useState<ViewMode>("list");
+  const [viewMode, setViewMode]     = useState<ViewMode>("explorer");
+  const [explorerQuery, setExplorerQuery] = useState("");
+  const [expandedPolicies, setExpandedPolicies] = useState<Set<string>>(new Set());
 
   const { data: policiesData }              = usePolicies();
   const { data: complianceData, isLoading } = useComplianceMatrix();
@@ -622,23 +627,23 @@ export function ComplianceDashboard() {
         >
           {/* Tabs */}
           <div className="flex items-center gap-1">
-            {showMatrixToggle && (["list", "matrix"] as ViewMode[]).map((m) => (
+            {([
+              { id: "explorer", icon: <Search className="h-3.5 w-3.5" />, label: "Explorer" },
+              { id: "list",     icon: <List className="h-3.5 w-3.5" />,   label: "Policies" },
+              ...(showMatrixToggle ? [{ id: "matrix", icon: <LayoutGrid className="h-3.5 w-3.5" />, label: "Matrix" }] : []),
+            ] as { id: ViewMode; icon: React.ReactNode; label: string }[]).map(({ id, icon, label }) => (
               <button
-                key={m}
-                onClick={() => setViewMode(m)}
+                key={id}
+                onClick={() => setViewMode(id)}
                 className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
                 style={{
-                  background: viewMode === m ? "var(--color-accent)" : "transparent",
-                  color: viewMode === m ? "#fff" : "var(--color-text-muted)",
+                  background: viewMode === id ? "var(--color-accent)" : "transparent",
+                  color: viewMode === id ? "#fff" : "var(--color-text-muted)",
                 }}
               >
-                {m === "list" ? <List className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
-                {m === "list" ? "Policies" : "Matrix"}
+                {icon}{label}
               </button>
             ))}
-            {!showMatrixToggle && (
-              <span className="px-3 py-1.5 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Policies</span>
-            )}
           </div>
 
           {/* Actions */}
@@ -679,6 +684,161 @@ export function ComplianceDashboard() {
             <Loader2 className="h-4 w-4 animate-spin" /> Loading…
           </div>
         )}
+
+        {/* ── Explorer view ─────────────────────────────────────────────────── */}
+        {!isLoading && hasData && viewMode === "explorer" && (() => {
+          const q = explorerQuery.trim().toLowerCase();
+          const filtered = policies.filter((pol) => {
+            if (!q) return true;
+            const pack = packs.find((pk) => pk.id === pol.pack_id);
+            return (
+              pol.name.toLowerCase().includes(q) ||
+              conditionLabel(pol.rule as Record<string, unknown>).toLowerCase().includes(q) ||
+              (pack?.name.toLowerCase().includes(q) ?? false)
+            );
+          });
+          return (
+            <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
+              {/* Search bar */}
+              <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--color-border)" }}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: "var(--color-text-muted)" }} />
+                  <input
+                    value={explorerQuery}
+                    onChange={(e) => setExplorerQuery(e.target.value)}
+                    placeholder="Search policies, conditions, packs…"
+                    className="w-full rounded-lg pl-8 pr-3 py-2 text-sm outline-none"
+                    style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                  />
+                </div>
+              </div>
+              {/* Results */}
+              <div className="flex flex-col overflow-auto flex-1">
+                {filtered.length === 0 && (
+                  <div className="flex items-center justify-center flex-1 p-8 text-sm" style={{ color: "var(--color-text-muted)" }}>
+                    No policies match &ldquo;{explorerQuery}&rdquo;
+                  </div>
+                )}
+                {filtered.map((pol) => {
+                  const pack = packs.find((pk) => pk.id === pol.pack_id);
+                  const isExpanded = expandedPolicies.has(pol.id);
+                  let pass = 0, fail = 0, exception = 0, unknown = 0;
+                  for (const p of products) {
+                    const v = verdictMap.get(`${pol.id}:${p.data_product_id}`) ?? "unknown";
+                    if (v === "pass") pass++;
+                    else if (v === "fail") fail++;
+                    else if (v === "exception") exception++;
+                    else unknown++;
+                  }
+                  const total = products.length;
+                  const allUnknown = unknown === total;
+                  const passRate = total > 0 ? pass / total : 0;
+                  return (
+                    <div key={pol.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                      {/* Policy header row */}
+                      <button
+                        type="button"
+                        onClick={() => setExpandedPolicies((prev) => {
+                          const next = new Set(prev);
+                          isExpanded ? next.delete(pol.id) : next.add(pol.id);
+                          return next;
+                        })}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[rgba(128,128,128,0.04)]"
+                      >
+                        {/* Expand chevron */}
+                        <span className="shrink-0" style={{ color: "var(--color-text-muted)" }}>
+                          {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        </span>
+                        {/* Name + meta */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                            <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>{pol.name}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize"
+                              style={ACTION_BADGE_STYLE[pol.action] ?? ACTION_BADGE_STYLE.notify}>
+                              {pol.action}
+                            </span>
+                            {pack && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                                style={{ background: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}>
+                                {pack.name}{pack.framework && ` · ${pack.framework}`}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                            {conditionLabel(pol.rule as Record<string, unknown>)}
+                          </p>
+                        </div>
+                        {/* Compliance summary */}
+                        {total > 0 && (
+                          <div className="flex items-center gap-3 shrink-0">
+                            {/* Mini progress bar */}
+                            <div className="hidden sm:block w-20 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--color-border)" }}>
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: `${passRate * 100}%`,
+                                  background: fail > 0 ? "var(--color-error)" : passRate === 1 ? "var(--color-success)" : "var(--color-warning)",
+                                }}
+                              />
+                            </div>
+                            <div className="text-right min-w-[48px]">
+                              {allUnknown ? (
+                                <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>Not run</span>
+                              ) : (
+                                <>
+                                  <span className="text-sm font-semibold tabular-nums" style={{ color: fail > 0 ? "var(--color-error)" : "var(--color-success)" }}>
+                                    {pass}
+                                  </span>
+                                  <span className="text-xs" style={{ color: "var(--color-text-muted)" }}> / {total}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {/* Edit button */}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setModalState({ open: true, policy: pol }); }}
+                          className="p-1.5 rounded shrink-0"
+                          style={{ color: "var(--color-text-muted)" }}
+                          title="Edit policy"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </button>
+                      {/* Expanded: product chips */}
+                      {isExpanded && (
+                        <div className="px-10 pb-3 flex flex-wrap gap-1.5">
+                          {products.map((prod) => {
+                            const v = verdictMap.get(`${pol.id}:${prod.data_product_id}`) ?? "unknown";
+                            const chipStyle: React.CSSProperties =
+                              v === "pass"      ? { background: "rgba(16,185,129,0.10)",  color: "#059669",  border: "1px solid rgba(16,185,129,0.25)"  } :
+                              v === "fail"      ? { background: "rgba(239,68,68,0.10)",   color: "#dc2626",  border: "1px solid rgba(239,68,68,0.25)"   } :
+                              v === "exception" ? { background: "rgba(245,158,11,0.10)",  color: "#d97706",  border: "1px solid rgba(245,158,11,0.25)"  } :
+                                                  { background: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" };
+                            return (
+                              <span key={prod.data_product_id}
+                                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-full font-medium"
+                                style={chipStyle}
+                                title={prod.display_name}
+                              >
+                                {v === "pass"      ? <CheckCircle2 className="h-3 w-3 shrink-0" /> :
+                                 v === "fail"      ? <XCircle className="h-3 w-3 shrink-0" /> :
+                                 v === "exception" ? <AlertTriangle className="h-3 w-3 shrink-0" /> :
+                                                     <span className="w-3 shrink-0 text-center text-[9px]">—</span>}
+                                <span className="max-w-[120px] truncate">{prod.display_name}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── Policy list view ──────────────────────────────────────────────── */}
         {!isLoading && hasData && viewMode === "list" && (

@@ -63,7 +63,7 @@ function EntityNodeComponent({ data, selected }: NodeProps) {
 
   return (
     <div
-      className="shadow-sm overflow-hidden min-w-[240px] max-w-[340px]"
+      className="shadow-sm overflow-hidden min-w-[280px] max-w-[420px]"
       style={{
         background: isEntity ? "var(--color-surface)" : "var(--color-card)",
         border: "1px solid var(--color-border)",
@@ -91,7 +91,7 @@ function EntityNodeComponent({ data, selected }: NodeProps) {
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2">
         <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: accentColor }} />
-        <span className="text-[13px] font-semibold flex-1 leading-snug line-clamp-2" style={{ color: "var(--color-text)" }} title={label}>
+        <span className="text-[13px] font-semibold flex-1 leading-snug line-clamp-3" style={{ color: "var(--color-text)" }} title={label}>
           {label}
         </span>
         {/* LADR-064: entity badge voor silver/gold nodes */}
