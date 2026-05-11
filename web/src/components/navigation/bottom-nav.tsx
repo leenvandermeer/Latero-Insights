@@ -44,14 +44,14 @@ export function BottomNav() {
       >
         {primaryItems.map((item) => {
           const Icon = iconMap[item.icon];
-          const active = pathname === item.href;
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors",
+                "flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium transition-colors",
                 active
                   ? "text-[var(--color-accent)]"
                   : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
@@ -67,7 +67,7 @@ export function BottomNav() {
         <button
           onClick={() => setSheetOpen(true)}
           className={cn(
-            "flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors",
+            "flex min-h-[var(--touch-target-min)] flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium transition-colors",
             sheetOpen
               ? "text-[var(--color-accent)]"
               : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
@@ -108,7 +108,7 @@ export function BottomNav() {
             <div className="px-2 py-2">
               {moreItems.map((item) => {
                 const Icon = iconMap[item.icon];
-                const active = pathname === item.href;
+                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <Link
                     key={item.href}

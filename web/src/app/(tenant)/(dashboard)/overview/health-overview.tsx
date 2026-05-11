@@ -115,25 +115,32 @@ export function HealthOverview() {
   ];
 
   return (
-    <div className="flex flex-col gap-6" style={{ padding: "var(--spacing-page, 24px)" }}>
+    <div className="page-content flex flex-col gap-6 overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold" style={{ color: "var(--color-text)" }}>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>
             Estate Health
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
             Showing {summaryLabel}
           </p>
           {!!health?.last_run_at && (
-            <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+            <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
               Last run {relativeTime(String(health.last_run_at))}
             </p>
           )}
         </div>
-        <div className="flex flex-col items-end gap-1 pb-0.5">
-          <DateRangePicker from={from} to={to} preset={preset} onChange={setRange} onPresetChange={setPreset} />
-          <span className="flex items-center gap-1 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+        <div className="flex w-full min-w-0 flex-col items-start gap-1 pb-0.5 lg:w-auto lg:items-end">
+          <DateRangePicker
+            from={from}
+            to={to}
+            preset={preset}
+            onChange={setRange}
+            onPresetChange={setPreset}
+            className="w-full lg:w-auto"
+          />
+          <span className="flex max-w-full items-center gap-1 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
             <Calendar className="h-3 w-3" />
             Recent runs and monitor signals use this period
           </span>
@@ -141,7 +148,7 @@ export function HealthOverview() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map(({ label, value, icon: Icon, href, accent }) => (
           <Link
             key={label}
@@ -165,7 +172,7 @@ export function HealthOverview() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Data products */}
         <div className="rounded-xl border" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
           <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--color-border)" }}>
@@ -245,7 +252,7 @@ export function HealthOverview() {
                   <li key={rid || i} className="border-b last:border-0" style={{ borderColor: "var(--color-border)" }}>
                     <Link
                       href={rid ? `/runs/${encodeURIComponent(rid)}` : "/runs"}
-                      className="flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-surface-subtle)] transition-colors"
+                      className="flex flex-col gap-2 px-5 py-3 transition-colors hover:bg-[var(--color-surface-subtle)] sm:flex-row sm:items-center"
                     >
                       <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded shrink-0", statusColor(status))}>
                         {statusIcon(status)} {status}
@@ -279,7 +286,7 @@ export function HealthOverview() {
         <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text-muted)" }}>
           Operating model
         </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Link href="/compliance"
             className="rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow"
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>

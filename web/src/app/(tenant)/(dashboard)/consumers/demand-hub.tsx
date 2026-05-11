@@ -166,18 +166,21 @@ export function DemandHub() {
   );
 
   return (
-    <div className="flex h-full" style={{ padding: "var(--spacing-page, 24px)", gap: "24px" }}>
-      {/* Left: product list */}
-      <div className="w-72 flex-shrink-0 flex flex-col gap-3">
-        <div>
-          <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>Consumers</h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            Demand-side analytics per data product
-          </p>
+    <div className="page-content flex h-full flex-col overflow-x-hidden">
+      <div className="mb-5 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4" style={{ color: "var(--color-brand)" }} />
+          <div>
+            <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Consumers</h1>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Demand-side analytics per data product
+            </p>
+          </div>
         </div>
+
         <div
-          className="flex items-center gap-2 px-3 py-2 rounded-lg"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          className="flex items-center gap-2 rounded-md border px-2.5"
+          style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
         >
           <Search className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--color-text-muted)" }} />
           <input
@@ -185,33 +188,47 @@ export function DemandHub() {
             placeholder="Filter products…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-transparent text-sm outline-none"
+            className="h-9 flex-1 bg-transparent text-sm outline-none"
             style={{ color: "var(--color-text)" }}
           />
         </div>
-
-        <div className="flex flex-col gap-1 flex-1 overflow-y-auto">
-          {isLoading && <p className="text-xs py-4" style={{ color: "var(--color-text-muted)" }}>Loading…</p>}
-          {filtered.map((p) => (
-            <button
-              key={p.data_product_id}
-              onClick={() => setSelectedId(p.data_product_id)}
-              className="text-left px-3 py-2 rounded-lg text-sm transition-colors"
-              style={{
-                background: selectedId === p.data_product_id ? "var(--color-brand)" : "transparent",
-                color: selectedId === p.data_product_id ? "#fff" : "var(--color-text)",
-              }}
-            >
-              {p.display_name}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* Right: detail */}
-      <div className="flex-1 min-w-0 overflow-y-auto">
-        {!selectedId && (
-          <div className="flex flex-col items-center justify-center h-full gap-2">
+      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <div
+          className="min-h-0 overflow-hidden rounded-lg border"
+          style={{ borderColor: "var(--color-border)" }}
+        >
+          <div className="border-b px-4 py-2.5 text-xs font-medium" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)", background: "var(--color-surface-subtle)" }}>
+            Products
+          </div>
+          <div className="flex max-h-[50vh] flex-col gap-1 overflow-y-auto p-2 xl:max-h-none xl:h-full">
+            {isLoading && <p className="px-2 py-4 text-xs" style={{ color: "var(--color-text-muted)" }}>Loading…</p>}
+            {!isLoading && filtered.length === 0 && (
+              <p className="px-2 py-4 text-xs" style={{ color: "var(--color-text-muted)" }}>No matching products.</p>
+            )}
+            {filtered.map((p) => (
+              <button
+                key={p.data_product_id}
+                onClick={() => setSelectedId(p.data_product_id)}
+                className="rounded-md px-3 py-2 text-left text-sm transition-colors"
+                style={{
+                  background: selectedId === p.data_product_id ? "var(--color-sidebar-hover)" : "transparent",
+                  color: "var(--color-text)",
+                }}
+              >
+                {p.display_name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div
+          className="min-h-0 overflow-y-auto rounded-lg border"
+          style={{ borderColor: "var(--color-border)" }}
+        >
+          {!selectedId && (
+          <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
             <Users className="h-8 w-8" style={{ color: "var(--color-text-muted)" }} />
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
               Select a product to view consumer analytics
@@ -219,8 +236,8 @@ export function DemandHub() {
           </div>
         )}
         {selectedId && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
+          <div className="p-4">
+            <div className="mb-4 flex items-center gap-2">
               <BarChart3 className="h-4 w-4" style={{ color: "var(--color-brand)" }} />
               <h2 className="text-base font-semibold" style={{ color: "var(--color-text)" }}>
                 {products.find((p) => p.data_product_id === selectedId)?.display_name}
@@ -229,6 +246,7 @@ export function DemandHub() {
             <ProductDemandPanel productId={selectedId} />
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -12,14 +12,13 @@ export default function DashboardLayout({
     <InstallationProvider>
       <DashboardProvider>
         <InstallationGate>
-          <div className="min-h-screen overflow-x-clip" style={{ background: "var(--color-bg)" }}>
+          <div className="min-h-screen overflow-x-hidden" style={{ background: "var(--color-bg)" }}>
             <Sidebar />
             {/* paddingLeft tracks --sidebar-width, set by Sidebar via JS (LADR-013) */}
             <main
-              className="pb-16 md:pb-0 transition-[padding-left] duration-200"
-              style={{ paddingLeft: "var(--sidebar-width, 280px)" }}
+              className="pb-[calc(var(--bottomnav-height)+env(safe-area-inset-bottom,0px))] md:pb-0 pl-0 md:pl-[var(--sidebar-width,280px)] transition-[padding-left] duration-200"
             >
-              <div className="px-4 py-4 xl:px-6 xl:py-6 w-full min-w-0">
+              <div className="w-full min-w-0">
                 {children}
               </div>
             </main>

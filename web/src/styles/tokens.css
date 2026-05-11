@@ -227,9 +227,10 @@
   --sidebar-collapsed:      64px;
   --topbar-height:          56px;
   --bottomnav-height:       64px;
-  --content-max-width:      1280px;
+  --content-max-width:      1440px;
   --page-padding-x:         var(--space-6);
   --page-padding-x-mobile:  var(--space-4);
+  --spacing-page:           var(--page-padding-x-mobile);
   --touch-target-min:       44px;
 }
 

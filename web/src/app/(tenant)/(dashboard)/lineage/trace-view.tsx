@@ -9,6 +9,7 @@ import {
   useNodesState,
   type Edge,
   type Node,
+  type ReactFlowInstance,
   MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 import type { LineageAttribute, LineageEntity } from "@/lib/adapters/types";
 import { EntityNode } from "./entity-node";
+import { AdjustableTraceEdge } from "./adjustable-trace-edge";
 import { EntityDetailPanel } from "./entity-detail-panel";
 import { LINEAGE_LAYER_ORDER, lineageLayerIndex, lineageNodeKey, lineageNodeLabel } from "./lineage-utils";
 
@@ -69,9 +71,12 @@ interface GraphNodeData {
   hopDistance?: number;
 }
 
-const X_SPACING = 320;
+const BASE_X_SPACING = 560;
+const MAX_X_SPACING = 1200;
 const Y_SPACING = 148;
 const DEFAULT_DEPTH = 2;
+const TRACE_NODE_ESTIMATED_WIDTH = 300;
+const TRACE_CANVAS_GUTTER = 16;
 const LAYER_ACCENT: Record<string, string> = {
   landing: "#4E7496",
   raw: "#2F5D50",
@@ -91,6 +96,12 @@ const STATUS_EDGE_COLOR: Record<string, string> = {
 const nodeTypes = {
   entity: EntityNode,
 };
+
+const edgeTypes = {
+  adjustableTrace: AdjustableTraceEdge,
+};
+
+type TraceFlowInstance = ReactFlowInstance<Node, Edge<Record<string, unknown>>>;
 
 function statusToHealth(status: string): HealthStatus {
   switch (status.toUpperCase()) {
@@ -230,6 +241,7 @@ function buildTraceGraph(
   distances: Map<string, number>,
   directions: Map<string, -1 | 0 | 1>,
   anchorKey: string | null,
+  viewportWidth: number,
 ) {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -248,6 +260,19 @@ function buildTraceGraph(
   }
 
   const sortedColumns = [...columns.keys()].sort((a, b) => a - b);
+  const columnCount = Math.max(1, sortedColumns.length);
+  const usableWidth = Math.max(viewportWidth - TRACE_CANVAS_GUTTER * 2 - TRACE_NODE_ESTIMATED_WIDTH, BASE_X_SPACING);
+  const dynamicXSpacing = Math.min(
+    MAX_X_SPACING,
+    Math.max(BASE_X_SPACING, columnCount > 1 ? usableWidth / (columnCount - 1) : 0),
+  );
+  const columnPositions = new Map<number, number>(
+    sortedColumns.map((col, index) => [
+      col,
+      (index - (columnCount - 1) / 2) * dynamicXSpacing,
+    ]),
+  );
+
   for (const col of sortedColumns) {
     const keys = columns.get(col)!;
     keys.sort((a, b) => {
@@ -320,7 +345,7 @@ function buildTraceGraph(
       const entity = entityByKey.get(key)!;
       const distance = distances.get(key) ?? 0;
       const direction = directions.get(key) ?? 0;
-      const x = col * X_SPACING;
+      const x = columnPositions.get(col) ?? 0;
       const y = (index - (count - 1) / 2) * Y_SPACING;
 
       const data: GraphNodeData = {
@@ -406,6 +431,9 @@ function statusBadgeTone(status: string) {
 export function TraceView({ entities, attributes, initialFocus, request, onOpenColumns }: TraceViewProps) {
   const normalizedEntities = useMemo(() => normalizeLineageEntities(entities), [entities]);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const flowInstanceRef = useRef<TraceFlowInstance | null>(null);
+  const fitFrameRef = useRef<number | null>(null);
+  const [canvasWidth, setCanvasWidth] = useState(1280);
   const entityOptions = useMemo(
     () => normalizedEntities
       .map((entity) => ({ key: lineageNodeKey(entity), label: lineageNodeLabel(entity), layer: entity.layer.toLowerCase() }))
@@ -420,6 +448,7 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
   const [displayMode, setDisplayMode] = useState<TraceDisplayMode>("graph");
   const [includedLayers, setIncludedLayers] = useState<string[]>([...LINEAGE_LAYER_ORDER]);
   const [controlsCollapsed, setControlsCollapsed] = useState(false);
+  const [edgeOffsets, setEdgeOffsets] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const stored = window.localStorage.getItem("lineage-trace-controls-collapsed");
@@ -458,8 +487,8 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
   );
 
   const graph = useMemo(
-    () => buildTraceGraph(trace.nodes, trace.edges, trace.distances, trace.directions, anchorKey),
-    [anchorKey, trace]
+    () => buildTraceGraph(trace.nodes, trace.edges, trace.distances, trace.directions, anchorKey, canvasWidth),
+    [anchorKey, canvasWidth, trace]
   );
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(graph.nodes);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(graph.edges);
@@ -471,6 +500,68 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
   useEffect(() => {
     setFlowEdges(graph.edges);
   }, [graph.edges, setFlowEdges]);
+
+  useEffect(() => {
+    setEdgeOffsets((current) => {
+      const activeIds = new Set(graph.edges.map((edge) => edge.id));
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([edgeId]) => activeIds.has(edgeId)),
+      );
+      return Object.keys(next).length === Object.keys(current).length ? current : next;
+    });
+  }, [graph.edges]);
+
+  const scheduleFitView = useCallback((duration = 220) => {
+    if (displayMode !== "graph" || trace.nodes.length === 0) return;
+    if (fitFrameRef.current != null) {
+      cancelAnimationFrame(fitFrameRef.current);
+    }
+    fitFrameRef.current = requestAnimationFrame(() => {
+      flowInstanceRef.current?.fitView({
+        padding: 0.02,
+        duration,
+        maxZoom: 3,
+      });
+    });
+  }, [displayMode, trace.nodes.length]);
+
+  useEffect(() => {
+    scheduleFitView(0);
+  }, [scheduleFitView, graph.nodes, graph.edges]);
+
+  useEffect(() => {
+    if (displayMode !== "graph" || trace.nodes.length === 0) return;
+    const timeout = window.setTimeout(() => {
+      scheduleFitView(260);
+    }, 240);
+    return () => window.clearTimeout(timeout);
+  }, [controlsCollapsed, displayMode, scheduleFitView, trace.nodes.length]);
+
+  useEffect(() => {
+    const node = canvasRef.current;
+    if (!node || displayMode !== "graph") return;
+
+    setCanvasWidth(node.clientWidth || 1280);
+
+    const observer = new ResizeObserver(() => {
+      const nextWidth = node.clientWidth || 1280;
+      setCanvasWidth((current) => (Math.abs(current - nextWidth) > 2 ? nextWidth : current));
+      scheduleFitView();
+    });
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [displayMode, scheduleFitView]);
+
+  useEffect(() => {
+    return () => {
+      if (fitFrameRef.current != null) {
+        cancelAnimationFrame(fitFrameRef.current);
+      }
+    };
+  }, []);
 
   const selectedEntity = useMemo(
     () => trace.nodes.find((entity) => lineageNodeKey(entity) === selectedNodeId) ?? null,
@@ -504,20 +595,53 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
     return { failed, warning };
   }, [trace.nodes]);
 
+  const handleEdgeOffsetChange = useCallback((edgeId: string, offsetY: number) => {
+    setFlowEdges((current) =>
+      current.map((edge) =>
+        edge.id === edgeId
+          ? {
+              ...edge,
+              selected: true,
+              data: {
+                ...(edge.data ?? {}),
+                offsetY,
+              },
+            }
+          : edge
+      )
+    );
+    setEdgeOffsets((current) => {
+      if (offsetY === 0) {
+        const { [edgeId]: _removed, ...rest } = current;
+        return rest;
+      }
+      return {
+        ...current,
+        [edgeId]: offsetY,
+      };
+    });
+  }, [setFlowEdges]);
+
   const displayEdges = useMemo(() => {
-    if (!selectedNodeId) return flowEdges;
     return flowEdges.map((edge) => {
       const isConnected = edge.source === selectedNodeId || edge.target === selectedNodeId;
+      const hasNodeSelection = Boolean(selectedNodeId);
       return {
         ...edge,
+        type: "adjustableTrace",
+        data: {
+          ...(edge.data ?? {}),
+          offsetY: edgeOffsets[edge.id] ?? 0,
+          onOffsetChange: handleEdgeOffsetChange,
+        },
         style: {
           ...edge.style,
-          opacity: isConnected ? 1 : 0.18,
-          strokeWidth: isConnected ? 3 : (edge.style?.strokeWidth ?? 2),
+          opacity: hasNodeSelection ? (isConnected ? 1 : 0.18) : 1,
+          strokeWidth: hasNodeSelection && isConnected ? 3 : (edge.style?.strokeWidth ?? 2),
         },
       };
     });
-  }, [flowEdges, selectedNodeId]);
+  }, [edgeOffsets, flowEdges, handleEdgeOffsetChange, selectedNodeId]);
 
   const handleExportImage = useCallback(async () => {
     if (!canvasRef.current || displayMode !== "graph") return;
@@ -528,7 +652,7 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
       pixelRatio: 2,
       filter: (node) => {
         if (!(node instanceof HTMLElement)) return true;
-        return !node.classList.contains("react-flow__controls");
+        return !node.classList.contains("react-flow__controls") && !node.classList.contains("trace-edge-handle");
       },
     });
     const link = document.createElement("a");
@@ -542,10 +666,10 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
     : "Choose an anchor entity to start tracing.";
 
   return (
-    <div className="relative flex h-full min-h-0">
+    <div className="relative flex h-full min-h-0 overflow-hidden">
       <aside
         className={`shrink-0 overflow-auto border-r transition-[width] duration-200 ${
-          controlsCollapsed ? "w-[56px]" : "w-[236px]"
+          controlsCollapsed ? "w-[64px]" : "w-[280px]"
         }`}
         style={{ borderColor: "var(--color-border)", background: "var(--color-card)" }}
       >
@@ -845,13 +969,23 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
                 nodes={flowNodes}
                 edges={displayEdges}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                fitViewOptions={{ padding: 0.02, maxZoom: 3 }}
+                onInit={(instance) => {
+                  flowInstanceRef.current = instance as unknown as TraceFlowInstance;
+                  scheduleFitView(0);
+                  window.setTimeout(() => {
+                    scheduleFitView(0);
+                  }, 80);
+                }}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onNodeClick={(_, node) => setSelectedNodeId((current) => current === node.id ? null : node.id)}
+                onPaneClick={() => setSelectedNodeId(null)}
                 nodesDraggable
                 fitView
                 minZoom={0.45}
-                maxZoom={1.6}
+                maxZoom={3}
                 className="bg-[var(--color-bg)]"
               >
                 <Background color="var(--color-border)" gap={24} size={1} />

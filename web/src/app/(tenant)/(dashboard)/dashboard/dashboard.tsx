@@ -263,10 +263,10 @@ export function DashboardCanvas({ dashboardId }: Props) {
 
   return (
     <>
-      <div className="flex h-full gap-3" style={{ alignItems: "flex-start" }}>
+      <div className="page-content flex h-full gap-3 overflow-x-hidden" style={{ alignItems: "flex-start" }}>
 
         {/* Main content */}
-        <div className="flex-1 min-w-0 space-y-4 p-0 overflow-hidden pr-1">
+        <div className="min-w-0 flex-1 space-y-4 overflow-hidden">
         {/* Dashboard header */}
         <div
           className="mb-5 flex min-h-[44px] flex-wrap items-center gap-3"
@@ -294,7 +294,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
               <div className="relative group/title min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <h1
-                    className="truncate text-[17px] font-semibold leading-none"
+                    className="truncate text-lg font-medium leading-tight"
                     style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}
                   >
                     {dashboard.name}

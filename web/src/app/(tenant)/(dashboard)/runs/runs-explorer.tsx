@@ -29,7 +29,7 @@ export function RunsExplorer() {
   const runs = (data?.data ?? []) as Array<Record<string, string>>;
 
   return (
-    <div className="flex flex-col h-full" style={{ padding: "var(--spacing-page, 24px)" }}>
+    <div className="page-content flex h-full flex-col overflow-x-hidden">
       <div className="flex flex-col gap-3 mb-5">
         <div className="flex items-center gap-2">
           <Activity className="h-4 w-4" style={{ color: "var(--color-brand)" }} />

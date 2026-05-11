@@ -48,6 +48,8 @@
    Content Area Padding
    ---------------------------------------------------------------- */
 .page-content {
+  padding-top: var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
   padding-left: var(--page-padding-x-mobile);
   padding-right: var(--page-padding-x-mobile);
   max-width: var(--content-max-width);
@@ -56,8 +58,44 @@
 
 @media (min-width: 768px) {
   .page-content {
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-6);
     padding-left: var(--page-padding-x);
     padding-right: var(--page-padding-x);
+  }
+}
+
+@media (min-width: 1280px) {
+  .page-content {
+    max-width: 1600px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .page-content {
+    max-width: 1760px;
+  }
+}
+
+:root {
+  --spacing-page: var(--page-padding-x-mobile);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --spacing-page: var(--page-padding-x);
+  }
+}
+
+/* ----------------------------------------------------------------
+   iOS Safari Form Zoom Prevention
+   Prevent auto-zoom when focusing inputs/selects below 16px.
+   ---------------------------------------------------------------- */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }
 

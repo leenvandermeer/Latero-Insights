@@ -42,33 +42,35 @@ export function CatalogHub() {
   };
 
   return (
-    <div className="flex flex-col h-full" style={{ padding: "var(--spacing-page, 24px)" }}>
+    <div className="flex h-full flex-col page-content">
       {/* Header */}
       <div className="mb-4">
-        <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>Catalog</h1>
-        <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+        <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Catalog</h1>
+        <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
           Data products, entities, and datasets
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b" style={{ borderColor: "var(--color-border)" }}>
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => updateParams({ tab: id })}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors"
-            style={{
-              color: tab === id ? "var(--color-brand)" : "var(--color-text-muted)",
-              borderBottom: tab === id ? "2px solid var(--color-brand)" : "2px solid transparent",
-              background: "transparent",
-              marginBottom: "-1px",
-            }}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </button>
-        ))}
+      <div className="mb-6 overflow-x-auto border-b" style={{ borderColor: "var(--color-border)" }}>
+        <div className="flex min-w-max gap-1">
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => updateParams({ tab: id })}
+              className="flex min-h-[var(--touch-target-min)] items-center gap-2 px-3 py-2 text-sm font-medium transition-colors"
+              style={{
+                color: tab === id ? "var(--color-brand)" : "var(--color-text-muted)",
+                borderBottom: tab === id ? "2px solid var(--color-brand)" : "2px solid transparent",
+                background: "transparent",
+                marginBottom: "-1px",
+              }}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}

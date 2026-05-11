@@ -57,7 +57,7 @@ export function EntityDetail({ fqn }: { fqn: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-muted)" }}>
+      <div className="page-content flex h-full items-center justify-center" style={{ color: "var(--color-text-muted)" }}>
         Loading…
       </div>
     );
@@ -65,7 +65,7 @@ export function EntityDetail({ fqn }: { fqn: string }) {
 
   if (isError || !entity) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3">
+      <div className="page-content flex h-full flex-col items-center justify-center gap-3">
         <p className="text-red-500">Entity not found.</p>
         <Link href="/entities" className="text-sm hover:underline" style={{ color: "var(--color-brand)" }}>
           ← Back to Entities
@@ -75,7 +75,7 @@ export function EntityDetail({ fqn }: { fqn: string }) {
   }
 
   return (
-    <div className="flex flex-col" style={{ padding: "var(--spacing-page, 24px)", gap: 24 }}>
+    <div className="page-content flex flex-col gap-6 overflow-x-hidden">
       {/* Breadcrumb */}
       <Link
         href="/entities"
@@ -90,10 +90,10 @@ export function EntityDetail({ fqn }: { fqn: string }) {
         <div className="p-2.5 rounded-lg" style={{ background: "var(--color-surface-subtle)" }}>
           <Boxes className="h-6 w-6" style={{ color: "var(--color-brand)" }} />
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold" style={{ color: "var(--color-text)" }}>{fqn}</h1>
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>{fqn}</h1>
           {Boolean(entity.data_product_id) && (
-            <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+            <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
               Product: {String(entity.data_product_id)}
             </p>
           )}

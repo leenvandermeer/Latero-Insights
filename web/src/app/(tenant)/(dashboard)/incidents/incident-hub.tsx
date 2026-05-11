@@ -307,12 +307,12 @@ export function IncidentHub() {
   };
 
   return (
-    <div className="flex flex-col h-full" style={{ padding: "var(--spacing-page, 24px)" }}>
+    <div className="page-content flex h-full flex-col overflow-x-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>Issues</h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+          <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Issues</h1>
+          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
             Detected and reported trust issues for data products
           </p>
         </div>

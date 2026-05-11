@@ -555,7 +555,7 @@ function EditProductModal({
           <textarea value={form.description} onChange={set("description")} rows={3} className={inputCls + " resize-none"} style={inputStyle} />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Owner</label>
             <input value={form.owner} onChange={set("owner")} className={inputCls} style={inputStyle} />
@@ -727,7 +727,7 @@ function OverviewTab({
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Details</h2>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
             <dt style={{ color: "var(--color-text-muted)" }}>Owner</dt>
             <dd style={{ color: "var(--color-text)" }}>{product.owner ?? "—"}</dd>
             <dt style={{ color: "var(--color-text-muted)" }}>Domain</dt>
@@ -799,17 +799,17 @@ function IncidentsTab({ productId }: { productId: string }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href={`/incidents?product_id=${encodeURIComponent(productId)}`}
-          className="text-xs hover:underline flex items-center gap-1"
+          className="flex items-center gap-1 text-xs hover:underline"
           style={{ color: "var(--color-brand)" }}
         >
           View all issues <ArrowRight className="h-3 w-3" />
         </Link>
         <Link
           href={`/incidents?new=1&product_id=${encodeURIComponent(productId)}`}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
+          className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium sm:min-h-0 sm:justify-start sm:py-1.5 sm:text-xs"
           style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
         >
           <Plus className="h-3.5 w-3.5" /> Report issue
@@ -841,20 +841,22 @@ function IncidentsTab({ productId }: { productId: string }) {
         return (
           <div
             key={inc.id}
-            className="flex items-center gap-3 py-2.5 px-3 rounded-xl"
+            className="flex flex-col gap-2 rounded-xl px-3 py-3 sm:flex-row sm:items-center"
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
           >
-            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" style={{ color: sev.text }} />
-            <span className="flex-1 text-sm truncate" style={{ color: "var(--color-text)" }}>
-              {inc.title}
-            </span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex min-w-0 items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" style={{ color: sev.text }} />
+              <span className="min-w-0 flex-1 text-sm sm:truncate" style={{ color: "var(--color-text)" }}>
+                {inc.title}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto sm:justify-end">
               <Badge bg={sev.bg} text={sev.text} label={inc.severity} />
               <Badge bg={sts.bg} text={sts.text} label={inc.status.replace("_", " ")} />
+              <span className="text-xs whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
+                {new Date(inc.opened_at ?? inc.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+              </span>
             </div>
-            <span className="text-xs whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
-              {new Date(inc.opened_at ?? inc.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-            </span>
           </div>
         );
       })}
@@ -1125,7 +1127,7 @@ export function ProductDetail({ productId }: { productId: string }) {
   const slaStyle = product.sla_tier ? SLA_STYLE[product.sla_tier] : null;
 
   return (
-    <div className="flex flex-col h-full" style={{ padding: "var(--spacing-page, 24px)" }}>
+    <div className="page-content flex h-full flex-col overflow-x-hidden">
       {/* Breadcrumb */}
       <button
         onClick={() => router.push("/products")}
@@ -1136,10 +1138,10 @@ export function ProductDetail({ productId }: { productId: string }) {
       </button>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-5">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-col gap-1.5 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-semibold truncate" style={{ color: "var(--color-text)" }}>
+            <h1 className="text-lg font-medium leading-tight truncate" style={{ color: "var(--color-text)" }}>
               {product.display_name}
             </h1>
             {trustScore && <TrustScoreBadge score={trustScore.score} size="lg" />}
@@ -1160,10 +1162,10 @@ export function ProductDetail({ productId }: { productId: string }) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-start lg:flex-shrink-0">
           <button
             onClick={() => setShowEdit(true)}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
+            className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium sm:min-h-0 sm:justify-start sm:py-1.5 sm:text-xs"
             style={{
               background: "var(--color-surface)",
               border: "1px solid var(--color-border)",
@@ -1174,7 +1176,7 @@ export function ProductDetail({ productId }: { productId: string }) {
           </button>
           <button
             onClick={() => setShowDelete(true)}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium"
+            className="flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium sm:min-h-0 sm:justify-start sm:py-1.5 sm:text-xs"
             style={{
               background: "var(--color-surface)",
               border: "1px solid #fca5a5",
@@ -1202,30 +1204,32 @@ export function ProductDetail({ productId }: { productId: string }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 border-b" style={{ borderColor: "var(--color-border)" }}>
-        {TABS.map(({ id, label }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className="px-3 py-2 text-sm font-medium flex items-center gap-1.5"
-            style={{
-              color: tab === id ? "var(--color-brand)" : "var(--color-text-muted)",
-              borderBottom: tab === id ? "2px solid var(--color-brand)" : "2px solid transparent",
-              background: "transparent",
-              marginBottom: "-1px",
-            }}
-          >
-            {label}
-            {id === "incidents" && incidentCount > 0 && (
-              <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none"
-                style={{ background: "var(--color-error-subtle)", color: "var(--color-error)" }}
-              >
-                {incidentCount}
-              </span>
-            )}
-          </button>
-        ))}
+      <div className="mb-5 overflow-x-auto border-b" style={{ borderColor: "var(--color-border)" }}>
+        <div className="flex min-w-max gap-1">
+          {TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className="flex min-h-[var(--touch-target-min)] items-center gap-1.5 px-3 py-2 text-sm font-medium"
+              style={{
+                color: tab === id ? "var(--color-brand)" : "var(--color-text-muted)",
+                borderBottom: tab === id ? "2px solid var(--color-brand)" : "2px solid transparent",
+                background: "transparent",
+                marginBottom: "-1px",
+              }}
+            >
+              {label}
+              {id === "incidents" && incidentCount > 0 && (
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none"
+                  style={{ background: "var(--color-error-subtle)", color: "var(--color-error)" }}
+                >
+                  {incidentCount}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}

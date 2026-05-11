@@ -255,16 +255,16 @@ export function ProductRegistry() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-full" style={{ padding: "var(--spacing-page, 24px)" }}>
-        <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="flex h-full flex-col page-content">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2">
             <div className="h-6 w-32 rounded animate-pulse" style={{ background: "var(--color-border)" }} />
             <div className="h-4 w-24 rounded animate-pulse" style={{ background: "var(--color-border)" }} />
           </div>
-          <div className="h-8 w-28 rounded-lg animate-pulse" style={{ background: "var(--color-border)" }} />
+        <div className="h-8 w-28 rounded-lg animate-pulse" style={{ background: "var(--color-border)" }} />
         </div>
         <div className="h-9 w-full rounded-lg mb-6 animate-pulse" style={{ background: "var(--color-border)" }} />
-        <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+        <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))" }}>
           {Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)}
         </div>
       </div>
@@ -272,14 +272,14 @@ export function ProductRegistry() {
   }
 
   return (
-    <div className="flex flex-col h-full" style={{ padding: "var(--spacing-page, 24px)" }}>
+    <div className="flex h-full flex-col page-content">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>
             Data Products
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
             Browse operational products and surface governance gaps quickly.
           </p>
           {(query || domain || readiness !== "all" || sortBy !== "name_asc") && (
@@ -290,7 +290,7 @@ export function ProductRegistry() {
         </div>
         <Link
           href="/catalog?tab=products"
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-opacity hover:opacity-90"
+          className="inline-flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-opacity hover:opacity-90 sm:min-h-0 sm:w-auto sm:justify-start sm:py-1.5 sm:text-xs"
           style={{ background: "var(--color-brand)", color: "#fff" }}
         >
           + New Product
@@ -305,9 +305,9 @@ export function ProductRegistry() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="mb-6 grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,0.7fr))]">
         <div
-          className="flex items-center gap-2 px-3 py-2 rounded-lg flex-1 min-w-[200px]"
+          className="flex min-w-0 items-center gap-2 rounded-lg px-3 py-2 sm:col-span-2 xl:col-span-1"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <Search className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-text-muted)" }} />
@@ -316,14 +316,14 @@ export function ProductRegistry() {
             placeholder="Search products, domains, owners…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 bg-transparent text-sm outline-none"
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
             style={{ color: "var(--color-text)" }}
           />
         </div>
 
         {domains.length > 1 && (
           <div
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg"
+            className="flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-lg px-3 py-2"
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
           >
             <select
@@ -342,7 +342,7 @@ export function ProductRegistry() {
         )}
 
         <div
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg"
+          className="flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-lg px-3 py-2"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <select
@@ -361,7 +361,7 @@ export function ProductRegistry() {
         </div>
 
         <div
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg"
+          className="flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-lg px-3 py-2"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <select
@@ -408,7 +408,7 @@ export function ProductRegistry() {
 
       {/* Grid */}
       {!error && filtered.length > 0 && (
-        <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+        <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))" }}>
           {filtered.map((p) => (
             <ProductCard key={p.data_product_id} product={p} />
           ))}

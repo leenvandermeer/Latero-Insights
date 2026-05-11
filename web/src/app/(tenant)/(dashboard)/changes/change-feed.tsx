@@ -114,10 +114,10 @@ export function ChangeFeed() {
   ];
 
   return (
-    <div className="flex flex-col h-full" style={{ padding: "var(--spacing-page, 24px)" }}>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>Change Intelligence</h1>
-        <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+    <div className="page-content flex h-full flex-col overflow-x-hidden">
+      <div className="mb-5">
+        <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Change Intelligence</h1>
+        <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
           Detected drift and change events across your data estate
         </p>
       </div>

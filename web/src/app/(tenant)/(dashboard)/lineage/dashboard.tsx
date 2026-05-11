@@ -89,19 +89,18 @@ export function LineageDashboard() {
 
   if (entitiesError) {
     return (
-      <div
-        className="flex flex-col -mx-6 -mt-6"
-        style={{ height: "100dvh", paddingTop: "24px" }}
-      >
-        <div className="px-6 pt-4 shrink-0">
+      <div className="page-content flex flex-col gap-4">
+        <div className="shrink-0">
           <PageHeader title="Lineage" icon={GitBranch} />
         </div>
-        <div className="flex-1 p-6 flex items-center justify-center">
+        <div
+          className="flex min-h-[420px] items-center justify-center rounded-xl border p-6"
+          style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+        >
           {isNoDataError(entitiesError)
             ? (
               <div
-                className="flex flex-col items-center gap-4 rounded-xl border p-10 text-center max-w-md"
-                style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+                className="flex max-w-md flex-col items-center gap-4 text-center"
               >
                 <div
                   className="flex items-center justify-center w-12 h-12 rounded-xl"
@@ -143,12 +142,9 @@ export function LineageDashboard() {
   }
 
   return (
-    <div
-      className="flex flex-col -mx-6 -mt-6"
-      style={{ height: "100dvh", paddingTop: "24px" }}
-    >
+    <div className="page-content flex min-h-[calc(100dvh-120px)] flex-col gap-4">
       {/* Header */}
-      <div className="px-6 pt-4 shrink-0">
+      <div className="shrink-0">
         <PageHeader
           title="Lineage"
           icon={GitBranch}
@@ -179,48 +175,53 @@ export function LineageDashboard() {
         />
       </div>
 
-      {/* Tab bar */}
+      {/* Content shell */}
       <div
-        className="flex items-center gap-1 px-6 py-1.5 shrink-0"
-        style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}
+        className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-xl border"
+        style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
       >
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
-            style={{
-              background: activeTab === id ? "var(--color-accent)" : "transparent",
-              color: activeTab === id ? "#fff" : "var(--color-text-muted)",
-            }}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-            {id === "columns" && (
-              <span
-                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                style={{
-                  background: activeTab === id
-                    ? "rgba(255,255,255,0.18)"
-                    : currentAttributeCount > 0
-                    ? "rgba(16,185,129,0.12)"
-                    : "rgba(245,158,11,0.12)",
-                  color: activeTab === id
-                    ? "#fff"
-                    : currentAttributeCount > 0
-                    ? "#047857"
-                    : "#B45309",
-                }}
-              >
-                {currentAttributeCount > 0 ? currentAttributeCount : "0"}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+        {/* Tab bar */}
+        <div
+          className="flex shrink-0 items-center gap-1 overflow-x-auto px-4 py-2"
+          style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}
+        >
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+              style={{
+                background: activeTab === id ? "var(--color-accent)" : "transparent",
+                color: activeTab === id ? "#fff" : "var(--color-text-muted)",
+              }}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+              {id === "columns" && (
+                <span
+                  className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                  style={{
+                    background: activeTab === id
+                      ? "rgba(255,255,255,0.18)"
+                      : currentAttributeCount > 0
+                      ? "rgba(16,185,129,0.12)"
+                      : "rgba(245,158,11,0.12)",
+                    color: activeTab === id
+                      ? "#fff"
+                      : currentAttributeCount > 0
+                      ? "#047857"
+                      : "#B45309",
+                  }}
+                >
+                  {currentAttributeCount > 0 ? currentAttributeCount : "0"}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
 
-      {/* Content */}
-      <div className="flex-1 min-h-0">
+        {/* Inner content */}
+        <div className="flex-1 min-h-0">
         {isLoading ? (
           <Skeleton className="w-full h-full" />
         ) : activeTab === "overview" ? (
@@ -257,6 +258,7 @@ export function LineageDashboard() {
             onOpenTrace={() => setActiveTab("trace")}
           />
         )}
+      </div>
       </div>
     </div>
   );

@@ -44,7 +44,7 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-muted)", padding: "var(--spacing-page, 24px)" }}>
+      <div className="page-content flex h-full items-center justify-center" style={{ color: "var(--color-text-muted)" }}>
         Loading…
       </div>
     );
@@ -52,7 +52,7 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
 
   if (isError || !data?.data) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3" style={{ padding: "var(--spacing-page, 24px)" }}>
+      <div className="page-content flex h-full flex-col items-center justify-center gap-3">
         <p style={{ color: "var(--color-error, #dc2626)" }}>Check result not found.</p>
         <Link href="/quality" className="text-sm hover:underline" style={{ color: "var(--color-brand)" }}>
           ← Back to Data Quality
@@ -65,7 +65,7 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
   const status = String(c.check_status ?? "UNKNOWN");
 
   return (
-    <div className="flex flex-col gap-6" style={{ padding: "var(--spacing-page, 24px)" }}>
+    <div className="page-content flex flex-col gap-6 overflow-x-hidden">
       {/* Breadcrumb */}
       <Link href="/quality" className="flex items-center gap-1.5 text-sm w-fit hover:underline" style={{ color: "var(--color-text-muted)" }}>
         <ArrowLeft className="h-3.5 w-3.5" /> Data Quality
@@ -78,7 +78,7 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl font-semibold truncate" style={{ color: "var(--color-text)" }}>
+            <h1 className="text-lg font-medium leading-tight truncate" style={{ color: "var(--color-text)" }}>
               {String(c.check_name ?? c.check_id)}
             </h1>
             <span className={statusBadge(status)}>

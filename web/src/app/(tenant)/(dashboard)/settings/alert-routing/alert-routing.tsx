@@ -179,15 +179,15 @@ export function AlertRoutingSettings() {
   };
 
   return (
-    <div className="flex flex-col gap-6" style={{ padding: "var(--spacing-page, 24px)" }}>
-      <div className="flex items-center justify-between">
+    <div className="page-content flex flex-col gap-6 overflow-x-hidden">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>Alert Routing Rules</h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+          <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Alert Routing Rules</h1>
+          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
             Define conditions and actions for routing alerts. Rules are evaluated by priority (lowest first).
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={addRule}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>

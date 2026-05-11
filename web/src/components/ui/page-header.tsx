@@ -15,14 +15,14 @@ interface PageHeaderProps {
 export function PageHeader({ title, icon: Icon, actions }: PageHeaderProps) {
   return (
     <div
-      className="flex items-center gap-3 mb-5 min-h-[44px]"
+      className="mb-5 flex min-h-[44px] flex-col gap-3 sm:flex-row sm:items-center"
       style={{ borderBottom: "1px solid var(--color-border)", paddingBottom: "12px" }}
     >
       {/* Left: icon + title */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
         {Icon && <Icon className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />}
         <h1
-          className="text-[17px] font-semibold leading-none truncate"
+          className="truncate text-lg font-medium leading-tight"
           style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}
         >
           {title}
@@ -31,7 +31,7 @@ export function PageHeader({ title, icon: Icon, actions }: PageHeaderProps) {
 
       {/* Right: actions */}
       {actions && (
-        <div className="flex items-center gap-1.5 shrink-0">{actions}</div>
+        <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:shrink-0">{actions}</div>
       )}
     </div>
   );

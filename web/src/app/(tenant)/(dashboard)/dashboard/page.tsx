@@ -36,25 +36,27 @@ function DashboardRow({
 }) {
   return (
     <div
-      className="group flex items-center gap-3 rounded-xl px-4 py-3 transition-colors"
+      className="group flex flex-col gap-3 rounded-xl px-4 py-3 transition-colors sm:flex-row sm:items-center"
       style={{ border: "1px solid var(--color-border)", background: "var(--color-card)" }}
     >
-      <div
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <LayoutDashboard className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
-      </div>
+      <div className="flex min-w-0 items-center gap-3 sm:flex-1">
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <LayoutDashboard className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
+        </div>
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }}>
-          {dashboard.name}
-        </p>
-        {dashboard.description && (
-          <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
-            {dashboard.description}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }}>
+            {dashboard.name}
           </p>
-        )}
+          {dashboard.description && (
+            <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+              {dashboard.description}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="hidden shrink-0 items-center gap-4 text-xs sm:flex" style={{ color: "var(--color-text-muted)" }}>
@@ -62,36 +64,37 @@ function DashboardRow({
         <span>{formatDate(dashboard.updatedAt)}</span>
       </div>
 
-      {onTogglePin && (
-        <button
-          onClick={(e) => { e.preventDefault(); onTogglePin(); }}
-          className="shrink-0 rounded-md p-1.5 transition-colors"
-          style={{ color: isPinned ? "var(--color-accent)" : "var(--color-text-muted)" }}
-          title={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-        >
-          <Star className="h-4 w-4" fill={isPinned ? "currentColor" : "none"} />
-        </button>
-      )}
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+        {onTogglePin && (
+          <button
+            onClick={(e) => { e.preventDefault(); onTogglePin(); }}
+            className="shrink-0 rounded-md p-1.5 transition-colors"
+            style={{ color: isPinned ? "var(--color-accent)" : "var(--color-text-muted)" }}
+            title={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-sidebar-hover)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+          >
+            <Star className="h-4 w-4" fill={isPinned ? "currentColor" : "none"} />
+          </button>
+        )}
 
-      <Link
-        href={href}
-        prefetch={false}
-        className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium opacity-0 transition-opacity group-hover:opacity-100"
-        style={{ background: "var(--color-sidebar-hover)", color: "var(--color-text)" }}
-      >
-        Open
-        <ArrowRight className="ml-1 inline h-3 w-3" />
-      </Link>
+        <Link
+          href={href}
+          prefetch={false}
+          className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-lg px-3 py-2 text-sm font-medium opacity-100 transition-opacity sm:min-h-0 sm:py-1.5 sm:text-xs sm:opacity-0 sm:group-hover:opacity-100"
+          style={{ background: "var(--color-sidebar-hover)", color: "var(--color-text)" }}
+        >
+          Open
+          <ArrowRight className="ml-1 inline h-3 w-3" />
+        </Link>
+      </div>
     </div>
   );
 }
 
 export default function DashboardListPage() {
-  const router = useRouter();
   const { installation } = useInstallation();
-  const { userDashboards, systemDashboards, createDash } = useDashboards();
+  const { userDashboards, systemDashboards } = useDashboards();
   const { pinnedIds, toggle: togglePin, isPinned } = usePinnedDashboards(installation?.installation_id);
   const [newDashOpen, setNewDashOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("all");
@@ -118,30 +121,33 @@ export default function DashboardListPage() {
   ];
 
   return (
-    <div className="space-y-6 fade-in-up">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold" style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}>
-            My Dashboards
-          </h1>
-          <p className="mt-0.5 text-sm" style={{ color: "var(--color-text-muted)" }}>
-            Dashboards you created
-            {pinnedIds.length > 0 ? ` · ${pinnedIds.length} pinned` : ""}
-          </p>
+    <div className="page-content fade-in-up flex h-full flex-col overflow-x-hidden">
+      <div className="mb-5 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <LayoutDashboard className="h-4 w-4" style={{ color: "var(--color-brand)" }} />
+          <div>
+            <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>
+              Dashboards
+            </h1>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Your dashboards
+              {pinnedIds.length > 0 ? ` · ${pinnedIds.length} pinned` : ""}
+            </p>
+          </div>
         </div>
+
         <div className="flex flex-wrap gap-2">
           <Link
             href="/dashboard/widget-builder"
-            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium"
-            style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+            className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium"
+            style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
           >
             <Sparkles className="h-4 w-4" />
             Build widget
           </Link>
           <button
             onClick={() => setNewDashOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium"
+            className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
             style={{ background: "var(--color-accent)", color: "#fff" }}
           >
             <Plus className="h-4 w-4" />
@@ -151,7 +157,7 @@ export default function DashboardListPage() {
       </div>
 
       {/* System dashboards */}
-      <div>
+      <div className="mb-6">
         <p className="mb-3 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
           System
         </p>
@@ -173,8 +179,8 @@ export default function DashboardListPage() {
         <p className="mb-3 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
           Yours
         </p>
-        <div className="mb-3 flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[200px] flex-1 max-w-xs">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="relative min-w-0 flex-1 sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: "var(--color-text-muted)" }} />
             <input
               type="search"
@@ -189,12 +195,12 @@ export default function DashboardListPage() {
               }}
             />
           </div>
-          <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+          <div className="flex w-full items-center gap-1 overflow-x-auto rounded-xl p-1 sm:w-auto" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
                 style={
                   activeTab === tab.id
                     ? { background: "var(--color-card)", color: "var(--color-text)", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }

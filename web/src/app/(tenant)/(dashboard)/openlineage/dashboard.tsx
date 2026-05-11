@@ -99,7 +99,7 @@ export function OpenLineageDashboard() {
 
   if (error) {
     return (
-      <div className="space-y-4">
+      <div className="page-content space-y-4">
         <PageHeader title="OpenLineage" icon={Network} actions={<DateRangePicker from={from} to={to} onChange={setRange} />} />
         {isNoDataError(error)
           ? <EmptyState from={from} to={to} onRetry={() => refetch()} />
@@ -110,7 +110,7 @@ export function OpenLineageDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-content space-y-6">
       <PageHeader
         title="OpenLineage"
         icon={Network}
