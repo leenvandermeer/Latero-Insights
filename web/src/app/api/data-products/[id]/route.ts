@@ -141,31 +141,35 @@ export async function PUT(
     }
     const prev = exists.rows[0];
 
+    // Build dynamic SET clause — only update fields present in the request body
+    const setClauses: string[] = ["updated_at = now()"];
+    const values: unknown[] = [installationId, id];
+    let idx = 3;
+
+    const addField = (col: string, val: unknown) => {
+      setClauses.push(`${col} = $${idx++}`);
+      values.push(val);
+    };
+    const addJsonField = (col: string, val: unknown) => {
+      setClauses.push(`${col} = $${idx++}::jsonb`);
+      values.push(val !== null ? JSON.stringify(val) : null);
+    };
+
+    if (display_name !== undefined) addField("display_name", display_name.trim() || null);
+    if (description  !== undefined) addField("description",  description ?? null);
+    if (owner        !== undefined) addField("owner",         owner ?? null);
+    if (domain       !== undefined) addField("domain",        domain ?? null);
+    if (sla_tier     !== undefined) addField("sla_tier",      sla_tier ?? null);
+    if (sla          !== undefined) addJsonField("sla",        sla ?? null);
+    if (contract_ver !== undefined) addField("contract_ver",  contract_ver ?? null);
+    if (classification !== undefined) addField("classification", classification ?? null);
+    if (data_steward   !== undefined) addField("data_steward",   data_steward ?? null);
+    if (retention_days !== undefined) addField("retention_days", retention_days ?? null);
+
     await client.query(
-      `UPDATE meta.data_products SET
-         display_name    = COALESCE($3, display_name),
-         description     = $4,
-         owner           = $5,
-         domain          = $6,
-         sla_tier        = $7,
-         sla             = CASE WHEN $8::text IS NULL THEN sla ELSE $8::jsonb END,
-         contract_ver    = CASE WHEN $9::text IS NULL THEN contract_ver ELSE $9 END,
-         classification  = CASE WHEN $10::text IS NULL THEN classification ELSE $10 END,
-         data_steward    = CASE WHEN $11::text IS NULL THEN data_steward ELSE $11 END,
-         retention_days  = CASE WHEN $12::text IS NULL THEN retention_days ELSE $12::integer END,
-         updated_at      = now()
+      `UPDATE meta.data_products SET ${setClauses.join(", ")}
        WHERE installation_id = $1 AND data_product_id = $2`,
-      [installationId, id,
-       display_name?.trim() ?? null,
-       description ?? null,
-       owner ?? null,
-       domain ?? null,
-       sla_tier ?? null,
-       sla !== undefined ? JSON.stringify(sla) : null,
-       contract_ver !== undefined ? contract_ver : null,
-       classification !== undefined ? classification : null,
-       data_steward !== undefined ? data_steward : null,
-       retention_days !== undefined ? String(retention_days) : null]
+      values
     );
 
     if (Array.isArray(entity_ids)) {

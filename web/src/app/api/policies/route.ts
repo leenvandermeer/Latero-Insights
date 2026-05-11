@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
   if (!name?.trim()) return NextResponse.json({ error: "name is required" }, { status: 400 });
   if (!rule || typeof rule !== "object") return NextResponse.json({ error: "rule must be an object" }, { status: 400 });
-  if (!action || !VALID_ACTIONS.has(action)) return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  const resolvedAction = action && VALID_ACTIONS.has(action) ? action : "warn";
 
   const pool = getPgPool();
   try {
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         description?.trim() ?? null,
         JSON.stringify(rule),
         scope ? JSON.stringify(scope) : '{"all":true}',
-        action,
+        resolvedAction,
         active !== false,
       ]
     );

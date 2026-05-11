@@ -10,6 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../sql/schema.sql:/docker-entrypoint-initdb.d/000_schema.sql:ro   # schema bij eerste start
+      - ../sql/init:/docker-entrypoint-initdb.d/migrations:ro            # migratie-bestanden beschikbaar voor migrate script
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U insights -d insights"]
       interval: 10s
@@ -34,6 +35,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    command: ["sh", "-c", "npm run db:migrate && node server.js"]
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health || exit 1"]
       interval: 30s
