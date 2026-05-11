@@ -578,12 +578,19 @@ export function ComplianceDashboard() {
   }
 
   // Product-centric stats
-  const productsCompliant = products.filter((p) =>
-    policies.length > 0 &&
-    policies.every((pol) => (verdictMap.get(`${pol.id}:${p.data_product_id}`) ?? "unknown") === "pass")
+  // "Failing" = at least one explicit fail verdict
+  // "Compliant" = has been run AND has no fail verdicts (may have exceptions/unknowns)
+  const productsWithAnyRun = products.filter((p) =>
+    policies.some((pol) => {
+      const v = verdictMap.get(`${pol.id}:${p.data_product_id}`);
+      return v === "pass" || v === "fail" || v === "exception";
+    })
   );
   const productsFailing = products.filter((p) =>
     policies.some((pol) => verdictMap.get(`${pol.id}:${p.data_product_id}`) === "fail")
+  );
+  const productsCompliant = productsWithAnyRun.filter((p) =>
+    !policies.some((pol) => verdictMap.get(`${pol.id}:${p.data_product_id}`) === "fail")
   );
 
   const handleRunAll = async () => {
@@ -603,8 +610,8 @@ export function ComplianceDashboard() {
           {[
             { label: "Active policies",   value: policies.length,           color: "var(--color-text)"    },
             { label: "Products in scope", value: products.length,           color: "var(--color-text)"    },
-            { label: "Compliant",         value: productsCompliant.length,  color: "var(--color-success)" },
-            { label: "Failing",           value: productsFailing.length,    color: productsFailing.length > 0 ? "var(--color-error)" : "var(--color-text)" },
+            { label: "No failures",       value: productsCompliant.length,  color: productsCompliant.length > 0 ? "var(--color-success)" : "var(--color-text)" },
+            { label: "Has failures",      value: productsFailing.length,    color: productsFailing.length > 0 ? "var(--color-error)" : "var(--color-text)" },
           ].map(({ label, value, color }) => (
             <div key={label} className="rounded-xl px-4 py-3"
               style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
