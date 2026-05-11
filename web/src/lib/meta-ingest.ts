@@ -625,3 +625,87 @@ export async function writeMetaColumnLineage(
     client.release();
   }
 }
+
+// ---------------------------------------------------------------------------
+// writeMetaDataProduct
+// Upserts a data product record — called via the data_product ingest event.
+// Allows Latero runtimes to register/update governance fields without UI.
+// ---------------------------------------------------------------------------
+
+export interface MetaDataProductParams {
+  installationId: string;
+  dataProductId: string;
+  displayName: string;
+  description?: string | null;
+  owner?: string | null;
+  dataS_steward?: string | null;
+  domain?: string | null;
+  classification?: string | null;
+  retentionDays?: number | null;
+  slaTier?: string | null;
+  contractVer?: string | null;
+  tags?: Record<string, unknown> | null;
+}
+
+const ALLOWED_CLASSIFICATIONS = new Set(["public", "internal", "confidential", "restricted"]);
+const ALLOWED_SLA_TIERS = new Set(["bronze", "silver", "gold"]);
+
+export async function writeMetaDataProduct(
+  pool: Pool,
+  params: MetaDataProductParams,
+): Promise<void> {
+  const classification = params.classification?.toLowerCase().trim() ?? null;
+  const slaTier = params.slaTier?.toLowerCase().trim() ?? null;
+
+  if (classification !== null && !ALLOWED_CLASSIFICATIONS.has(classification)) {
+    throw new Error(`classification must be one of: ${[...ALLOWED_CLASSIFICATIONS].join(", ")}`);
+  }
+  if (slaTier !== null && !ALLOWED_SLA_TIERS.has(slaTier)) {
+    throw new Error(`sla_tier must be one of: ${[...ALLOWED_SLA_TIERS].join(", ")}`);
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `INSERT INTO meta.data_products (
+         installation_id, data_product_id, display_name, description,
+         owner, data_steward, domain, classification,
+         retention_days, sla_tier, contract_ver, tags,
+         valid_from, updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())
+       ON CONFLICT (installation_id, data_product_id) DO UPDATE SET
+         display_name    = COALESCE(EXCLUDED.display_name,    meta.data_products.display_name),
+         description     = COALESCE(EXCLUDED.description,     meta.data_products.description),
+         owner           = COALESCE(EXCLUDED.owner,           meta.data_products.owner),
+         data_steward    = COALESCE(EXCLUDED.data_steward,    meta.data_products.data_steward),
+         domain          = COALESCE(EXCLUDED.domain,          meta.data_products.domain),
+         classification  = COALESCE(EXCLUDED.classification,  meta.data_products.classification),
+         retention_days  = COALESCE(EXCLUDED.retention_days,  meta.data_products.retention_days),
+         sla_tier        = COALESCE(EXCLUDED.sla_tier,        meta.data_products.sla_tier),
+         contract_ver    = COALESCE(EXCLUDED.contract_ver,    meta.data_products.contract_ver),
+         tags            = CASE
+                             WHEN EXCLUDED.tags IS NOT NULL
+                             THEN meta.data_products.tags || EXCLUDED.tags
+                             ELSE meta.data_products.tags
+                           END,
+         updated_at      = now()
+       WHERE meta.data_products.valid_to IS NULL`,
+      [
+        params.installationId,
+        params.dataProductId,
+        params.displayName,
+        params.description ?? null,
+        params.owner ?? null,
+        params.dataS_steward ?? null,
+        params.domain ?? null,
+        classification,
+        params.retentionDays ?? null,
+        slaTier,
+        params.contractVer ?? null,
+        params.tags ? JSON.stringify(params.tags) : null,
+      ],
+    );
+  } finally {
+    client.release();
+  }
+}

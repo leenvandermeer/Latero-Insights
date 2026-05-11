@@ -53,6 +53,14 @@ const CONDITION_OPTIONS: {
   { value: "consumer_inactivity",     label: "Consumer inactivity (no access for N days)",    hasThreshold: true, thresholdLabel: "Max inactive days",    defaultThreshold: 30 },
   { value: "evidence_gap",            label: "Evidence gap (no evidence in last N days)",     hasThreshold: true, thresholdLabel: "Days to check",        defaultThreshold: 7  },
   { value: "temporal_coverage",       label: "Temporal coverage gap (longest gap > N days)",  hasThreshold: true, thresholdLabel: "Max gap (days)",       defaultThreshold: 7  },
+  // BCBS 239 / governance
+  { value: "classification_missing",  label: "Classification missing",                         hasThreshold: false },
+  { value: "steward_missing",         label: "Data steward missing",                           hasThreshold: false },
+  { value: "no_description",          label: "No description",                                 hasThreshold: false },
+  { value: "stale_data",              label: "Stale data (no successful run in last N days)",  hasThreshold: true, thresholdLabel: "Max days without run", defaultThreshold: 1  },
+  { value: "tag_missing",             label: "No tags assigned",                               hasThreshold: false },
+  { value: "retention_missing",       label: "Retention policy missing",                       hasThreshold: false },
+  { value: "dq_coverage_missing",     label: "DQ coverage incomplete (datasets without rules)", hasThreshold: false },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -63,11 +71,7 @@ const INPUT_STYLE: React.CSSProperties = {
   color: "var(--color-text)",
 };
 
-const ACTION_BADGE_STYLE: Record<string, React.CSSProperties> = {
-  block:  { background: "var(--color-error-subtle)",   color: "var(--color-error)"   },
-  warn:   { background: "var(--color-warning-subtle)", color: "var(--color-warning)" },
-  notify: { background: "var(--color-brand-subtle)",   color: "var(--color-brand)"   },
-};
+
 
 function conditionLabel(rule: Record<string, unknown>): string {
   const cond = rule?.condition as string | undefined;
@@ -99,7 +103,6 @@ function PolicyModal({ packs, initial, onClose }: PolicyModalProps) {
   const [name, setName]                 = useState(initial?.name ?? "");
   const [conditionKey, setConditionKey] = useState(initialCondition);
   const [threshold, setThreshold]       = useState<number>(initialThreshold);
-  const [action, setAction]             = useState<"warn" | "block" | "notify">(initial?.action ?? "warn");
   const [packId, setPackId]             = useState(initial?.pack_id ?? packs[0]?.id ?? "");
   const [error, setError]               = useState<string | null>(null);
 
@@ -120,9 +123,9 @@ function PolicyModal({ packs, initial, onClose }: PolicyModalProps) {
     if (conditionMeta?.hasThreshold) rule.threshold = threshold;
     try {
       if (isEdit) {
-        await updatePolicy.mutateAsync({ id: initial.id, name: name.trim(), rule, action, pack_id: packId || null });
+        await updatePolicy.mutateAsync({ id: initial.id, name: name.trim(), rule, pack_id: packId || null });
       } else {
-        await createPolicy.mutateAsync({ name: name.trim(), rule, scope: { all: true }, action, pack_id: packId || undefined });
+        await createPolicy.mutateAsync({ name: name.trim(), rule, scope: { all: true }, pack_id: packId || undefined });
       }
       onClose();
     } catch (err) {
@@ -169,16 +172,6 @@ function PolicyModal({ packs, initial, onClose }: PolicyModalProps) {
               className={inputCls} style={INPUT_STYLE} min={0} />
           </div>
         )}
-
-        <div>
-          <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Action on fail</label>
-          <select value={action} onChange={(e) => setAction(e.target.value as "warn" | "block" | "notify")}
-            className={inputCls} style={INPUT_STYLE}>
-            <option value="warn">Warn</option>
-            <option value="block">Block</option>
-            <option value="notify">Notify</option>
-          </select>
-        </div>
 
         {packs.length > 0 && (
           <div>
@@ -415,10 +408,6 @@ function PolicyRow({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium truncate" style={{ color: "var(--color-text)" }}>
             {policy.name}
-          </span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize flex-shrink-0"
-            style={ACTION_BADGE_STYLE[policy.action] ?? ACTION_BADGE_STYLE.notify}>
-            {policy.action}
           </span>
         </div>
         <p className="text-xs mt-0.5" style={{ color: "var(--color-text-subtle)" }}>

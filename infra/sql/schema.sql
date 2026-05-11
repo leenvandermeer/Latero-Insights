@@ -934,6 +934,15 @@ CREATE INDEX IF NOT EXISTS idx_product_cost_records_product
   ON meta.product_cost_records (installation_id, product_id, period_start DESC);
 
 -- =============================================================================
+-- Schema migrations — ADD COLUMN IF NOT EXISTS
+-- =============================================================================
+-- meta.data_products: governance fields voor BCBS 239 compliance conditions
+ALTER TABLE meta.data_products ADD COLUMN IF NOT EXISTS classification  TEXT
+  CHECK (classification IN ('public','internal','confidential','restricted'));
+ALTER TABLE meta.data_products ADD COLUMN IF NOT EXISTS data_steward    TEXT;
+ALTER TABLE meta.data_products ADD COLUMN IF NOT EXISTS retention_days  INTEGER CHECK (retention_days > 0);
+
+-- =============================================================================
 -- Keycloak database-gebruiker en database
 -- =============================================================================
 -- Keycloak heeft een eigen Postgres-gebruiker en database nodig.

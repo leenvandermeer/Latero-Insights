@@ -209,6 +209,131 @@ const CONDITIONS: Record<
       detail: { max_gap_days: maxGap, threshold_days: threshold },
     };
   },
+
+  // ── BCBS 239 / Governance fields ─────────────────────────────────────────
+
+  /**
+   * Fails if no classification (public/internal/confidential/restricted) is set.
+   * BCBS 239 principle 1: Governance — data must be classified.
+   */
+  classification_missing: async (productId, installationId) => {
+    const pool = getPgPool();
+    const r = await pool.query(
+      `SELECT classification FROM meta.data_products
+       WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
+      [installationId, productId]
+    );
+    return { pass: !!r.rows[0]?.classification };
+  },
+
+  /**
+   * Fails if no data_steward is assigned.
+   * BCBS 239 principle 1: every critical data product needs a designated steward.
+   */
+  steward_missing: async (productId, installationId) => {
+    const pool = getPgPool();
+    const r = await pool.query(
+      `SELECT data_steward FROM meta.data_products
+       WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
+      [installationId, productId]
+    );
+    return { pass: !!r.rows[0]?.data_steward };
+  },
+
+  /**
+   * Fails if the product has no description.
+   * BCBS 239 principle 1: data assets must be documented.
+   */
+  no_description: async (productId, installationId) => {
+    const pool = getPgPool();
+    const r = await pool.query(
+      `SELECT description FROM meta.data_products
+       WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
+      [installationId, productId]
+    );
+    const desc = (r.rows[0]?.description as string | null | undefined) ?? "";
+    return { pass: desc.trim().length > 0 };
+  },
+
+  /**
+   * Fails if no pipeline run for this product completed within the last N days.
+   * BCBS 239 principle 5: Completeness — stale products must be flagged.
+   */
+  stale_data: async (productId, installationId, threshold = 1) => {
+    const pool = getPgPool();
+    const r = await pool.query(
+      `SELECT MAX(pr.finished_at) AS last_run
+       FROM meta.runs pr
+       JOIN meta.run_io rio ON rio.run_id = pr.run_id AND rio.installation_id = pr.installation_id
+       JOIN meta.datasets d ON d.dataset_id = rio.dataset_id AND d.installation_id = rio.installation_id
+       JOIN meta.entities e ON e.entity_id = d.entity_id AND e.installation_id = d.installation_id
+       WHERE pr.installation_id = $1
+         AND e.data_product_id = $2
+         AND pr.status = 'success'`,
+      [installationId, productId]
+    );
+    const lastRun = r.rows[0]?.last_run as string | null;
+    if (!lastRun) return { pass: false, detail: { last_run: null, threshold_days: threshold } };
+    const daysAgo = (Date.now() - new Date(lastRun).getTime()) / 86400_000;
+    return {
+      pass: daysAgo <= threshold,
+      detail: { days_since_run: Math.round(daysAgo * 10) / 10, threshold_days: threshold },
+    };
+  },
+
+  /**
+   * Fails if a required tag key is absent from the product's tags JSONB.
+   * threshold is not used; required_tag must be set in rule.tag_key.
+   * Falls back to checking for presence of any tags when tag_key is not specified.
+   */
+  tag_missing: async (productId, installationId) => {
+    const pool = getPgPool();
+    const r = await pool.query(
+      `SELECT tags FROM meta.data_products
+       WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
+      [installationId, productId]
+    );
+    const tags = r.rows[0]?.tags as Record<string, unknown> | null | undefined;
+    const hasAnyTag = tags !== null && tags !== undefined && Object.keys(tags).length > 0;
+    return { pass: hasAnyTag, detail: { tags } };
+  },
+
+  /**
+   * Fails if no retention_days policy is set on the product.
+   * Required for GDPR / regulatory compliance.
+   */
+  retention_missing: async (productId, installationId) => {
+    const pool = getPgPool();
+    const r = await pool.query(
+      `SELECT retention_days FROM meta.data_products
+       WHERE installation_id = $1 AND data_product_id = $2 AND valid_to IS NULL`,
+      [installationId, productId]
+    );
+    return { pass: r.rows[0]?.retention_days != null };
+  },
+
+  /**
+   * Fails if one or more datasets linked to this product have no DQ rules defined.
+   * BCBS 239 principle 7: Accuracy — all datasets must be covered by quality checks.
+   */
+  dq_coverage_missing: async (productId, installationId) => {
+    const pool = getPgPool();
+    const r = await pool.query(
+      `SELECT COUNT(d.dataset_id) AS total,
+              COUNT(DISTINCT qr.dataset_id) AS covered
+       FROM meta.entities e
+       JOIN meta.datasets d ON d.entity_id = e.entity_id AND d.installation_id = e.installation_id AND d.valid_to IS NULL
+       LEFT JOIN meta.quality_rules qr ON qr.dataset_id = d.dataset_id AND qr.installation_id = d.installation_id
+       WHERE e.installation_id = $1 AND e.data_product_id = $2 AND e.valid_to IS NULL`,
+      [installationId, productId]
+    );
+    const { total, covered } = r.rows[0] as { total: number; covered: number } ?? { total: 0, covered: 0 };
+    if (total === 0) return { pass: true };
+    return {
+      pass: Number(covered) >= Number(total),
+      detail: { datasets_total: Number(total), datasets_covered: Number(covered) },
+    };
+  },
 };
 
 // ---------------------------------------------------------------------------

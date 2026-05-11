@@ -73,7 +73,7 @@ export async function createPolicy(data: {
   name: string;
   rule: Record<string, unknown>;
   scope?: Record<string, unknown>;
-  action: "warn" | "block" | "notify";
+  action?: "warn" | "block" | "notify";
   pack_id?: string;
   description?: string;
   active?: boolean;
@@ -94,7 +94,7 @@ export async function updatePolicy(
     name: string;
     rule: Record<string, unknown>;
     scope: Record<string, unknown>;
-    action: "warn" | "block" | "notify";
+    action?: "warn" | "block" | "notify";
     description: string;
     active: boolean;
     pack_id: string | null;

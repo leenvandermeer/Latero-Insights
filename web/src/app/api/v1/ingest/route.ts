@@ -19,6 +19,7 @@ import {
   writeMetaPipelineRun,
   writeMetaDqCheck,
   writeMetaLineage,
+  writeMetaDataProduct,
 } from "@/lib/meta-ingest";
 
 interface AdapterEvent {
@@ -120,6 +121,36 @@ async function ingestLineage(event: AdapterEvent, pool: ReturnType<typeof getPgP
   }
 }
 
+async function ingestDataProduct(event: AdapterEvent, pool: ReturnType<typeof getPgPool>) {
+  validateSchemaVersion(event.schema_version);
+  const installationId = requireString(event.installation_id, "installation_id");
+  const dataProductId  = requireString(event.data_product_id, "data_product_id");
+  const displayName    = requireString(event.display_name,    "display_name");
+
+  const tags = event.tags && typeof event.tags === "object" && !Array.isArray(event.tags)
+    ? (event.tags as Record<string, unknown>)
+    : null;
+
+  const retentionDays = event.retention_days !== undefined && event.retention_days !== null
+    ? Number(event.retention_days)
+    : null;
+
+  await writeMetaDataProduct(pool, {
+    installationId,
+    dataProductId,
+    displayName,
+    description:    optionalString(event.description),
+    owner:          optionalString(event.owner),
+    dataS_steward:  optionalString(event.data_steward),
+    domain:         optionalString(event.domain),
+    classification: optionalString(event.classification),
+    retentionDays:  retentionDays !== null && !isNaN(retentionDays) ? retentionDays : null,
+    slaTier:        optionalString(event.sla_tier),
+    contractVer:    optionalString(event.contract_ver),
+    tags,
+  });
+}
+
 export async function POST(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const { allowed, remaining } = rateLimit(`v1:ingest:${clientIp}`);
@@ -172,6 +203,8 @@ export async function POST(request: NextRequest) {
         await ingestDqCheck(event, pool);
       } else if (eventType === "lineage") {
         await ingestLineage(event, pool);
+      } else if (eventType === "data_product") {
+        await ingestDataProduct(event, pool);
       } else {
         throw new Error(`Unknown event_type '${eventType}'`);
       }
