@@ -479,11 +479,14 @@ function EditProductModal({
   const update = useUpdateDataProduct(product.data_product_id);
   const gaps = getProductGaps(product);
   const [form, setForm] = useState({
-    display_name: product.display_name,
-    description:  product.description ?? "",
-    owner:        product.owner ?? "",
-    domain:       product.domain ?? "",
-    sla_tier:     (product.sla_tier ?? "") as "bronze" | "silver" | "gold" | "",
+    display_name:   product.display_name,
+    description:    product.description ?? "",
+    owner:          product.owner ?? "",
+    data_steward:   product.data_steward ?? "",
+    domain:         product.domain ?? "",
+    classification: (product.classification ?? "") as "public" | "internal" | "confidential" | "restricted" | "",
+    retention_days: product.retention_days !== null ? String(product.retention_days) : "",
+    sla_tier:       (product.sla_tier ?? "") as "bronze" | "silver" | "gold" | "",
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -493,14 +496,22 @@ function EditProductModal({
 
   const handleSave = async () => {
     if (!form.display_name.trim()) { setError("Name is required"); return; }
+    const retDays = form.retention_days.trim() ? Number(form.retention_days) : null;
+    if (retDays !== null && (isNaN(retDays) || retDays <= 0)) {
+      setError("Retention days must be a positive number");
+      return;
+    }
     setError(null);
     try {
       const input: Partial<DataProductInput> = {
-        display_name: form.display_name.trim(),
-        description:  form.description.trim() || undefined,
-        owner:        form.owner.trim()        || undefined,
-        domain:       form.domain.trim()       || undefined,
-        sla_tier:     (form.sla_tier as "bronze" | "silver" | "gold") || null,
+        display_name:   form.display_name.trim(),
+        description:    form.description.trim() || undefined,
+        owner:          form.owner.trim() || null,
+        data_steward:   form.data_steward.trim() || null,
+        domain:         form.domain.trim() || undefined,
+        classification: (form.classification as "public" | "internal" | "confidential" | "restricted") || null,
+        retention_days: retDays,
+        sla_tier:       (form.sla_tier as "bronze" | "silver" | "gold") || null,
       };
       await update.mutateAsync(input);
       onClose();
@@ -561,19 +572,42 @@ function EditProductModal({
             <input value={form.owner} onChange={set("owner")} className={inputCls} style={inputStyle} />
           </div>
           <div>
-            <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Domain</label>
-            <input value={form.domain} onChange={set("domain")} className={inputCls} style={inputStyle} />
+            <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Data steward</label>
+            <input value={form.data_steward} onChange={set("data_steward")} className={inputCls} style={inputStyle} placeholder="e.g. jane.doe@bank.nl" />
           </div>
         </div>
 
-        <div>
-          <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>SLA tier</label>
-          <select value={form.sla_tier} onChange={set("sla_tier")} className={inputCls} style={inputStyle}>
-            <option value="">— None —</option>
-            <option value="bronze">Bronze</option>
-            <option value="silver">Silver</option>
-            <option value="gold">Gold</option>
-          </select>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Domain</label>
+            <input value={form.domain} onChange={set("domain")} className={inputCls} style={inputStyle} />
+          </div>
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Retention (days)</label>
+            <input type="number" value={form.retention_days} onChange={set("retention_days")} min={1} className={inputCls} style={inputStyle} placeholder="e.g. 365" />
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>Classification</label>
+            <select value={form.classification} onChange={set("classification")} className={inputCls} style={inputStyle}>
+              <option value="">— Not set —</option>
+              <option value="public">Public</option>
+              <option value="internal">Internal</option>
+              <option value="confidential">Confidential</option>
+              <option value="restricted">Restricted</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "var(--color-text-muted)" }}>SLA tier</label>
+            <select value={form.sla_tier} onChange={set("sla_tier")} className={inputCls} style={inputStyle}>
+              <option value="">— None —</option>
+              <option value="bronze">Bronze</option>
+              <option value="silver">Silver</option>
+              <option value="gold">Gold</option>
+            </select>
+          </div>
         </div>
 
         {error && <p className="text-xs" style={{ color: "var(--color-error)" }}>{error}</p>}
@@ -730,14 +764,20 @@ function OverviewTab({
           <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
             <dt style={{ color: "var(--color-text-muted)" }}>Owner</dt>
             <dd style={{ color: "var(--color-text)" }}>{product.owner ?? "—"}</dd>
+            <dt style={{ color: "var(--color-text-muted)" }}>Data steward</dt>
+            <dd style={{ color: "var(--color-text)" }}>{product.data_steward ?? "—"}</dd>
             <dt style={{ color: "var(--color-text-muted)" }}>Domain</dt>
             <dd style={{ color: "var(--color-text)" }}>{product.domain ?? "—"}</dd>
+            <dt style={{ color: "var(--color-text-muted)" }}>Classification</dt>
+            <dd style={{ color: "var(--color-text)" }} className="capitalize">{product.classification ?? "—"}</dd>
             <dt style={{ color: "var(--color-text-muted)" }}>SLA tier</dt>
             <dd>
               {slaStyle
                 ? <Badge bg={slaStyle.bg} text={slaStyle.text} label={product.sla_tier!} />
                 : <span style={{ color: "var(--color-text-muted)" }}>—</span>}
             </dd>
+            <dt style={{ color: "var(--color-text-muted)" }}>Retention</dt>
+            <dd style={{ color: "var(--color-text)" }}>{product.retention_days ? `${product.retention_days} days` : "—"}</dd>
             <dt style={{ color: "var(--color-text-muted)" }}>Entities</dt>
             <dd style={{ color: "var(--color-text)" }}>{product.entity_count}</dd>
             <dt style={{ color: "var(--color-text-muted)" }}>Last updated</dt>
