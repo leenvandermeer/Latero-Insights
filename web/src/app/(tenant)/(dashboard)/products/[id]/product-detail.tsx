@@ -351,7 +351,7 @@ function ManageMembersModal({
     >
       <div
         className="w-full max-w-2xl rounded-2xl p-6 flex flex-col gap-4"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-elevated)" }}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -528,7 +528,7 @@ function EditProductModal({
     >
       <div
         className="w-full max-w-lg rounded-2xl p-6 flex flex-col gap-4"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-elevated)" }}
       >
         <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
           Edit product
@@ -668,7 +668,7 @@ function DeleteConfirmModal({
     >
       <div
         className="w-full max-w-sm rounded-2xl p-6 flex flex-col gap-4"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-elevated)" }}
       >
         <div className="flex flex-col gap-1">
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>

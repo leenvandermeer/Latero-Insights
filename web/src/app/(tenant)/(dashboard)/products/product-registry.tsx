@@ -137,7 +137,7 @@ function GovernanceModal({ product, onClose }: { product: Product; onClose: () =
     >
       <div
         className="w-full max-w-md rounded-2xl p-6 flex flex-col gap-4"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-elevated)" }}
       >
         <div>
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
@@ -416,7 +416,7 @@ export function ProductRegistry() {
 
       <div className="grid gap-4 mb-6 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard label="Products" value={products.length} hint="Registered in this tenant" icon={Layers3} />
-        <SummaryCard label="Ready" value={metrics.ready} hint="Owner, SLA, domain, and members present" icon={CircleCheckBig} />
+        <SummaryCard label="Ready" value={metrics.ready} hint="Owner, SLA, domain, members, classification and steward present" icon={CircleCheckBig} />
         <SummaryCard label="Missing owner" value={metrics.missingOwner} hint="Needs clear accountability" icon={UserRound} />
         <SummaryCard label="Missing SLA" value={metrics.missingSla} hint="No declared service tier" icon={ShieldAlert} />
       </div>
