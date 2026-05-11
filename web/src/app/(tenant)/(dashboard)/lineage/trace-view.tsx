@@ -649,8 +649,8 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
     : "Choose a starting entity to begin tracing.";
 
   return (
-    <div className="relative flex h-full min-h-0 overflow-hidden">
-      <div className="flex min-h-0 flex-1 flex-col">
+    <div className="relative flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* Inline controls */}
         <div
           className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-4 py-2"
@@ -815,8 +815,8 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
           </button>
         </div>
 
-        <div className="flex min-h-0 flex-1">
-          <div ref={canvasRef} className="relative h-full min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <div ref={canvasRef} className="relative min-h-0 flex-1">
             {trace.nodes.length === 0 ? (
               <div className="flex h-full items-center justify-center bg-[var(--color-bg)] p-6">
                 <div
