@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPgPool } from "@/lib/insights-saas-db";
 
 const SESSION_COOKIE = "insights_session";
-const SESSION_TTL_DAYS = Number(process.env.INSIGHTS_SESSION_TTL_DAYS ?? "14") || 14;
-const SESSION_TTL_MS = SESSION_TTL_DAYS * 24 * 60 * 60 * 1000;
+const SESSION_TTL_HOURS = Number(process.env.INSIGHTS_SESSION_TTL_HOURS ?? "8") || 8;
+const SESSION_TTL_MS = SESSION_TTL_HOURS * 60 * 60 * 1000;
 
 export interface SessionInstallation {
   installation_id: string;
@@ -261,7 +261,8 @@ export function attachSessionCookie(response: NextResponse, token: string, reque
     sameSite: "lax",
     secure: shouldUseSecureCookie(request),
     path: "/",
-    maxAge: SESSION_TTL_MS / 1000,
+    // No maxAge/expires → session cookie: browser close invalidates the cookie client-side.
+    // Server-side expiry (SESSION_TTL_MS) enforces the absolute maximum regardless.
   });
 }
 
