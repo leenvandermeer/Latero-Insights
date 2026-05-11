@@ -142,7 +142,7 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "", onO
                 <p className="max-w-sm text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
                   {current.length === 0
                     ? "Entity and dataset lineage are still available, but this tenant currently has no synced attribute-level mappings."
-                    : "Try broadening the current filters or return to Trace to inspect a different entity path."}
+                    : "Try broadening the current filters or return to Advanced Trace to inspect a different entity path."}
                 </p>
                 {onOpenTrace && (
                   <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
@@ -152,7 +152,7 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "", onO
                       className="rounded-lg px-3 py-2 text-xs font-semibold"
                       style={{ background: "var(--color-brand)", color: "#fff" }}
                     >
-                      Back to Trace
+                      Back to Advanced Trace
                     </button>
                   </div>
                 )}

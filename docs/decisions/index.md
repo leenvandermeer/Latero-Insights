@@ -62,3 +62,5 @@ Naming note:
 | [LADR-070](20260510-environment-id-mismatch-fix.md) | 2026-05-10 | Environment-ID mismatch: latero.yml environment vs Control databricksEnvironment — sync gaf 0 rijen door onjuist environment-label | ACCEPTED |
 | [LADR-071](20260510-schema-migration-tracking.md) | 2026-05-10 | Schema Migration Tracking: schema_migrations tabel, eenmalige uitvoering, fatale fouten — vervangt idempotent-alles aanpak | ACCEPTED |
 | [LADR-072](20260511-dashboard-time-range-semantics.md) | 2026-05-11 | Dashboard time-range semantics: expliciet onderscheid tussen snapshot metrics en selected-period metrics | PROPOSED |
+| [LADR-073](20260511-keycloak-admin-exposure-without-new-subdomain.md) | 2026-05-11 | Keycloak admin exposure hardening without introducing a new public subdomain | PROPOSED |
+| [LADR-074](20260511-lineage-default-map-and-advanced-trace.md) | 2026-05-11 | Lineage default map with preserved advanced trace | PROPOSED |

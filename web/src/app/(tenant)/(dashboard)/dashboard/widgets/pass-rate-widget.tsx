@@ -29,7 +29,7 @@ export function PassRateWidget({ from, to, titleOverride }: Props) {
 
   return (
     <CounterCard
-      label={titleOverride ?? "DQ Pass Rate"}
+      label={titleOverride ?? "Quality Pass Rate"}
       value={`${rate}%`}
       icon={<CheckCircle className="h-5 w-5" />}
     />

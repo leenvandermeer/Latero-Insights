@@ -25,23 +25,23 @@ interface AdminShellProps {
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Overview", icon: Home, exact: true },
-  { href: "/admin/installations", label: "Installations", icon: Building2 },
+  { href: "/admin/installations", label: "Workspaces", icon: Building2 },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/health", label: "Health", icon: ActivitySquare },
   { href: "/admin/audit", label: "Audit Log", icon: Activity },
 ];
 
 function getAdminHeader(pathname: string) {
-  if (pathname === "/admin") return { title: "Platform Admin", subtitle: "Overview of tenant operations and platform posture" };
-  if (pathname === "/admin/installations") return { title: "Installations", subtitle: "Tenant lifecycle, connectivity and onboarding" };
+  if (pathname === "/admin") return { title: "Platform Admin", subtitle: "Overview of workspace operations and platform posture" };
+  if (pathname === "/admin/installations") return { title: "Workspaces", subtitle: "Workspace lifecycle, connectivity and onboarding" };
   if (pathname.startsWith("/admin/installations/") && pathname.endsWith("/auth")) {
     return { title: "Auth Configuration", subtitle: "Authentication mode and identity settings" };
   }
   if (pathname.startsWith("/admin/installations/")) {
-    return { title: "Installation Detail", subtitle: "Tenant configuration, keys and operational state" };
+    return { title: "Workspace Detail", subtitle: "Workspace configuration, keys and operational state" };
   }
-  if (pathname === "/admin/users") return { title: "Users", subtitle: "Access governance and tenant assignments" };
-  if (pathname === "/admin/health") return { title: "Platform Health", subtitle: "Infrastructure and tenant health evidence" };
+  if (pathname === "/admin/users") return { title: "Users", subtitle: "Access governance and workspace assignments" };
+  if (pathname === "/admin/health") return { title: "Platform Health", subtitle: "Infrastructure and workspace health evidence" };
   if (pathname === "/admin/audit") return { title: "Audit Log", subtitle: "Operator actions and evidence trail" };
   return { title: "Platform Admin", subtitle: "Administrative controls for Latero Control" };
 }

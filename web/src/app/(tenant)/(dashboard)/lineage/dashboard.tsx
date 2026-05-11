@@ -22,9 +22,8 @@ interface TraceRequest {
 }
 
 const TABS: { id: Tab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: "overview", label: "Overview", Icon: LayoutDashboard },
-  { id: "trace", label: "Trace", Icon: Route },
-  { id: "columns", label: "Columns", Icon: Columns3 },
+  { id: "overview", label: "Map", Icon: LayoutDashboard },
+  { id: "trace", label: "Advanced Trace", Icon: Route },
 ];
 
 function downloadEntitiesAsJSON(entities: LineageEntity[]) {
@@ -87,6 +86,12 @@ export function LineageDashboard() {
         .reverse()[0]
     ?? undefined;
 
+  const modeSummary = activeTab === "overview"
+    ? "Map shows the current flow across sources, transformations, and outputs."
+    : activeTab === "trace"
+      ? "Advanced Trace investigates one path with direction, depth, and layer controls."
+      : "Column mappings show attribute-level evidence for the path you are inspecting.";
+
   if (entitiesError) {
     return (
       <div className="page-content flex flex-col gap-4 pt-3">
@@ -108,7 +113,7 @@ export function LineageDashboard() {
                 <div className="space-y-1.5">
                   <p className="font-semibold text-base" style={{ color: "var(--color-text)" }}>No lineage data available</p>
                   <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-                    No lineage data was found for this installation. Make sure your Databricks connection is configured and a sync has been run.
+                    No lineage data was found for this workspace. Make sure your Databricks connection is configured and a sync has been run.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -187,6 +192,36 @@ export function LineageDashboard() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              onClick={() => setActiveTab("columns")}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5"
+              style={{
+                border: "1px solid var(--color-border)",
+                color: activeTab === "columns" ? "#fff" : "var(--color-text-muted)",
+                background: activeTab === "columns" ? "var(--color-accent)" : "var(--color-surface)",
+              }}
+              title="Open column mappings"
+            >
+              <Columns3 className="h-3.5 w-3.5" />
+              Column mappings
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                style={{
+                  background: activeTab === "columns"
+                    ? "rgba(255,255,255,0.18)"
+                    : currentAttributeCount > 0
+                      ? "rgba(16,185,129,0.12)"
+                      : "rgba(245,158,11,0.12)",
+                  color: activeTab === "columns"
+                    ? "#fff"
+                    : currentAttributeCount > 0
+                      ? "#047857"
+                      : "#B45309",
+                }}
+              >
+                {currentAttributeCount > 0 ? currentAttributeCount : "0"}
+              </span>
+            </button>
             {entitiesRes && <SourceIndicator source={entitiesRes.source} cachedAt={entitiesRes.cachedAt} />}
             <button
               onClick={() => downloadEntitiesAsJSON(entities)}
@@ -212,6 +247,12 @@ export function LineageDashboard() {
 
         {/* Inner content */}
         <div className="flex-1 min-h-0">
+        <div
+          className="border-b px-4 py-2 text-xs"
+          style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)", background: "var(--color-surface)" }}
+        >
+          {modeSummary}
+        </div>
         {isLoading ? (
           <Skeleton className="w-full h-full" />
         ) : activeTab === "overview" ? (

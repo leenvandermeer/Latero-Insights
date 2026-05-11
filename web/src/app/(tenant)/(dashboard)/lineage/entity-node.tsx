@@ -108,9 +108,9 @@ function EntityNodeComponent({ data, selected }: NodeProps) {
           <span
             className="text-[9px] font-bold rounded-full px-1.5 py-0.5 shrink-0"
             style={{ background: "rgba(27,59,107,0.12)", color: "var(--color-brand, #1B3B6B)", border: "1px solid rgba(27,59,107,0.2)" }}
-            title="Current trace anchor"
+            title="Current trace starting point"
           >
-            ANCHOR
+            FOCUS
           </span>
         )}
         {atRisk && (
@@ -147,7 +147,7 @@ function EntityNodeComponent({ data, selected }: NodeProps) {
           style={{ borderTop: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "rgba(128,128,128,0.04)" }}
         >
           <span>
-            {isAnchor ? "trace anchor" : `${hopDistance} hop${hopDistance === 1 ? "" : "s"} away`}
+            {isAnchor ? "starting point" : `${hopDistance} hop${hopDistance === 1 ? "" : "s"} away`}
           </span>
           {traceRole && traceRole !== "neutral" && !isAnchor && (
             <span className="font-semibold uppercase" style={{ color: traceBorder ?? "var(--color-text-muted)" }}>

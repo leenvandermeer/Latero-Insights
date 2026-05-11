@@ -106,7 +106,7 @@ function InstallationSwitcher({ compact = false }: { compact?: boolean }) {
         <div className="min-w-0">
           {!compact ? (
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] leading-none" style={{ color: "var(--color-text-subtle)" }}>
-              Installation
+              Workspace
             </p>
           ) : null}
           <div className={cn("flex min-w-0 items-center gap-1.5", compact ? "" : "mt-0.5")}>
@@ -137,7 +137,7 @@ function InstallationSwitcher({ compact = false }: { compact?: boolean }) {
         >
           <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--color-border)" }}>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-subtle)" }}>
-              Switch installation
+              Switch workspace
             </p>
             <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
               Choose the active workspace for this session.
@@ -196,7 +196,7 @@ function InstallationSwitcher({ compact = false }: { compact?: boolean }) {
                     type="button"
                     onClick={(e) => void handleSetDefault(e, inst)}
                     disabled={!!settingDefault}
-                    title={isDefault ? "Default installation" : "Set as default"}
+                    title={isDefault ? "Default workspace" : "Set as default workspace"}
                     className="rounded-full p-2 transition-colors disabled:opacity-50"
                     style={{
                       background: isDefault ? "var(--color-accent-subtle)" : "transparent",
@@ -358,14 +358,14 @@ export function TopBar() {
   const runsRange = useDateRange({ scope: "monitor:runs", defaultPreset: "7d" });
 
   const pageHeader = (() => {
-    if (pathname === "/overview") return { title: "Estate Health", subtitle: `Current state with run and quality signals for ${overviewRange.summaryLabel}`, icon: Boxes };
+    if (pathname === "/overview") return { title: "Operational Overview", subtitle: `Current state with run and quality signals for ${overviewRange.summaryLabel}`, icon: Boxes };
     if (pathname === "/quality") return { title: "Data Quality", subtitle: `Showing ${qualityRange.summaryLabel}`, icon: Shield };
     if (pathname === "/runs") return { title: "Runs", subtitle: `Showing ${runsRange.summaryLabel}`, icon: Activity };
     if (pathname === "/incidents") return { title: "Issues", subtitle: "Detected and reported trust issues for data products", icon: Shield };
     if (pathname === "/compliance") return { title: "Compliance", subtitle: "Policy checks across your data estate", icon: Shield };
     if (pathname === "/products") return { title: "Data Products", subtitle: "Browse operational products and surface governance gaps quickly.", icon: Package };
     if (pathname === "/catalog") return { title: "Catalog", subtitle: "Data products, entities, and datasets", icon: Package };
-    if (pathname === "/lineage") return { title: "Lineage", subtitle: "Upstream, downstream and column-level relationships across the estate", icon: GitBranch };
+    if (pathname === "/lineage") return { title: "Lineage", subtitle: "Current flow across sources, transformations, and outputs", icon: GitBranch };
     if (pathname === "/changes") return { title: "Change Intelligence", subtitle: "Detected drift and change events across your data estate", icon: TrendingUp };
     if (pathname === "/impact") return { title: "Business Impact", subtitle: "Business outputs and downstream impact analysis", icon: TrendingUp };
     if (pathname === "/consumers") return { title: "Consumers", subtitle: "Demand-side analytics per data product", icon: UserCircle };

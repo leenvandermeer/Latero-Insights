@@ -138,7 +138,7 @@ export function HealthOverview() {
       accent: Number(health?.issue_count) > 0 ? "var(--color-danger, #dc2626)" : undefined,
     },
     {
-      label: "DQ Pass Rate",
+      label: "Quality pass rate",
       value: health?.dq_pass_rate != null ? `${health.dq_pass_rate}%` : "—",
       icon: TrendingUp,
       href: "/quality",
@@ -176,7 +176,7 @@ export function HealthOverview() {
       <section className="flex flex-col gap-3">
         <div>
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            Current state
+            Current overview
           </h2>
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
             Live inventory metrics that do not change with the date picker.
@@ -192,7 +192,7 @@ export function HealthOverview() {
       <section className="flex flex-col gap-3">
         <div>
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            Selected period
+            This period
           </h2>
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
             Metrics and activity that respond to the chosen date range.
@@ -273,7 +273,7 @@ export function HealthOverview() {
                   Recent Runs
                 </span>
                 <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                  Selected period activity
+                  Activity in this period
                 </p>
               </div>
             </div>

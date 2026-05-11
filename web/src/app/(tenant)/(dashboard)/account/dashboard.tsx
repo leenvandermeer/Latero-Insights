@@ -247,7 +247,7 @@ export function AccountDashboard() {
             Your account and tenant access
           </h2>
           <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-            Manage personal security and confirm which organization context you are currently using.
+            Manage personal security and confirm which workspace you are currently using.
           </p>
         </div>
 
@@ -259,15 +259,15 @@ export function AccountDashboard() {
           />
           <SummaryCard
             icon={Building2}
-            label="Active organization"
+            label="Active workspace"
             value={installationLabel}
             meta={installationEnvironment}
           />
           <SummaryCard
             icon={Users}
-            label="Access scope"
-            value={`${installations.length} organization${installations.length !== 1 ? "s" : ""}`}
-            meta={isDefaultInstallation ? "Current organization is your default." : "Current organization differs from your default."}
+            label="Workspace access"
+            value={`${installations.length} workspace${installations.length !== 1 ? "s" : ""}`}
+            meta={isDefaultInstallation ? "Current workspace is your default." : "Current workspace differs from your default."}
           />
         </div>
       </section>
@@ -504,14 +504,14 @@ export function AccountDashboard() {
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4" style={{ color: "var(--color-brand, #1b3b6b)" }} />
               <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                Active tenant context
+                Active workspace
               </p>
             </div>
             <p className="mt-3 text-sm font-medium" style={{ color: "var(--color-text)" }}>
               {installationLabel}
             </p>
             <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Installation ID: {installation?.installation_id ?? "Unavailable"}
+              Workspace ID: {installation?.installation_id ?? "Unavailable"}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "rgba(27,59,107,0.10)", color: "var(--color-brand, #1b3b6b)" }}>
@@ -520,12 +520,12 @@ export function AccountDashboard() {
               {isDefaultInstallation ? (
                 <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "rgba(200,137,42,0.12)", color: "var(--color-accent)" }}>
                   <Star className="h-3 w-3" />
-                  Default organization
+                  Default workspace
                 </span>
               ) : null}
             </div>
             <p className="mt-4 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-              Use the organization switcher in the sidebar when you need to move between tenant contexts.
+              Use the workspace switcher in the sidebar when you need to move between workspaces.
             </p>
           </div>
 
@@ -555,10 +555,10 @@ export function AccountDashboard() {
                   Session model
                 </p>
                 <p className="mt-2 text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                  Tenant-scoped access
+                  Workspace-scoped access
                 </p>
                 <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-                  Your account signs you into a specific organization context, while installation provisioning and broader access operations live in admin flows.
+                  Your account signs you into a specific workspace, while workspace provisioning and broader access operations live in admin flows.
                 </p>
               </div>
             </div>

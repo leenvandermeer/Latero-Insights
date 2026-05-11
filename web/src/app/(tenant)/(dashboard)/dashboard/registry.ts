@@ -89,7 +89,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
   },
   {
     type: "pass-rate",
-    label: "DQ Pass Rate",
+    label: "Quality Pass Rate",
     description: "Data quality check pass rate percentage in the selected period",
     category: "counter",
     timeSemantics: "period",
@@ -135,7 +135,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
   },
   {
     type: "dq-trend",
-    label: "DQ Pass Rate Trend",
+    label: "Quality Pass Rate Trend",
     description: "Line chart of data quality pass rate over time",
     category: "charts",
     timeSemantics: "period",

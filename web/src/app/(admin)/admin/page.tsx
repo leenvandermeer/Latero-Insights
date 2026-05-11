@@ -39,7 +39,7 @@ export default function AdminOverviewPage() {
   const actionFlows = [
     {
       href: "/admin/installations",
-      title: "Installation lifecycle",
+      title: "Workspace lifecycle",
       icon: <Building2 className="h-5 w-5" />,
     },
     {
@@ -71,7 +71,7 @@ export default function AdminOverviewPage() {
               className="rounded-full px-4 py-2.5 text-sm font-semibold"
               style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
             >
-              Open installations
+              Open workspaces
             </Link>
             <Link
               href="/admin/users"
@@ -86,24 +86,24 @@ export default function AdminOverviewPage() {
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <AdminStatCard
-          label="Active installations"
+          label="Active workspaces"
           value={healthLoading ? "—" : health?.active_installations || 0}
-          meta="Tenants visible in the operational product"
+          meta="Workspaces visible in the operational product"
         />
         <AdminStatCard
-          label="Inactive installations"
+          label="Inactive workspaces"
           value={healthLoading ? "—" : health?.inactive_installations || 0}
-          meta="Archived tenants hidden from the tenant-facing UX"
+          meta="Archived workspaces hidden from the tenant-facing UX"
         />
         <AdminStatCard
           label="Messages in 24h"
           value={healthLoading ? "—" : (health?.total_messages_24h || 0).toLocaleString()}
-          meta="Recent ingest activity across all tenants"
+          meta="Recent ingest activity across all workspaces"
         />
         <AdminStatCard
           label="Average error rate"
           value={healthLoading ? "—" : `${(health?.avg_error_rate || 0).toFixed(2)}%`}
-          meta="Cross-tenant error percentage"
+          meta="Cross-workspace error percentage"
         />
       </div>
 

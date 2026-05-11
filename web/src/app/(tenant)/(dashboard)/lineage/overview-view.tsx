@@ -319,7 +319,7 @@ function ChainReadinessRow({
               className="inline-flex items-center gap-1 text-[11px] font-semibold transition-colors lg:justify-end"
               style={{ color: "var(--color-brand)" }}
             >
-              Open in trace
+              Open advanced trace
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           )}
@@ -478,7 +478,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
                 Lineage
               </p>
               <h1 className="mt-2 text-lg font-medium leading-snug" style={{ color: "var(--color-text)" }}>
-                Open trace or review column evidence.
+                Scan the current flow, then open Advanced Trace when you need a deeper investigation.
               </h1>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
@@ -493,7 +493,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
                   className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
                   style={{ background: "var(--color-accent)", color: "#fff" }}
                 >
-                  Open recommended trace
+                  Open advanced trace
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <button
@@ -502,7 +502,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
                   className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
                   style={{ border: "1px solid var(--color-border)", color: "var(--color-text)" }}
                 >
-                  Review column evidence
+                  Review column mappings
                 </button>
               </div>
             </div>
@@ -614,7 +614,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
         </section>
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
-          <Panel title="Layer coverage" action={<TabAction onClick={() => onOpenTab("trace")}>Open in trace</TabAction>}>
+          <Panel title="Layer coverage" action={<TabAction onClick={() => onOpenTab("trace")}>Open advanced trace</TabAction>}>
             <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
               {model.layerRows.length === 0 ? (
                 <p className="px-4 py-6 text-sm" style={{ color: "var(--color-text-muted)" }}>No layer data available.</p>
@@ -650,7 +650,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
             </div>
           </Panel>
 
-          <Panel title="Needs attention" action={<TabAction onClick={() => onOpenTab("trace")}>Trace issues</TabAction>}>
+          <Panel title="Needs attention" action={<TabAction onClick={() => onOpenTab("trace")}>Investigate in trace</TabAction>}>
             <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
               {model.riskiestEntities.length === 0 ? (
                 <div className="flex items-center gap-3 px-4 py-6">
@@ -683,7 +683,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
         </div>
 
         <div className="grid gap-4 xl:grid-cols-2">
-          <Panel title="Critical paths" action={<TabAction onClick={() => onOpenTab("trace")}>Open in trace</TabAction>}>
+          <Panel title="Critical paths" action={<TabAction onClick={() => onOpenTab("trace")}>Open advanced trace</TabAction>}>
             <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
               {model.chains.length === 0 ? (
                 <p className="px-4 py-6 text-sm" style={{ color: "var(--color-text-muted)" }}>No connected entity paths available.</p>
@@ -697,7 +697,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
             </div>
           </Panel>
 
-          <Panel title="Investigation entry points" action={<TabAction onClick={() => onOpenTab("columns")}>Open columns</TabAction>}>
+          <Panel title="Investigation entry points" action={<TabAction onClick={() => onOpenTab("columns")}>Open column mappings</TabAction>}>
             <div className="grid gap-3 p-4 md:grid-cols-3">
               <button
                 type="button"
@@ -706,7 +706,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
                 style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
               >
                 <ShieldAlert className="h-5 w-5" style={{ color: "#EF4444" }} />
-                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Trace failures</p>
+                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Open advanced trace</p>
                 <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
                   Follow one entity path upstream or downstream with explicit depth controls.
                 </p>
@@ -718,7 +718,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
                 style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
               >
                 <Columns3 className="h-5 w-5" style={{ color: "#D97706" }} />
-                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Verify evidence</p>
+                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Review column mappings</p>
                 <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
                   Check whether attribute-level evidence exists for the path you are investigating.
                 </p>
@@ -728,16 +728,16 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
                 style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
               >
                 <Layers3 className="h-5 w-5" style={{ color: "var(--color-brand)" }} />
-                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Wider scope stays in Trace</p>
+                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Use trace for deeper investigation</p>
                 <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-                  Use direction, depth, layers, and drag controls inside Trace instead of switching to a second graph mode.
+                  Use direction, depth, layers, and drag controls inside Advanced Trace instead of switching to a second graph mode.
                 </p>
               </div>
             </div>
           </Panel>
         </div>
 
-        <Panel title="Most connected entities" action={<TabAction onClick={() => onOpenTab("trace")}>Trace impact</TabAction>}>
+          <Panel title="Most connected entities" action={<TabAction onClick={() => onOpenTab("trace")}>Investigate impact</TabAction>}>
           <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
             {model.topConnected.map((entity) => {
               const degree = entity.upstream_keys.length + entity.downstream_keys.length;

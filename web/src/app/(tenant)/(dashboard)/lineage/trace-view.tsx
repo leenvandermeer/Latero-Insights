@@ -414,7 +414,7 @@ function formatDepthLabel(depth: number) {
 function formatDirectionLabel(direction: -1 | 0 | 1) {
   if (direction === -1) return "Upstream";
   if (direction === 1) return "Downstream";
-  return "Anchor";
+  return "Starting point";
 }
 
 function statusBadgeTone(status: string) {
@@ -663,7 +663,7 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
 
   const scopeSummary = anchorKey
     ? `Tracing ${formatDirection(direction)} from ${anchorKey}, ${formatDepthLabel(depth)}, ${includedLayers.length} layer${includedLayers.length === 1 ? "" : "s"}`
-    : "Choose an anchor entity to start tracing.";
+    : "Choose a starting entity to begin tracing.";
 
   return (
     <div className="relative flex h-full min-h-0 overflow-hidden">
@@ -704,9 +704,9 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
             <div
               className="w-full rounded-2xl px-2 py-3 text-center"
               style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-              title={anchorEntity ? lineageNodeLabel(anchorEntity) : "No anchor selected"}
+              title={anchorEntity ? lineageNodeLabel(anchorEntity) : "No starting point selected"}
             >
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Anchor</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Starting point</p>
               <p className="mt-1 line-clamp-3 text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
                 {anchorEntity ? lineageNodeLabel(anchorEntity) : "None"}
               </p>
@@ -720,7 +720,7 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
                 style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
               >
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Current anchor</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Current focus</p>
                   <button
                     type="button"
                     onClick={() => setControlsCollapsed(true)}
@@ -767,7 +767,7 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
             )}
 
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Anchor entity</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Start from</p>
               <select
                 value={anchorKey ?? ""}
                 onChange={(event) => {
@@ -960,7 +960,7 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
                 >
                   <p className="text-base font-semibold" style={{ color: "var(--color-text)" }}>No entities match this trace scope</p>
                   <p className="mt-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
-                    Try restoring more layers or changing direction and depth. The anchor entity may fall outside the currently visible layer set.
+                    Try restoring more layers or changing direction and depth. The starting entity may fall outside the currently visible layer set.
                   </p>
                 </div>
               </div>

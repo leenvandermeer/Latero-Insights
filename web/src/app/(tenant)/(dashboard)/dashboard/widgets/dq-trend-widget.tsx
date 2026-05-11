@@ -37,7 +37,7 @@ export function DqTrendWidget({ from, to, titleOverride }: Props) {
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
-        <CardTitle>{titleOverride ?? "DQ Pass Rate Trend"}</CardTitle>
+        <CardTitle>{titleOverride ?? "Quality Pass Rate Trend"}</CardTitle>
         <label className="flex items-center gap-1.5 text-xs shrink-0" style={{ color: "var(--color-text-muted)" }}>
           Target
           <input

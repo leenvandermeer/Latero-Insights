@@ -13,6 +13,7 @@
 - [Microsoft Defender SmartScreen Checklist](./smartscreen-checklist.md)
 - [Go-Live Checklist](./go-live-checklist.md)
 - [Dashboard Time Semantics Work Package](./dashboard-time-semantics-workpackage.md)
+- [Keycloak Admin Hardening Work Package](./keycloak-admin-hardening-workpackage.md)
 
 ### V2
 

@@ -145,7 +145,7 @@ export function EntityDetailPanel({
                   style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-brand)" }}
                 >
                   <Focus className="h-3.5 w-3.5" />
-                  Re-anchor here
+                  Set as focus
                 </button>
               )}
               {onTraceFromEntity && (
@@ -307,7 +307,7 @@ export function EntityDetailPanel({
                 style={{ border: "1px solid var(--color-border)", color: "var(--color-brand)", background: "var(--color-surface)" }}
               >
                 <Columns3 className="h-3.5 w-3.5" />
-                View all {outgoing.length + incoming.length} attribute flows in Columns
+                View all {outgoing.length + incoming.length} attribute flows in Column mappings
               </button>
             )}
           </div>
