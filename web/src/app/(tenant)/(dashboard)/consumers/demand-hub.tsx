@@ -167,31 +167,19 @@ export function DemandHub() {
 
   return (
     <div className="page-content flex h-full flex-col overflow-x-hidden">
-      <div className="mb-5 flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4" style={{ color: "var(--color-brand)" }} />
-          <div>
-            <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Consumers</h1>
-            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Demand-side analytics per data product
-            </p>
-          </div>
-        </div>
-
-        <div
-          className="flex items-center gap-2 rounded-md border px-2.5"
-          style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
-        >
-          <Search className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--color-text-muted)" }} />
-          <input
-            type="text"
-            placeholder="Filter products…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 flex-1 bg-transparent text-sm outline-none"
-            style={{ color: "var(--color-text)" }}
-          />
-        </div>
+      <div
+        className="mb-5 flex items-center gap-2 rounded-md border px-2.5 pt-3"
+        style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+      >
+        <Search className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--color-text-muted)" }} />
+        <input
+          type="text"
+          placeholder="Filter products…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-9 flex-1 bg-transparent text-sm outline-none"
+          style={{ color: "var(--color-text)" }}
+        />
       </div>
 
       <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLineageEntities, useLineageAttributes } from "@/hooks";
-import { SourceIndicator, ErrorMessage, PageHeader } from "@/components/ui";
+import { SourceIndicator, ErrorMessage } from "@/components/ui";
 import { Skeleton } from "@/components/ui/loading-skeleton";
 import { isNoDataError } from "@/lib/api";
 import { TraceView } from "./trace-view";
@@ -89,10 +89,7 @@ export function LineageDashboard() {
 
   if (entitiesError) {
     return (
-      <div className="page-content flex flex-col gap-4">
-        <div className="shrink-0">
-          <PageHeader title="Lineage" icon={GitBranch} />
-        </div>
+      <div className="page-content flex flex-col gap-4 pt-3">
         <div
           className="flex min-h-[420px] items-center justify-center rounded-xl border p-6"
           style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
@@ -142,39 +139,7 @@ export function LineageDashboard() {
   }
 
   return (
-    <div className="page-content flex min-h-[calc(100dvh-120px)] flex-col gap-4">
-      {/* Header */}
-      <div className="shrink-0">
-        <PageHeader
-          title="Lineage"
-          icon={GitBranch}
-          actions={
-            <div className="flex items-center gap-1.5">
-              {entitiesRes && <SourceIndicator source={entitiesRes.source} cachedAt={entitiesRes.cachedAt} />}
-              <button
-                onClick={() => downloadEntitiesAsJSON(entities)}
-                disabled={entities.length === 0}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 disabled:opacity-40"
-                style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "var(--color-surface)" }}
-                title="Download lineage data as JSON"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Export
-              </button>
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing || entitiesLoading}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 disabled:opacity-40"
-                style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "var(--color-surface)" }}
-              >
-                {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                {refreshing ? "Refreshing…" : "Refresh"}
-              </button>
-            </div>
-          }
-        />
-      </div>
-
+    <div className="page-content flex min-h-[calc(100dvh-120px)] flex-col gap-4 pt-3">
       {/* Content shell */}
       <div
         className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-xl border"
@@ -182,42 +147,67 @@ export function LineageDashboard() {
       >
         {/* Tab bar */}
         <div
-          className="flex shrink-0 items-center gap-1 overflow-x-auto px-4 py-2"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2"
           style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}
         >
-          {TABS.map(({ id, label, Icon }) => (
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+            {TABS.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                style={{
+                  background: activeTab === id ? "var(--color-accent)" : "transparent",
+                  color: activeTab === id ? "#fff" : "var(--color-text-muted)",
+                }}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+                {id === "columns" && (
+                  <span
+                    className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                    style={{
+                      background: activeTab === id
+                        ? "rgba(255,255,255,0.18)"
+                        : currentAttributeCount > 0
+                        ? "rgba(16,185,129,0.12)"
+                        : "rgba(245,158,11,0.12)",
+                      color: activeTab === id
+                        ? "#fff"
+                        : currentAttributeCount > 0
+                        ? "#047857"
+                        : "#B45309",
+                    }}
+                  >
+                    {currentAttributeCount > 0 ? currentAttributeCount : "0"}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {entitiesRes && <SourceIndicator source={entitiesRes.source} cachedAt={entitiesRes.cachedAt} />}
             <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
-              style={{
-                background: activeTab === id ? "var(--color-accent)" : "transparent",
-                color: activeTab === id ? "#fff" : "var(--color-text-muted)",
-              }}
+              onClick={() => downloadEntitiesAsJSON(entities)}
+              disabled={entities.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 disabled:opacity-40"
+              style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "var(--color-surface)" }}
+              title="Download lineage data as JSON"
             >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-              {id === "columns" && (
-                <span
-                  className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                  style={{
-                    background: activeTab === id
-                      ? "rgba(255,255,255,0.18)"
-                      : currentAttributeCount > 0
-                      ? "rgba(16,185,129,0.12)"
-                      : "rgba(245,158,11,0.12)",
-                    color: activeTab === id
-                      ? "#fff"
-                      : currentAttributeCount > 0
-                      ? "#047857"
-                      : "#B45309",
-                  }}
-                >
-                  {currentAttributeCount > 0 ? currentAttributeCount : "0"}
-                </span>
-              )}
+              <Download className="h-3.5 w-3.5" />
+              Export
             </button>
-          ))}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing || entitiesLoading}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 disabled:opacity-40"
+              style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "var(--color-surface)" }}
+            >
+              {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
         </div>
 
         {/* Inner content */}

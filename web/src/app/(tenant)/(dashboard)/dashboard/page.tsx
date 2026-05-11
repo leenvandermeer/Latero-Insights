@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   LayoutDashboard, Plus, Star,
   ArrowRight, Search, Sparkles,
@@ -122,38 +121,23 @@ export default function DashboardListPage() {
 
   return (
     <div className="page-content fade-in-up flex h-full flex-col overflow-x-hidden">
-      <div className="mb-5 flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <LayoutDashboard className="h-4 w-4" style={{ color: "var(--color-brand)" }} />
-          <div>
-            <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>
-              Dashboards
-            </h1>
-            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Your dashboards
-              {pinnedIds.length > 0 ? ` · ${pinnedIds.length} pinned` : ""}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/dashboard/widget-builder"
-            className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium"
-            style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
-          >
-            <Sparkles className="h-4 w-4" />
-            Build widget
-          </Link>
-          <button
-            onClick={() => setNewDashOpen(true)}
-            className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
-            style={{ background: "var(--color-accent)", color: "#fff" }}
-          >
-            <Plus className="h-4 w-4" />
-            New dashboard
-          </button>
-        </div>
+      <div className="mb-5 flex flex-wrap justify-end gap-2 pt-3">
+        <Link
+          href="/dashboard/widget-builder"
+          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium"
+          style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
+        >
+          <Sparkles className="h-4 w-4" />
+          Build widget
+        </Link>
+        <button
+          onClick={() => setNewDashOpen(true)}
+          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
+          style={{ background: "var(--color-accent)", color: "#fff" }}
+        >
+          <Plus className="h-4 w-4" />
+          New dashboard
+        </button>
       </div>
 
       {/* System dashboards */}

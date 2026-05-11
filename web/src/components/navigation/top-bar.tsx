@@ -2,27 +2,38 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Settings, Sun, Moon, LogOut, UserCircle,
-  Building2, Check, Star, ChevronDown,
+  ChevronDown,
+  Check,
+  LogOut,
+  Moon,
+  Settings,
+  Star,
+  Sun,
+  UserCircle,
+  Building2,
 } from "lucide-react";
 import { useInstallation } from "@/contexts/installation-context";
+import { useDateRange } from "@/hooks/use-date-range";
 import type { Installation } from "@/contexts/installation-context";
 import { cn } from "@/lib/utils";
 
-// ── Env badge ─────────────────────────────────────────────────────────────────
-
 function envStyle(env: string): React.CSSProperties {
   if (env === "production") return { background: "var(--color-error-subtle)", color: "var(--color-error)" };
-  if (env === "staging")    return { background: "var(--color-warning-subtle)", color: "var(--color-warning)" };
-  return { background: "var(--color-surface-alt)", color: "var(--color-text-muted)" };
+  if (env === "staging") return { background: "var(--color-warning-subtle)", color: "var(--color-warning-text, var(--color-warning))" };
+  return { background: "var(--color-brand-subtle)", color: "var(--color-brand)" };
 }
 
-// ── Installation switcher ─────────────────────────────────────────────────────
-
 function InstallationSwitcher() {
-  const { installation, installations, defaultInstallationId, switchInstallation, setDefaultInstallation, validating } = useInstallation();
+  const {
+    installation,
+    installations,
+    defaultInstallationId,
+    switchInstallation,
+    setDefaultInstallation,
+    validating,
+  } = useInstallation();
   const [open, setOpen] = useState(false);
   const [settingDefault, setSettingDefault] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -40,9 +51,13 @@ function InstallationSwitcher() {
 
   const isMulti = installations.length > 1;
   const label = installation.label ?? installation.installation_id;
+  const activeInstallationId = installation.installation_id;
 
   async function handleSwitch(inst: Installation) {
-    if (inst.installation_id === installation!.installation_id) { setOpen(false); return; }
+    if (inst.installation_id === activeInstallationId) {
+      setOpen(false);
+      return;
+    }
     setOpen(false);
     await switchInstallation(inst.installation_id);
   }
@@ -56,33 +71,44 @@ function InstallationSwitcher() {
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative min-w-0" ref={ref}>
       <button
         type="button"
-        onClick={() => isMulti && setOpen((v) => !v)}
+        onClick={() => isMulti && setOpen((value) => !value)}
         className={cn(
-          "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-          isMulti && "cursor-pointer"
+          "flex min-w-0 items-center gap-2.5 rounded-xl border px-2.5 py-1.5 text-left transition-all",
+          isMulti && "cursor-pointer hover:shadow-sm"
         )}
         style={{
           background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
+          borderColor: "var(--color-border)",
           color: "var(--color-text)",
+          boxShadow: "var(--shadow-sm)",
         }}
-        onMouseEnter={(e) => { if (isMulti) (e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface-alt)"; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface)"; }}
       >
-        <Building2 className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-text-muted)" }} />
-        <span className="max-w-[120px] truncate">{label}</span>
-        <span
-          className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold capitalize shrink-0"
-          style={envStyle(installation.environment)}
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+          style={{ background: "var(--color-brand-subtle)", color: "var(--color-brand)" }}
         >
-          {installation.environment}
-        </span>
+          <Building2 className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] leading-none" style={{ color: "var(--color-text-subtle)" }}>
+            Installation
+          </p>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-sm font-semibold leading-none">{label}</span>
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
+              style={envStyle(installation.environment)}
+            >
+              {installation.environment}
+            </span>
+          </div>
+        </div>
         {isMulti && (
           <ChevronDown
-            className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")}
+            className={cn("h-4 w-4 shrink-0 transition-transform", open && "rotate-180")}
             style={{ color: "var(--color-text-muted)" }}
           />
         )}
@@ -90,68 +116,94 @@ function InstallationSwitcher() {
 
       {isMulti && open && (
         <div
-          className="absolute top-full right-0 mt-1.5 w-64 rounded-xl overflow-hidden shadow-lg z-50"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          className="absolute right-0 top-full z-50 mt-2 w-[21rem] overflow-hidden rounded-2xl border shadow-xl"
+          style={{ background: "var(--color-surface)", borderColor: "var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
         >
-          <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>
-            Switch environment
-          </p>
-          {installations.map((inst, i) => {
-            const isActive   = inst.installation_id === installation.installation_id;
-            const isDefault  = inst.installation_id === defaultInstallationId;
-            const instLabel  = inst.label ?? inst.installation_id;
-            return (
-              <div
-                key={inst.installation_id}
-                role="button"
-                tabIndex={validating ? -1 : 0}
-                onClick={() => !validating && void handleSwitch(inst)}
-                onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !validating) void handleSwitch(inst); }}
-                className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm cursor-pointer transition-colors"
-                style={{
-                  background: isActive ? "var(--color-surface-alt)" : "transparent",
-                  borderTop: i === 0 ? "1px solid var(--color-border)" : "none",
-                  color: "var(--color-text)",
-                  opacity: validating ? 0.6 : 1,
-                }}
-                onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--color-surface-alt)"; }}
-                onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  {isActive
-                    ? <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-brand)" }} />
-                    : <span className="w-3.5 h-3.5 shrink-0" />}
-                  <span className="truncate font-medium">{instLabel}</span>
-                  <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold capitalize shrink-0" style={envStyle(inst.environment)}>
-                    {inst.environment}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => void handleSetDefault(e, inst)}
-                  disabled={!!settingDefault}
-                  title={isDefault ? "Default environment" : "Set as default"}
-                  className="p-0.5 rounded transition-colors shrink-0 disabled:opacity-50"
-                  style={{ color: isDefault ? "var(--color-warning)" : "var(--color-text-muted)" }}
+          <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--color-border)" }}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-subtle)" }}>
+              Switch installation
+            </p>
+            <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Choose the active workspace for this session.
+            </p>
+          </div>
+
+          <div className="max-h-[24rem] overflow-y-auto p-2">
+            {installations.map((inst) => {
+              const isActive = inst.installation_id === activeInstallationId;
+              const isDefault = inst.installation_id === defaultInstallationId;
+              const instLabel = inst.label ?? inst.installation_id;
+
+              return (
+                <div
+                  key={inst.installation_id}
+                  role="button"
+                  tabIndex={validating ? -1 : 0}
+                  onClick={() => !validating && void handleSwitch(inst)}
+                  onKeyDown={(e) => {
+                    if ((e.key === "Enter" || e.key === " ") && !validating) void handleSwitch(inst);
+                  }}
+                  className="flex items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors"
+                  style={{
+                    background: isActive ? "var(--color-brand-subtle)" : "transparent",
+                    color: "var(--color-text)",
+                    opacity: validating ? 0.6 : 1,
+                  }}
                 >
-                  <Star className={cn("h-3.5 w-3.5", isDefault && "fill-current")} />
-                </button>
-              </div>
-            );
-          })}
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+                      style={{
+                        background: isActive ? "var(--color-brand)" : "var(--color-surface-alt)",
+                        color: isActive ? "#fff" : "var(--color-text-muted)",
+                      }}
+                    >
+                      <Check className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-sm font-semibold">{instLabel}</span>
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
+                          style={envStyle(inst.environment)}
+                        >
+                          {inst.environment}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+                        {inst.installation_id}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => void handleSetDefault(e, inst)}
+                    disabled={!!settingDefault}
+                    title={isDefault ? "Default installation" : "Set as default"}
+                    className="rounded-full p-2 transition-colors disabled:opacity-50"
+                    style={{
+                      background: isDefault ? "var(--color-accent-subtle)" : "transparent",
+                      color: isDefault ? "var(--color-accent)" : "var(--color-text-muted)",
+                    }}
+                  >
+                    <Star className={cn("h-3.5 w-3.5", isDefault && "fill-current")} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// ── User menu ─────────────────────────────────────────────────────────────────
-
 function UserAvatarMenu() {
   const pathname = usePathname();
-  const router   = useRouter();
+  const router = useRouter();
   const { user } = useInstallation();
-  const [open, setOpen]   = useState(false);
+  const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const ref = useRef<HTMLDivElement>(null);
   const isAdmin = user?.is_admin ?? false;
@@ -185,29 +237,46 @@ function UserAvatarMenu() {
   };
 
   const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : "??";
-  const itemCls  = "w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left rounded-lg transition-colors";
+  const itemCls = "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors";
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        title={user?.email ?? "Account"}
-        className="flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-80"
-        style={{ background: "var(--color-brand)", color: "#fff" }}
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          title={user?.email ?? "Account"}
+          className="flex items-center gap-2.5 rounded-xl border px-2.5 py-1.5 transition-all hover:shadow-sm"
+          style={{
+            background: "var(--color-surface)",
+            borderColor: "var(--color-border)",
+          color: "var(--color-text)",
+          boxShadow: "var(--shadow-sm)",
+        }}
       >
-        <span className="text-[11px] font-semibold">{initials}</span>
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold"
+          style={{ background: "var(--color-brand)", color: "#fff" }}
+        >
+          {initials}
+        </div>
+        <div className="hidden text-left xl:block">
+          <p className="max-w-[12rem] truncate text-sm font-semibold leading-none">{user?.email ?? "Account"}</p>
+          <p className="mt-0.5 text-xs leading-none" style={{ color: "var(--color-text-muted)" }}>
+            {isAdmin ? "Administrator" : "Member"}
+          </p>
+        </div>
+        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} style={{ color: "var(--color-text-muted)" }} />
       </button>
 
       {open && (
         <div
-          className="absolute top-full right-0 mt-1.5 w-56 rounded-xl p-1.5 shadow-xl z-50"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border p-2 shadow-xl"
+          style={{ background: "var(--color-surface)", borderColor: "var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
         >
           {user?.email && (
             <div className="px-3 py-2">
-              <p className="text-xs font-medium truncate" style={{ color: "var(--color-text)" }}>{user.email}</p>
-              <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>{isAdmin ? "Admin" : "Member"}</p>
+              <p className="truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>{user.email}</p>
+              <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>{isAdmin ? "Administrator" : "Member"}</p>
             </div>
           )}
 
@@ -217,9 +286,7 @@ function UserAvatarMenu() {
             href="/account"
             onClick={() => setOpen(false)}
             className={itemCls}
-            style={{ color: "var(--color-text)", background: pathname === "/account" ? "var(--color-surface-alt)" : "transparent" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-surface-alt)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = pathname === "/account" ? "var(--color-surface-alt)" : "transparent"; }}
+            style={{ color: pathname === "/account" ? "var(--color-brand)" : "var(--color-text)" }}
           >
             <UserCircle className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
             Account
@@ -230,33 +297,23 @@ function UserAvatarMenu() {
               href="/settings"
               onClick={() => setOpen(false)}
               className={itemCls}
-              style={{ color: "var(--color-text)", background: pathname === "/settings" ? "var(--color-surface-alt)" : "transparent" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-surface-alt)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = pathname === "/settings" ? "var(--color-surface-alt)" : "transparent"; }}
+              style={{ color: pathname === "/settings" ? "var(--color-brand)" : "var(--color-text)" }}
             >
               <Settings className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
               Settings
             </Link>
           )}
 
-          <div className="my-1" style={{ borderTop: "1px solid var(--color-border)" }} />
-
-          <button type="button" onClick={() => { toggleTheme(); setOpen(false); }} className={itemCls} style={{ color: "var(--color-text)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface-alt)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-          >
+          <button type="button" onClick={() => { toggleTheme(); setOpen(false); }} className={itemCls} style={{ color: "var(--color-text)" }}>
             {theme === "light"
               ? <Moon className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
-              : <Sun  className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />}
+              : <Sun className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />}
             {theme === "light" ? "Dark mode" : "Light mode"}
           </button>
 
           <div className="my-1" style={{ borderTop: "1px solid var(--color-border)" }} />
 
-          <button type="button" onClick={handleLogout} className={itemCls} style={{ color: "var(--color-error)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-error-subtle)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-          >
+          <button type="button" onClick={handleLogout} className={itemCls} style={{ color: "var(--color-error)" }}>
             <LogOut className="h-4 w-4 shrink-0" />
             Log out
           </button>
@@ -266,13 +323,59 @@ function UserAvatarMenu() {
   );
 }
 
-// ── TopBar ────────────────────────────────────────────────────────────────────
-
 export function TopBar() {
+  const pathname = usePathname();
+  const overviewRange = useDateRange({ scope: "monitor:overview", defaultPreset: "7d" });
+  const qualityRange = useDateRange({ scope: "monitor:quality", defaultPreset: "7d" });
+  const runsRange = useDateRange({ scope: "monitor:runs", defaultPreset: "7d" });
+
+  const pageHeader = (() => {
+    if (pathname === "/overview") return { title: "Estate Health", subtitle: `Current state with run and quality signals for ${overviewRange.summaryLabel}` };
+    if (pathname === "/quality") return { title: "Data Quality", subtitle: `Showing ${qualityRange.summaryLabel}` };
+    if (pathname === "/runs") return { title: "Runs", subtitle: `Showing ${runsRange.summaryLabel}` };
+    if (pathname === "/incidents") return { title: "Issues", subtitle: "Detected and reported trust issues for data products" };
+    if (pathname === "/compliance") return { title: "Compliance", subtitle: "Policy checks across your data estate" };
+    if (pathname === "/products") return { title: "Data Products", subtitle: "Browse operational products and surface governance gaps quickly." };
+    if (pathname === "/catalog") return { title: "Catalog", subtitle: "Data products, entities, and datasets" };
+    if (pathname === "/lineage") return { title: "Lineage", subtitle: "Upstream, downstream and column-level relationships across the estate" };
+    if (pathname === "/changes") return { title: "Change Intelligence", subtitle: "Detected drift and change events across your data estate" };
+    if (pathname === "/impact") return { title: "Business Impact", subtitle: "Business outputs and downstream impact analysis" };
+    if (pathname === "/consumers") return { title: "Consumers", subtitle: "Demand-side analytics per data product" };
+    if (pathname === "/dashboard") return { title: "Dashboards", subtitle: "Personal and shared operational views" };
+    if (pathname.startsWith("/dashboard/")) return { title: "Dashboard", subtitle: "Configurable view with date scope for period-based widgets" };
+    return null;
+  })();
+
   return (
-    <div className="fixed top-3 right-4 z-40 hidden md:flex items-center gap-2">
-      <InstallationSwitcher />
-      <UserAvatarMenu />
-    </div>
+    <header
+      className="sticky top-0 z-20 hidden md:block"
+      style={{
+        background: "color-mix(in srgb, var(--color-bg) 92%, transparent)",
+        backdropFilter: "blur(18px)",
+        borderBottom: "1px solid var(--color-border)",
+      }}
+    >
+      <div className="page-content py-2">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            {pageHeader ? (
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>
+                  {pageHeader.title}
+                </h1>
+                <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+                  {pageHeader.subtitle}
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2.5">
+            <InstallationSwitcher />
+            <UserAvatarMenu />
+          </div>
+        </div>
+      </div>
+    </header>
   );
 }

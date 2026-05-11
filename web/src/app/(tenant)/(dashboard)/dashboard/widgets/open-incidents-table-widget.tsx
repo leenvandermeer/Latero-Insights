@@ -29,7 +29,7 @@ function fmtDate(ts: string): string {
 
 export function OpenIncidentsTableWidget({ titleOverride }: WidgetProps) {
   const { data: incidents, isLoading, error } = useQuery({
-    queryKey: ["incidents", "open"],
+    queryKey: ["incidents", "open", "snapshot"],
     queryFn: () => listIncidents({ status: "open" }),
     staleTime: 30_000,
   });

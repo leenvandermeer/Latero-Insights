@@ -273,17 +273,10 @@ export function ProductRegistry() {
 
   return (
     <div className="flex h-full flex-col page-content">
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-6 flex flex-col gap-3 pt-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>
-            Data Products
-          </h1>
-          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-            Browse operational products and surface governance gaps quickly.
-          </p>
           {(query || domain || readiness !== "all" || sortBy !== "name_asc") && (
-            <p className="text-xs mt-2" style={{ color: "var(--color-text-muted)" }}>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
               This view is shareable through the URL.
             </p>
           )}

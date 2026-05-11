@@ -591,15 +591,7 @@ export function ComplianceDashboard() {
 
   return (
     <div className="page-content flex h-full flex-col overflow-x-hidden">
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Compliance</h1>
-          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-            Policy checks across your data estate
-          </p>
-        </div>
+      <div className="mb-6 flex items-start justify-end gap-4 pt-3">
         <div className="flex items-center gap-2 flex-shrink-0">
           {showMatrixToggle && (
             <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid var(--color-border)" }}>

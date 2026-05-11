@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRuns } from "@/hooks/use-runs";
 import { useDateRange } from "@/hooks/use-date-range";
 import { DateRangePicker } from "@/components/ui";
-import { Activity, CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -23,52 +23,40 @@ const statusIcon = (status: string) => {
 export function RunsExplorer() {
   const [status, setStatus] = useState("");
   const [step, setStep] = useState("");
-  const { from, to, preset, setRange, setPreset, summaryLabel } = useDateRange({ scope: "monitor:runs", defaultPreset: "7d" });
+  const { from, to, preset, setRange, setPreset } = useDateRange({ scope: "monitor:runs", defaultPreset: "7d" });
   const { data, isLoading, isError } = useRuns({ from, to, status: status || undefined, step: step || undefined });
 
   const runs = (data?.data ?? []) as Array<Record<string, string>>;
 
   return (
-    <div className="page-content flex h-full flex-col overflow-x-hidden">
-      <div className="flex flex-col gap-3 mb-5">
-        <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4" style={{ color: "var(--color-brand)" }} />
-          <div>
-            <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Runs</h1>
-            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Showing {summaryLabel}</p>
-          </div>
-        </div>
-
-        <div
-          className="flex flex-wrap items-center gap-2"
+    <div className="page-content flex h-full flex-col overflow-x-hidden pt-3">
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="h-9 text-sm rounded-md border px-2.5 min-w-40"
+          style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
         >
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="h-9 text-sm rounded-md border px-2.5 min-w-40"
-            style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
-          >
-            <option value="">All statuses</option>
-            {STATUS_OPTIONS.filter(Boolean).map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Filter by job…"
-            value={step}
-            onChange={(e) => setStep(e.target.value)}
-            className="h-9 text-sm rounded-md border px-2.5 min-w-56 flex-1"
-            style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
-          />
-          <DateRangePicker
-            from={from}
-            to={to}
-            preset={preset}
-            onChange={setRange}
-            onPresetChange={setPreset}
-          />
-        </div>
+          <option value="">All statuses</option>
+          {STATUS_OPTIONS.filter(Boolean).map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <input
+          type="text"
+          placeholder="Filter by job…"
+          value={step}
+          onChange={(e) => setStep(e.target.value)}
+          className="h-9 text-sm rounded-md border px-2.5 min-w-56 flex-1"
+          style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
+        />
+        <DateRangePicker
+          from={from}
+          to={to}
+          preset={preset}
+          onChange={setRange}
+          onPresetChange={setPreset}
+        />
       </div>
 
       {/* Table */}
@@ -131,8 +119,8 @@ export function RunsExplorer() {
                       <span
                         className="px-1.5 py-0.5 rounded text-xs font-medium"
                         style={{
-                          background: run.environment === "prod" ? "var(--color-danger-subtle, #fee2e2)" : "var(--color-surface-subtle)",
-                          color: run.environment === "prod" ? "var(--color-danger, #dc2626)" : "var(--color-text-muted)",
+                          background: run.environment === "prod" ? "var(--color-brand-subtle)" : "var(--color-surface-alt, #ece4d6)",
+                          color: run.environment === "prod" ? "var(--color-brand)" : "var(--color-text-muted)",
                         }}
                       >
                         {run.environment}

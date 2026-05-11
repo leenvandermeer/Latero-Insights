@@ -12,6 +12,7 @@
 - [Security Guidelines](./security-guidelines.md)
 - [Microsoft Defender SmartScreen Checklist](./smartscreen-checklist.md)
 - [Go-Live Checklist](./go-live-checklist.md)
+- [Dashboard Time Semantics Work Package](./dashboard-time-semantics-workpackage.md)
 
 ### V2
 

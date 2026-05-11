@@ -8,7 +8,7 @@ import type { WidgetProps } from "../registry";
 
 export function OpenIncidentsWidget({ titleOverride }: WidgetProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ["incidents", "open"],
+    queryKey: ["incidents", "open", "snapshot"],
     queryFn: () => listIncidents({ status: "open" }),
     staleTime: 30_000,
   });

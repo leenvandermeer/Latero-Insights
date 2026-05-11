@@ -115,15 +115,8 @@ export function ChangeFeed() {
 
   return (
     <div className="page-content flex h-full flex-col overflow-x-hidden">
-      <div className="mb-5">
-        <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Change Intelligence</h1>
-        <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-          Detected drift and change events across your data estate
-        </p>
-      </div>
-
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
+      <div className="mb-4 flex flex-wrap items-center gap-3 pt-3">
         <div className="flex gap-1 border-b" style={{ borderColor: "var(--color-border)" }}>
           {SEVERITY_FILTERS.map(({ id, label }) => (
             <button

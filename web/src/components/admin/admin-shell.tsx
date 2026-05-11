@@ -1,171 +1,267 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, ActivitySquare, Building2, Home, LogOut, Moon, ShieldCheck, Sun, Users } from "lucide-react";
+import {
+  Activity,
+  ActivitySquare,
+  Building2,
+  ChevronDown,
+  Home,
+  LogOut,
+  Moon,
+  Sun,
+  UserCircle,
+  Users,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AdminShellProps {
   children: ReactNode;
   sessionEmail: string;
 }
 
-export function AdminShell({ children, sessionEmail }: AdminShellProps) {
+const NAV_ITEMS = [
+  { href: "/admin", label: "Overview", icon: Home, exact: true },
+  { href: "/admin/installations", label: "Installations", icon: Building2 },
+  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/health", label: "Health", icon: ActivitySquare },
+  { href: "/admin/audit", label: "Audit Log", icon: Activity },
+];
+
+function getAdminHeader(pathname: string) {
+  if (pathname === "/admin") return { title: "Platform Admin", subtitle: "Overview of tenant operations and platform posture" };
+  if (pathname === "/admin/installations") return { title: "Installations", subtitle: "Tenant lifecycle, connectivity and onboarding" };
+  if (pathname.startsWith("/admin/installations/") && pathname.endsWith("/auth")) {
+    return { title: "Auth Configuration", subtitle: "Authentication mode and identity settings" };
+  }
+  if (pathname.startsWith("/admin/installations/")) {
+    return { title: "Installation Detail", subtitle: "Tenant configuration, keys and operational state" };
+  }
+  if (pathname === "/admin/users") return { title: "Users", subtitle: "Access governance and tenant assignments" };
+  if (pathname === "/admin/health") return { title: "Platform Health", subtitle: "Infrastructure and tenant health evidence" };
+  if (pathname === "/admin/audit") return { title: "Audit Log", subtitle: "Operator actions and evidence trail" };
+  return { title: "Platform Admin", subtitle: "Administrative controls for Latero Control" };
+}
+
+function AdminNavItem({
+  href,
+  label,
+  Icon,
+  active,
+}: {
+  href: string;
+  label: string;
+  Icon: React.ComponentType<{ className?: string }>;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
+      style={
+        active
+          ? { background: "var(--color-sidebar-active-bg)", color: "var(--color-sidebar-active-text)" }
+          : { color: "var(--color-sidebar-muted)" }
+      }
+      onMouseEnter={(e) => {
+        if (!active) {
+          (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)";
+          (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+          (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)";
+        }
+      }}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="truncate">{label}</span>
+    </Link>
+  );
+}
+
+function AdminUserMenu({ sessionEmail }: { sessionEmail: string }) {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const storedTheme = (localStorage.getItem("theme") as "light" | "dark") ?? "light";
-    setTheme(storedTheme);
-    document.documentElement.setAttribute("data-theme", storedTheme);
+    const stored = (localStorage.getItem("theme") as "light" | "dark") ?? "light";
+    setTheme(stored);
   }, []);
 
-  const navItems = [
-    { href: "/admin", label: "Overview", icon: Home, exact: true },
-    { href: "/admin/installations", label: "Installations", icon: Building2 },
-    { href: "/admin/users", label: "Users", icon: Users },
-    { href: "/admin/health", label: "Health", icon: ActivitySquare },
-    { href: "/admin/audit", label: "Audit Log", icon: Activity },
-  ];
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const toggleTheme = () => {
+    const next = theme === "light" ? "dark" : "light";
+    setTheme(next);
+    localStorage.setItem("theme", next);
+    document.documentElement.setAttribute("data-theme", next);
+  };
 
   const handleLogout = async () => {
     try {
-      const res = await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-      if (!res.ok) {
-        console.error("[logout] server responded with", res.status);
-      }
-    } catch (err) {
-      console.error("[logout] fetch failed", err);
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     } finally {
       window.location.replace("/admin/login");
     }
   };
 
-  const toggleTheme = () => {
-    const nextTheme = theme === "light" ? "dark" : "light";
-    setTheme(nextTheme);
-    localStorage.setItem("theme", nextTheme);
-    document.documentElement.setAttribute("data-theme", nextTheme);
-  };
+  const initials = sessionEmail.slice(0, 2).toUpperCase();
+  const itemCls = "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors";
 
   return (
-    <div className="admin-theme min-h-screen">
-      <aside
-        className="fixed left-0 top-0 z-40 h-screen w-72 border-r"
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        title={sessionEmail}
+        className="flex items-center gap-2.5 rounded-xl border px-2.5 py-1.5 transition-all hover:shadow-sm"
         style={{
-          background: "var(--color-admin-sidebar)",
+          background: "var(--color-surface)",
           borderColor: "var(--color-border)",
-          backdropFilter: "blur(18px)",
+          color: "var(--color-text)",
+          boxShadow: "var(--shadow-sm)",
         }}
       >
-        <div className="border-b p-6" style={{ borderColor: "var(--color-border)" }}>
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-11 w-11 items-center justify-center rounded-2xl"
-              style={{ background: "var(--color-brand-subtle)", color: "var(--color-brand)" }}
-            >
-              <img
-                src="/logo/latero-mark-light.svg"
-                alt="Latero"
-                width={28}
-                height={28}
-                className="block [html[data-theme=dark]_&]:hidden"
-              />
-              <img
-                src="/logo/latero-mark-dark.svg"
-                alt=""
-                width={28}
-                height={28}
-                className="hidden [html[data-theme=dark]_&]:block"
-                aria-hidden="true"
-              />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold leading-none tracking-tight" style={{ color: "var(--color-brand, #1B3B6B)" }}>
-                Latero
-              </p>
-              <p className="mt-0.5 truncate text-xs leading-none" style={{ color: "var(--color-text-subtle)" }}>
-                Control
-              </p>
-              <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.14em]" style={{ color: "var(--color-text-subtle)" }}>
-                Platform Admin
-              </p>
-            </div>
-          </div>
-          <div
-            className="mt-5 rounded-2xl border p-4"
-            style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}
-          >
-            <div className="flex items-start gap-3">
-              <div
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                style={{ background: "var(--color-accent-subtle)", color: "var(--color-accent)" }}
-              >
-                <ShieldCheck className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--color-text-subtle)" }}>
-                  Break-glass session
-                </p>
-                <p className="mt-1 truncate text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                  {sessionEmail}
-                </p>
-              </div>
-            </div>
-          </div>
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold"
+          style={{ background: "var(--color-brand)", color: "#fff" }}
+        >
+          {initials}
         </div>
+        <div className="hidden text-left xl:block">
+          <p className="max-w-[14rem] truncate text-sm font-semibold leading-none">{sessionEmail}</p>
+          <p className="mt-0.5 text-xs leading-none" style={{ color: "var(--color-text-muted)" }}>
+            Platform administrator
+          </p>
+        </div>
+        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} style={{ color: "var(--color-text-muted)" }} />
+      </button>
 
-        <nav className="space-y-5 p-4">
-          <div>
-            <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-subtle)" }}>
-              Platform
-            </p>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="mb-1.5 flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-colors"
-                style={
-                  isActive
-                    ? { background: "var(--color-admin-active-bg)", color: "var(--color-admin-active-text)" }
-                    : { color: "var(--color-text-muted)" }
-                }
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+      {open && (
+        <div
+          className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border p-2 shadow-xl"
+          style={{ background: "var(--color-surface)", borderColor: "var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
+        >
+          <div className="px-3 py-2">
+            <p className="truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>{sessionEmail}</p>
+            <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>Break-glass admin session</p>
           </div>
-        </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 border-t p-4" style={{ borderColor: "var(--color-border)" }}>
-          <button
-            onClick={toggleTheme}
-            className="mb-2 flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-medium"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          <div className="my-1" style={{ borderTop: "1px solid var(--color-border)" }} />
+
+          <Link href="/admin/users" className={itemCls} style={{ color: pathname === "/admin/users" ? "var(--color-brand)" : "var(--color-text)" }} onClick={() => setOpen(false)}>
+            <UserCircle className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
+            Users
+          </Link>
+
+          <button type="button" onClick={() => { toggleTheme(); setOpen(false); }} className={itemCls} style={{ color: "var(--color-text)" }}>
+            {theme === "light"
+              ? <Moon className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
+              : <Sun className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />}
             {theme === "light" ? "Dark mode" : "Light mode"}
           </button>
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-medium transition-opacity hover:opacity-80"
-            style={{ color: "var(--color-error)" }}
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
+
+          <div className="my-1" style={{ borderTop: "1px solid var(--color-border)" }} />
+
+          <button type="button" onClick={handleLogout} className={itemCls} style={{ color: "var(--color-error)" }}>
+            <LogOut className="h-4 w-4 shrink-0" />
+            Log out
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+export function AdminShell({ children, sessionEmail }: AdminShellProps) {
+  const pathname = usePathname();
+  const header = getAdminHeader(pathname);
+
+  return (
+    <div className="min-h-screen overflow-x-hidden" style={{ background: "var(--color-bg)" }}>
+      <aside
+        className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col md:flex"
+        style={{
+          background: "var(--color-sidebar)",
+          borderRight: "1px solid var(--color-sidebar-border)",
+          color: "var(--color-sidebar-foreground)",
+        }}
+      >
+        <div
+          className="flex h-14 shrink-0 items-center px-3"
+          style={{ borderBottom: "1px solid var(--color-sidebar-border)" }}
+        >
+          <Link
+            href="/admin"
+            className="flex h-14 min-w-0 flex-1 items-center gap-2.5 transition-opacity hover:opacity-80"
+            aria-label="Latero Control Admin"
+          >
+            <img src="/logo/latero-mark-light.svg" alt="Latero" width={26} height={26} className="shrink-0" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold leading-none tracking-tight" style={{ color: "var(--color-brand, #1B3B6B)" }}>Latero</p>
+              <p className="mt-0.5 truncate text-xs leading-none" style={{ color: "var(--color-text-subtle)" }}>Control</p>
+            </div>
+          </Link>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--color-sidebar-muted)" }}>
+            Platform
+          </p>
+          <div className="space-y-0.5">
+            {NAV_ITEMS.map((item) => {
+              const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+              return <AdminNavItem key={item.href} href={item.href} label={item.label} Icon={item.icon} active={active} />;
+            })}
+          </div>
+        </nav>
       </aside>
 
-      <main className="ml-72 min-h-screen px-6 py-6 xl:px-8">
-        <div className="mx-auto max-w-[1440px]">{children}</div>
+      <main className="min-h-screen pl-0 transition-[padding-left] duration-200 md:pl-[248px]">
+        <header
+          className="sticky top-0 z-20 hidden md:block"
+          style={{
+            background: "color-mix(in srgb, var(--color-bg) 92%, transparent)",
+            backdropFilter: "blur(18px)",
+            borderBottom: "1px solid var(--color-border)",
+          }}
+        >
+          <div className="mx-auto w-full max-w-[1600px] px-6 py-2 xl:px-8">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>
+                  {header.title}
+                </h1>
+                <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+                  {header.subtitle}
+                </p>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2.5">
+                <AdminUserMenu sessionEmail={sessionEmail} />
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="mx-auto w-full max-w-[1600px] px-6 py-3 xl:px-8">
+          {children}
+        </div>
       </main>
     </div>
   );

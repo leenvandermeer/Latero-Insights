@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuality } from "@/hooks/use-quality";
 import { useDateRange } from "@/hooks/use-date-range";
 import { DateRangePicker } from "@/components/ui";
-import { ShieldCheck, CheckCircle, XCircle, AlertTriangle, HelpCircle } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { DataQualityCheck } from "@/lib/adapters/types";
@@ -23,7 +23,7 @@ const statusIcon = (status: string) => {
 export function QualityExplorer() {
   const [status, setStatus] = useState("");
   const [dataset, setDataset] = useState("");
-  const { from, to, preset, setRange, setPreset, summaryLabel } = useDateRange({ scope: "monitor:quality", defaultPreset: "7d" });
+  const { from, to, preset, setRange, setPreset } = useDateRange({ scope: "monitor:quality", defaultPreset: "7d" });
   const { data, isLoading, isError } = useQuality(from, to);
 
   const checks = useMemo(() => {
@@ -36,45 +36,35 @@ export function QualityExplorer() {
   }, [data, status, dataset]);
 
   return (
-    <div className="page-content flex h-full flex-col overflow-x-hidden">
-      <div className="flex flex-col gap-3 mb-5">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4" style={{ color: "var(--color-brand)" }} />
-          <div>
-            <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Data Quality</h1>
-            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Showing {summaryLabel}</p>
-          </div>
-        </div>
-
-        <div className="grid gap-2 lg:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto] lg:items-center">
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="h-9 w-full min-w-0 text-sm rounded-md border px-2.5"
-            style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
-          >
-            <option value="">All statuses</option>
-            {STATUS_OPTIONS.filter(Boolean).map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Filter by dataset…"
-            value={dataset}
-            onChange={(e) => setDataset(e.target.value)}
-            className="h-9 w-full min-w-0 text-sm rounded-md border px-2.5"
-            style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
-          />
-          <DateRangePicker
-            from={from}
-            to={to}
-            preset={preset}
-            onChange={setRange}
-            onPresetChange={setPreset}
-            className="w-full lg:w-auto"
-          />
-        </div>
+    <div className="page-content flex h-full flex-col overflow-x-hidden pt-3">
+      <div className="mb-5 grid gap-2 lg:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto] lg:items-center">
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="h-9 w-full min-w-0 text-sm rounded-md border px-2.5"
+          style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
+        >
+          <option value="">All statuses</option>
+          {STATUS_OPTIONS.filter(Boolean).map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <input
+          type="text"
+          placeholder="Filter by dataset…"
+          value={dataset}
+          onChange={(e) => setDataset(e.target.value)}
+          className="h-9 w-full min-w-0 text-sm rounded-md border px-2.5"
+          style={{ background: "var(--color-surface)", color: "var(--color-text)", borderColor: "var(--color-border)" }}
+        />
+        <DateRangePicker
+          from={from}
+          to={to}
+          preset={preset}
+          onChange={setRange}
+          onPresetChange={setPreset}
+          className="w-full lg:w-auto"
+        />
       </div>
 
       {/* Loading / error */}

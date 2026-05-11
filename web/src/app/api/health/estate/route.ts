@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
   }
 
   const pool = getPgPool();
+  const from = request.nextUrl.searchParams.get("from");
+  const to = request.nextUrl.searchParams.get("to");
+  const hasRange = Boolean(from && to);
   try {
     const [products, entities, runs, issues] = await Promise.all([
       pool.query(`SELECT COUNT(*)::int AS cnt FROM meta.data_products WHERE installation_id = $1 AND valid_to IS NULL`, [installationId]),
@@ -29,21 +32,31 @@ export async function GET(request: NextRequest) {
       pool.query(
         `SELECT COUNT(*)::int AS cnt
          FROM meta.quality_results qr
+         JOIN meta.runs r USING (run_id)
          WHERE qr.installation_id = $1
            AND qr.status = 'FAILED'
-           AND qr.result_date >= CURRENT_DATE - INTERVAL '7 days'`, [installationId]
+           AND (
+             ($2::date IS NOT NULL AND $3::date IS NOT NULL AND r.run_date BETWEEN $2::date AND $3::date)
+             OR
+             ($2::date IS NULL AND $3::date IS NULL AND qr.result_date >= CURRENT_DATE - INTERVAL '7 days')
+           )`,
+        [installationId, from, to]
       ),
     ]);
 
-    // DQ pass rate (7 days)
+    // DQ pass rate for selected range, with a 7-day fallback for callers without a range.
     const dqRes = await pool.query(
       `SELECT
          COUNT(*) FILTER (WHERE status = 'SUCCESS')::float /
          NULLIF(COUNT(*), 0) * 100 AS pass_rate
        FROM meta.quality_results
        WHERE installation_id = $1
-         AND result_date >= CURRENT_DATE - INTERVAL '7 days'`,
-      [installationId]
+         AND (
+           ($2::date IS NOT NULL AND $3::date IS NOT NULL AND result_date BETWEEN $2::date AND $3::date)
+           OR
+           ($2::date IS NULL AND $3::date IS NULL AND result_date >= CURRENT_DATE - INTERVAL '7 days')
+         )`,
+      [installationId, from, to]
     );
 
     return NextResponse.json({
@@ -55,6 +68,8 @@ export async function GET(request: NextRequest) {
         dq_pass_rate: dqRes.rows[0]?.pass_rate ? Math.round(dqRes.rows[0].pass_rate) : null,
         last_run_at: runs.rows[0]?.last_run_at ?? null,
         last_sync_at: runs.rows[0]?.last_success_at ?? null,
+        range_from: hasRange ? from : null,
+        range_to: hasRange ? to : null,
       },
       source: "insights-saas",
     });

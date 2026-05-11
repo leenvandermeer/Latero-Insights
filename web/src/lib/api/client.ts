@@ -190,7 +190,13 @@ export function fetchDataProducts(): Promise<{ data: unknown[]; source: string }
   return request("/data-products");
 }
 
-export function fetchEstateHealth(): Promise<{ data: unknown; source: string }> {
-  return request("/health/estate");
+export function fetchEstateHealth(params?: {
+  from?: string;
+  to?: string;
+}): Promise<{ data: unknown; source: string }> {
+  const search = new URLSearchParams();
+  if (params?.from) search.set("from", params.from);
+  if (params?.to) search.set("to", params.to);
+  const qs = search.toString();
+  return request(`/health/estate${qs ? `?${qs}` : ""}`);
 }
-

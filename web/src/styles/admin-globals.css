@@ -59,9 +59,18 @@
   --color-admin-hover:      rgba(27, 59, 107, 0.08);
   --color-admin-active-bg:  #1B3B6B;
   --color-admin-active-text:#F5EDE0;
+  --color-sidebar:              #FFFFFF;
+  --color-sidebar-border:       #E8E2D8;
+  --color-sidebar-foreground:   #1A1208;
+  --color-sidebar-muted:        #8A7860;
+  --color-sidebar-active-bg:    #DCE9F5;
+  --color-sidebar-active-text:  #1B3B6B;
+  --color-sidebar-hover:        #F5EFE4;
 
   /* Shadow */
   --shadow-card:            0 2px 8px rgba(27, 59, 107, 0.08), 0 8px 24px rgba(27, 59, 107, 0.07);
+  --shadow-sm:              0 1px 3px rgba(27, 59, 107, 0.06), 0 1px 2px rgba(27, 59, 107, 0.04);
+  --shadow-dropdown:        0 8px 24px rgba(27, 59, 107, 0.14);
 }
 
 /* ── Admin design tokens — dark mode ───────────────────────── */
@@ -102,7 +111,16 @@
   --color-admin-hover:      rgba(107, 150, 212, 0.12);
   --color-admin-active-bg:  #6B96D4;
   --color-admin-active-text:#0F0D08;
+  --color-sidebar:              #0A1628;
+  --color-sidebar-border:       #1E3050;
+  --color-sidebar-foreground:   #F0EBE0;
+  --color-sidebar-muted:        #A0B5CC;
+  --color-sidebar-active-bg:    #1A2A40;
+  --color-sidebar-active-text:  #D4A840;
+  --color-sidebar-hover:        #142038;
   --shadow-card:            0 2px 8px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.20);
+  --shadow-sm:              0 1px 3px rgba(0, 0, 0, 0.20), 0 1px 2px rgba(0, 0, 0, 0.14);
+  --shadow-dropdown:        0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 html, body {
@@ -118,10 +136,7 @@ body {
 }
 
 .admin-theme {
-  background:
-    radial-gradient(ellipse at 0% 0%, rgba(200,137,42,0.22) 0%, transparent 40%),
-    radial-gradient(ellipse at 100% 100%, rgba(27,59,107,0.22) 0%, transparent 40%),
-    var(--color-bg);
+  background: var(--color-bg);
 }
 
 /* Form element font inheritance — alleen font, geen padding/border.

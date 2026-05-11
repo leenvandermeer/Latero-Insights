@@ -15,34 +15,26 @@ export function AdminPageHeader({
   description?: string;
   actions?: ReactNode;
 }) {
+  if (!description && !actions && !eyebrow) return null;
+
   return (
-    <div
-      className="rounded-[28px] border px-6 py-6 md:px-8"
-      style={{
-        background:
-          "radial-gradient(circle at 10% 10%, rgba(200,137,42,0.14), transparent 32%), radial-gradient(circle at 88% 82%, rgba(27,59,107,0.12), transparent 42%), var(--color-surface)",
-        borderColor: "var(--color-border)",
-        boxShadow: "var(--shadow-card)",
-      }}
-    >
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl">
-          {eyebrow ? (
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-subtle)" }}>
-              {eyebrow}
-            </p>
-          ) : null}
-          <h1 className="text-[28px] font-semibold leading-tight" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
-            {title}
-          </h1>
-          {description ? (
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-              {description}
-            </p>
-          ) : null}
-        </div>
-        {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+    <div className="flex flex-col gap-3 pt-1 md:flex-row md:items-end md:justify-between">
+      <div className="max-w-3xl min-w-0">
+        {eyebrow ? (
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-subtle)" }}>
+            {eyebrow}
+          </p>
+        ) : null}
+        <h1 className="text-xl font-semibold leading-tight md:hidden" style={{ color: "var(--color-text)", fontFamily: "var(--font-display)" }}>
+          {title}
+        </h1>
+        {description ? (
+          <p className="mt-1 max-w-2xl text-sm" style={{ color: "var(--color-text-muted)" }}>
+            {description}
+          </p>
+        ) : null}
       </div>
+      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
     </div>
   );
 }
@@ -56,11 +48,10 @@ export function AdminSurface({
 }) {
   return (
     <div
-      className={`rounded-3xl border ${className}`}
+      className={`rounded-xl border ${className}`}
       style={{
-        background: "var(--color-card)",
+        background: "var(--color-surface)",
         borderColor: "var(--color-border)",
-        boxShadow: "var(--shadow-card)",
       }}
     >
       {children}
@@ -80,7 +71,7 @@ export function AdminSectionTitle({
   return (
     <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-muted)" }}>
+        <h2 className="text-sm font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--color-text-muted)" }}>
           {title}
         </h2>
         {description ? (
@@ -105,7 +96,7 @@ export function AdminStatCard({
 }) {
   return (
     <div
-      className="rounded-2xl border px-4 py-4"
+      className="rounded-xl border px-4 py-4"
       style={{
         background: "var(--color-surface)",
         borderColor: "var(--color-border)",
@@ -140,7 +131,7 @@ export function AdminActionCard({
   return (
     <Link
       href={href}
-      className="group rounded-2xl border p-4 transition-transform hover:-translate-y-0.5"
+      className="group rounded-xl border p-4 transition-colors"
       style={{
         background: "var(--color-surface)",
         borderColor: "var(--color-border)",

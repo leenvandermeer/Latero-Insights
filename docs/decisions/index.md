@@ -61,3 +61,4 @@ Naming note:
 | [LADR-069](20260510-schema-maintenance-gap-fix.md) | 2026-05-10 | Schema Maintenance: init-scripts niet automatisch toegepast — source_kind/target_kind, sla_tier, entity_sources fix | ACCEPTED |
 | [LADR-070](20260510-environment-id-mismatch-fix.md) | 2026-05-10 | Environment-ID mismatch: latero.yml environment vs Control databricksEnvironment — sync gaf 0 rijen door onjuist environment-label | ACCEPTED |
 | [LADR-071](20260510-schema-migration-tracking.md) | 2026-05-10 | Schema Migration Tracking: schema_migrations tabel, eenmalige uitvoering, fatale fouten — vervangt idempotent-alles aanpak | ACCEPTED |
+| [LADR-072](20260511-dashboard-time-range-semantics.md) | 2026-05-11 | Dashboard time-range semantics: expliciet onderscheid tussen snapshot metrics en selected-period metrics | PROPOSED |

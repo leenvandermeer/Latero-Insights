@@ -8,7 +8,7 @@ import type { WidgetProps } from "../registry";
 
 export function MonitoredEntitiesWidget({ titleOverride }: WidgetProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ["estate-health"],
+    queryKey: ["estate-health", "snapshot"],
     queryFn: () => fetchEstateHealth(),
     staleTime: 60_000,
   });

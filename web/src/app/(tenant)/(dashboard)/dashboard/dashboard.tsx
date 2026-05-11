@@ -260,22 +260,29 @@ export function DashboardCanvas({ dashboardId }: Props) {
   const dashboardScopeHint = isSystem
     ? "Changes affect the tenant after publishing."
     : "Only visible in your personal workspace.";
+  const widgetSemantics = new Set(
+    widgets.map((widget) => {
+      if (widget.type === "custom" || widget.type === "shared") return "mixed";
+      return getWidgetDef(widget.type)?.timeSemantics ?? "mixed";
+    })
+  );
+  const isPeriodOnlyDashboard = widgetSemantics.size > 0 && widgetSemantics.size === 1 && widgetSemantics.has("period");
+  const rangeHelper = isPeriodOnlyDashboard
+    ? `Showing ${summaryLabel}`
+    : `Date scope for period-based widgets: ${summaryLabel}`;
 
   return (
     <>
-      <div className="page-content flex h-full gap-3 overflow-x-hidden" style={{ alignItems: "flex-start" }}>
+      <div className="page-content flex h-full gap-3 overflow-x-hidden pt-3" style={{ alignItems: "flex-start" }}>
 
         {/* Main content */}
         <div className="min-w-0 flex-1 space-y-4 overflow-hidden">
         {/* Dashboard header */}
         <div
-          className="mb-5 flex min-h-[44px] flex-wrap items-center gap-3"
-          style={{ borderBottom: `1px solid ${editMode ? "var(--color-accent)" : "var(--color-border)"}`, paddingBottom: "12px", transition: "border-color 0.2s" }}
+          className="mb-5 flex min-h-[44px] flex-wrap items-start gap-3"
         >
-          {/* Left: icon + title */}
+          {/* Left: title */}
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <LayoutGrid className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
-
             {editingName ? (
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <input
@@ -322,14 +329,14 @@ export function DashboardCanvas({ dashboardId }: Props) {
                     </button>
                   )}
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span
-                    className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium"
+                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
                     style={dashboardScopeStyles}
                   >
                     {dashboardScopeLabel}
                   </span>
-                  <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                  <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
                     {dashboardScopeHint}
                   </span>
                 </div>
@@ -350,7 +357,7 @@ export function DashboardCanvas({ dashboardId }: Props) {
             <div className="flex flex-col items-end gap-1">
               <DateRangePicker from={from} to={to} preset={preset} onChange={setRange} onPresetChange={setPreset} />
               <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
-                Showing {summaryLabel}
+                {rangeHelper}
               </span>
             </div>
 

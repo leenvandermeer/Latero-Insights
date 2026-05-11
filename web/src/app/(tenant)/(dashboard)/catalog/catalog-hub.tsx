@@ -43,16 +43,8 @@ export function CatalogHub() {
 
   return (
     <div className="flex h-full flex-col page-content">
-      {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>Catalog</h1>
-        <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-          Data products, entities, and datasets
-        </p>
-      </div>
-
       {/* Tabs */}
-      <div className="mb-6 overflow-x-auto border-b" style={{ borderColor: "var(--color-border)" }}>
+      <div className="mb-6 overflow-x-auto border-b pt-3" style={{ borderColor: "var(--color-border)" }}>
         <div className="flex min-w-max gap-1">
           {TABS.map(({ id, label, Icon }) => (
             <button

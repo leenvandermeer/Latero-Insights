@@ -86,12 +86,17 @@ export function useUpdateDataProduct(id: string) {
   });
 }
 
-export function useEstateHealth() {
+export function useEstateHealth(params?: { from?: string; to?: string }) {
   const { installation } = useInstallation();
   const installationId = installation?.installation_id ?? null;
+  const search = new URLSearchParams();
+  if (params?.from) search.set("from", params.from);
+  if (params?.to) search.set("to", params.to);
+  const qs = search.toString();
+
   return useQuery({
-    queryKey: ["estate-health", installationId],
-    queryFn: () => apiFetch("/api/estate-health"),
+    queryKey: ["estate-health", installationId, params?.from ?? null, params?.to ?? null],
+    queryFn: () => apiFetch(`/api/health/estate${qs ? `?${qs}` : ""}`),
     enabled: !!installationId,
     staleTime: 60_000,
     retry: 1,
