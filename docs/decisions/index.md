@@ -64,3 +64,4 @@ Naming note:
 | [LADR-072](20260511-dashboard-time-range-semantics.md) | 2026-05-11 | Dashboard time-range semantics: expliciet onderscheid tussen snapshot metrics en selected-period metrics | PROPOSED |
 | [LADR-073](20260511-keycloak-admin-exposure-without-new-subdomain.md) | 2026-05-11 | Keycloak admin exposure hardening without introducing a new public subdomain | PROPOSED |
 | [LADR-074](20260511-lineage-default-map-and-advanced-trace.md) | 2026-05-11 | Lineage default map with preserved advanced trace | PROPOSED |
+| [LADR-075](20260511-lineage-ux-hardening.md) | 2026-05-11 | Lineage Explorer UX hardening: naamgeving, inline controls, tab-pariteit, verwijdering graph-view.tsx | ACCEPTED |

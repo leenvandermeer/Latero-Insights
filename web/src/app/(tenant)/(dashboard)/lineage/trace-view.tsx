@@ -20,8 +20,6 @@ import {
   Download,
   GitBranch,
   Network,
-  PanelLeftClose,
-  PanelLeftOpen,
   RotateCcw,
 } from "lucide-react";
 import type { LineageAttribute, LineageEntity } from "@/lib/adapters/types";
@@ -447,22 +445,7 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<TraceDisplayMode>("graph");
   const [includedLayers, setIncludedLayers] = useState<string[]>([...LINEAGE_LAYER_ORDER]);
-  const [controlsCollapsed, setControlsCollapsed] = useState(false);
   const [edgeOffsets, setEdgeOffsets] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem("lineage-trace-controls-collapsed");
-    if (stored === "true") {
-      setControlsCollapsed(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(
-      "lineage-trace-controls-collapsed",
-      String(controlsCollapsed),
-    );
-  }, [controlsCollapsed]);
 
   useEffect(() => {
     if (anchorKey) return;
@@ -535,7 +518,7 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
       scheduleFitView(260);
     }, 240);
     return () => window.clearTimeout(timeout);
-  }, [controlsCollapsed, displayMode, scheduleFitView, trace.nodes.length]);
+  }, [displayMode, scheduleFitView, trace.nodes.length]);
 
   useEffect(() => {
     const node = canvasRef.current;
@@ -667,241 +650,125 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
 
   return (
     <div className="relative flex h-full min-h-0 overflow-hidden">
-      <aside
-        className={`shrink-0 overflow-auto border-r transition-[width] duration-200 ${
-          controlsCollapsed ? "w-[64px]" : "w-[280px]"
-        }`}
-        style={{ borderColor: "var(--color-border)", background: "var(--color-card)" }}
-      >
-        {controlsCollapsed ? (
-          <div className="flex h-full flex-col items-center gap-3 px-2 py-3">
-            <button
-              type="button"
-              onClick={() => setControlsCollapsed(false)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl"
-              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
-              title="Expand trace controls"
-              aria-label="Expand trace controls"
+      <div className="flex min-h-0 flex-1 flex-col">
+        {/* Inline controls */}
+        <div
+          className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-4 py-2"
+          style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>From</span>
+            <select
+              value={anchorKey ?? ""}
+              onChange={(event) => {
+                const next = event.target.value || null;
+                setAnchorKey(next);
+                setSelectedNodeId(null);
+              }}
+              className="max-w-[200px] rounded-lg px-2.5 py-1.5 text-xs outline-none"
+              style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
             >
-              <PanelLeftOpen className="h-4 w-4" />
-            </button>
-            <div
-              className="w-full rounded-2xl px-2 py-3 text-center"
-              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-            >
-              <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{trace.nodes.length}</p>
-              <p className="mt-1 text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Nodes</p>
-            </div>
-            <div
-              className="w-full rounded-2xl px-2 py-3 text-center"
-              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-            >
-              <p className="text-[11px] font-semibold uppercase" style={{ color: "var(--color-text)" }}>{direction}</p>
-              <p className="mt-1 text-[10px]" style={{ color: "var(--color-text-muted)" }}>
-                {Number.isFinite(depth) ? `${depth} hop${depth === 1 ? "" : "s"}` : "All"}
-              </p>
-            </div>
-            <div
-              className="w-full rounded-2xl px-2 py-3 text-center"
-              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-              title={anchorEntity ? lineageNodeLabel(anchorEntity) : "No starting point selected"}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Starting point</p>
-              <p className="mt-1 line-clamp-3 text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
-                {anchorEntity ? lineageNodeLabel(anchorEntity) : "None"}
-              </p>
-            </div>
+              {entityOptions.map((option) => (
+                <option key={option.key} value={option.key}>{option.label} ({option.layer})</option>
+              ))}
+            </select>
           </div>
-        ) : (
-          <div className="space-y-4 px-4 py-4">
-            {anchorEntity && (
-              <div
-                className="rounded-xl px-4 py-3"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-              >
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Current focus</p>
-                  <button
-                    type="button"
-                    onClick={() => setControlsCollapsed(true)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg"
-                    style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-                    title="Collapse trace controls"
-                    aria-label="Collapse trace controls"
-                  >
-                    <PanelLeftClose className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <p className="mt-1 text-sm font-semibold" style={{ color: "var(--color-text)" }}>{lineageNodeLabel(anchorEntity)}</p>
-                <p className="mt-1 truncate text-[11px]" style={{ color: "var(--color-text-muted)" }}>{anchorKey}</p>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{trace.nodes.length}</p>
-                    <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>entities</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{anchorEntity.upstream_keys.length}</p>
-                    <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>upstream</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>{anchorEntity.downstream_keys.length}</p>
-                    <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>downstream</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {!anchorEntity && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setControlsCollapsed(true)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg"
-                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-                  title="Collapse trace controls"
-                  aria-label="Collapse trace controls"
-                >
-                  <PanelLeftClose className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
+          <div className="h-4 w-px shrink-0" style={{ background: "var(--color-border)" }} />
 
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Start from</p>
-              <select
-                value={anchorKey ?? ""}
-                onChange={(event) => {
-                  const next = event.target.value || null;
-                  setAnchorKey(next);
-                  setSelectedNodeId(null);
+          <div className="flex items-center gap-1">
+            {([
+              { id: "upstream", label: "Upstream", Icon: ArrowUpFromLine },
+              { id: "downstream", label: "Downstream", Icon: ArrowDownToLine },
+              { id: "both", label: "Both", Icon: GitBranch },
+            ] as const).map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setDirection(id)}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold"
+                style={{
+                  background: direction === id ? "var(--color-accent)" : "var(--color-surface)",
+                  color: direction === id ? "#fff" : "var(--color-text-muted)",
+                  border: `1px solid ${direction === id ? "var(--color-accent)" : "var(--color-border)"}`,
                 }}
-                className="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
               >
-                {entityOptions.map((option) => (
-                  <option key={option.key} value={option.key}>{option.label} ({option.layer})</option>
-                ))}
-              </select>
-            </div>
+                <Icon className="h-3 w-3" />
+                {label}
+              </button>
+            ))}
+          </div>
 
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Direction</p>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {([
-                  { id: "upstream", label: "Upstream", Icon: ArrowUpFromLine },
-                  { id: "downstream", label: "Downstream", Icon: ArrowDownToLine },
-                  { id: "both", label: "Both", Icon: GitBranch },
-                ] as const).map(({ id, label, Icon }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setDirection(id)}
-                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold"
-                    style={{
-                      background: direction === id ? "var(--color-accent)" : "var(--color-surface)",
-                      color: direction === id ? "#fff" : "var(--color-text-muted)",
-                      border: `1px solid ${direction === id ? "var(--color-accent)" : "var(--color-border)"}`,
-                    }}
-                  >
-                    <Icon className="h-3 w-3" />
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className="h-4 w-px shrink-0" style={{ background: "var(--color-border)" }} />
 
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Depth</p>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {[1, 2, 3, Number.POSITIVE_INFINITY].map((value) => (
-                  <button
-                    key={Number.isFinite(value) ? value : "all"}
-                    type="button"
-                    onClick={() => setDepth(value)}
-                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold"
-                    style={{
-                      background: depth === value ? "var(--color-brand)" : "var(--color-surface)",
-                      color: depth === value ? "#fff" : "var(--color-text-muted)",
-                      border: `1px solid ${depth === value ? "var(--color-brand)" : "var(--color-border)"}`,
-                    }}
-                  >
-                    {Number.isFinite(value) ? `${value} hop${value === 1 ? "" : "s"}` : "All"}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, Number.POSITIVE_INFINITY].map((value) => (
+              <button
+                key={Number.isFinite(value) ? value : "all"}
+                type="button"
+                onClick={() => setDepth(value)}
+                className="rounded-lg px-2 py-1.5 text-xs font-semibold"
+                style={{
+                  background: depth === value ? "var(--color-brand)" : "var(--color-surface)",
+                  color: depth === value ? "#fff" : "var(--color-text-muted)",
+                  border: `1px solid ${depth === value ? "var(--color-brand)" : "var(--color-border)"}`,
+                }}
+              >
+                {Number.isFinite(value) ? `${value}` : "All"}
+              </button>
+            ))}
+          </div>
 
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Layers</p>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {LINEAGE_LAYER_ORDER.map((layer) => {
-                  const active = includedLayerSet.has(layer);
-                  return (
-                    <button
-                      key={layer}
-                      type="button"
-                      onClick={() => setIncludedLayers((current) =>
-                        current.includes(layer)
-                          ? current.filter((item) => item !== layer)
-                          : [...current, layer]
-                      )}
-                      className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold uppercase"
-                      style={{
-                        background: active ? (LAYER_ACCENT[layer] ?? "var(--color-brand)") : "var(--color-surface)",
-                        color: active ? "#fff" : "var(--color-text-muted)",
-                        border: `1px solid ${active ? (LAYER_ACCENT[layer] ?? "var(--color-brand)") : "var(--color-border)"}`,
-                      }}
-                    >
-                      {layer}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-2 flex gap-1">
+          <div className="h-4 w-px shrink-0" style={{ background: "var(--color-border)" }} />
+
+          <div className="flex flex-wrap items-center gap-1">
+            {LINEAGE_LAYER_ORDER.map((layer) => {
+              const active = includedLayerSet.has(layer);
+              return (
                 <button
+                  key={layer}
                   type="button"
-                  onClick={() => setIncludedLayers([...LINEAGE_LAYER_ORDER])}
-                  className="rounded-lg px-2 py-1 text-[10px] font-semibold uppercase"
-                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                  onClick={() => setIncludedLayers((current) =>
+                    current.includes(layer)
+                      ? current.filter((item) => item !== layer)
+                      : [...current, layer]
+                  )}
+                  className="rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase"
+                  style={{
+                    background: active ? (LAYER_ACCENT[layer] ?? "var(--color-brand)") : "var(--color-surface)",
+                    color: active ? "#fff" : "var(--color-text-muted)",
+                    border: `1px solid ${active ? (LAYER_ACCENT[layer] ?? "var(--color-brand)") : "var(--color-border)"}`,
+                  }}
                 >
-                  All layers
+                  {layer}
                 </button>
+              );
+            })}
+          </div>
+
+          <div className="ml-auto flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
+              {([
+                { id: "graph", label: "Graph", Icon: Network },
+                { id: "list", label: "List", Icon: Columns3 },
+              ] as const).map(({ id, label, Icon }) => (
                 <button
+                  key={id}
                   type="button"
-                  onClick={() => setIncludedLayers(["bronze", "silver", "gold"])}
-                  className="rounded-lg px-2 py-1 text-[10px] font-semibold uppercase"
-                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                  onClick={() => setDisplayMode(id)}
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold"
+                  style={{
+                    background: displayMode === id ? "var(--color-accent)" : "var(--color-surface)",
+                    color: displayMode === id ? "#fff" : "var(--color-text-muted)",
+                    border: `1px solid ${displayMode === id ? "var(--color-accent)" : "var(--color-border)"}`,
+                  }}
                 >
-                  Core flow
+                  <Icon className="h-3 w-3" />
+                  {label}
                 </button>
-              </div>
+              ))}
             </div>
-
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>View</p>
-              <div className="mt-1 flex gap-1">
-                {([
-                  { id: "graph", label: "Graph", Icon: Network },
-                  { id: "list", label: "List", Icon: Columns3 },
-                ] as const).map(({ id, label, Icon }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setDisplayMode(id)}
-                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold"
-                    style={{
-                      background: displayMode === id ? "var(--color-accent)" : "var(--color-surface)",
-                      color: displayMode === id ? "#fff" : "var(--color-text-muted)",
-                      border: `1px solid ${displayMode === id ? "var(--color-accent)" : "var(--color-border)"}`,
-                    }}
-                  >
-                    <Icon className="h-3 w-3" />
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
+            <div className="h-4 w-px shrink-0" style={{ background: "var(--color-border)" }} />
             <button
               type="button"
               onClick={() => {
@@ -911,17 +778,15 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
                 setDisplayMode("graph");
                 setSelectedNodeId(null);
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold"
               style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              Reset trace
+              Reset
             </button>
           </div>
-        )}
-      </aside>
+        </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
         <div
           className="flex flex-wrap items-center gap-3 border-b px-4 py-2"
           style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}

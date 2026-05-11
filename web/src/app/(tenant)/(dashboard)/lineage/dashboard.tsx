@@ -22,8 +22,9 @@ interface TraceRequest {
 }
 
 const TABS: { id: Tab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: "overview", label: "Map", Icon: LayoutDashboard },
+  { id: "overview", label: "Overview", Icon: LayoutDashboard },
   { id: "trace", label: "Advanced Trace", Icon: Route },
+  { id: "columns", label: "Column mappings", Icon: Columns3 },
 ];
 
 function downloadEntitiesAsJSON(entities: LineageEntity[]) {
@@ -87,7 +88,7 @@ export function LineageDashboard() {
     ?? undefined;
 
   const modeSummary = activeTab === "overview"
-    ? "Map shows the current flow across sources, transformations, and outputs."
+    ? "Overview shows the current state of all entities, chains, and layer coverage."
     : activeTab === "trace"
       ? "Advanced Trace investigates one path with direction, depth, and layer controls."
       : "Column mappings show attribute-level evidence for the path you are inspecting.";
@@ -175,13 +176,13 @@ export function LineageDashboard() {
                       background: activeTab === id
                         ? "rgba(255,255,255,0.18)"
                         : currentAttributeCount > 0
-                        ? "rgba(16,185,129,0.12)"
-                        : "rgba(245,158,11,0.12)",
+                          ? "rgba(16,185,129,0.12)"
+                          : "rgba(245,158,11,0.12)",
                       color: activeTab === id
                         ? "#fff"
                         : currentAttributeCount > 0
-                        ? "#047857"
-                        : "#B45309",
+                          ? "#047857"
+                          : "#B45309",
                     }}
                   >
                     {currentAttributeCount > 0 ? currentAttributeCount : "0"}
@@ -192,36 +193,6 @@ export function LineageDashboard() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
-            <button
-              onClick={() => setActiveTab("columns")}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5"
-              style={{
-                border: "1px solid var(--color-border)",
-                color: activeTab === "columns" ? "#fff" : "var(--color-text-muted)",
-                background: activeTab === "columns" ? "var(--color-accent)" : "var(--color-surface)",
-              }}
-              title="Open column mappings"
-            >
-              <Columns3 className="h-3.5 w-3.5" />
-              Column mappings
-              <span
-                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                style={{
-                  background: activeTab === "columns"
-                    ? "rgba(255,255,255,0.18)"
-                    : currentAttributeCount > 0
-                      ? "rgba(16,185,129,0.12)"
-                      : "rgba(245,158,11,0.12)",
-                  color: activeTab === "columns"
-                    ? "#fff"
-                    : currentAttributeCount > 0
-                      ? "#047857"
-                      : "#B45309",
-                }}
-              >
-                {currentAttributeCount > 0 ? currentAttributeCount : "0"}
-              </span>
-            </button>
             {entitiesRes && <SourceIndicator source={entitiesRes.source} cachedAt={entitiesRes.cachedAt} />}
             <button
               onClick={() => downloadEntitiesAsJSON(entities)}

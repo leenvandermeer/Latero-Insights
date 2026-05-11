@@ -7,11 +7,9 @@ import {
   CheckCircle2,
   CircleDot,
   Columns3,
-  Database,
   Layers3,
   Minus,
   ShieldAlert,
-  Table2,
 } from "lucide-react";
 import type { LineageAttribute, LineageEntity } from "@/lib/adapters/types";
 import { lineageNodeName, lineageNodeLabel } from "./lineage-utils";
@@ -426,14 +424,6 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
       })
       .slice(0, 6);
 
-    const topConnected = [...currentEntities]
-      .sort((a, b) => {
-        const aDegree = a.upstream_keys.length + a.downstream_keys.length;
-        const bDegree = b.upstream_keys.length + b.downstream_keys.length;
-        return bDegree - aDegree || a.name.localeCompare(b.name);
-      })
-      .slice(0, 5);
-
     return {
       total,
       failed,
@@ -446,11 +436,10 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
       chains: chainRows,
       layerRows,
       riskiestEntities,
-      topConnected,
       currentAttributes,
       uniqueSourceColumns: new Set(currentAttributes.map((attribute) => `${attribute.source_name}.${attribute.source_attribute}`)).size,
       uniqueTargetColumns: new Set(currentAttributes.map((attribute) => `${attribute.target_name}.${attribute.target_attribute}`)).size,
-      recommendedEntity: riskiestEntities[0] ?? topConnected[0] ?? null,
+      recommendedEntity: riskiestEntities[0] ?? null,
     };
   }, [attributes, entities]);
 
@@ -474,9 +463,19 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
         >
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>
-                Lineage
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-accent)" }}>
+                  Lineage
+                </p>
+                {refreshedAt && (
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                    style={{ background: "rgba(128,128,128,0.09)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}
+                  >
+                    As of {formatTime(refreshedAt)}
+                  </span>
+                )}
+              </div>
               <h1 className="mt-2 text-lg font-medium leading-snug" style={{ color: "var(--color-text)" }}>
                 Scan the current flow, then open Advanced Trace when you need a deeper investigation.
               </h1>
@@ -532,7 +531,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
                       ? "Start upstream."
                       : model.warning > 0
                       ? "Check the exposed path."
-                      : "Start from the most connected entity."}
+                      : "Open Advanced Trace to investigate this path."}
                   </p>
                 </>
               ) : (
@@ -737,35 +736,7 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
           </Panel>
         </div>
 
-          <Panel title="Most connected entities" action={<TabAction onClick={() => onOpenTab("trace")}>Investigate impact</TabAction>}>
-          <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
-            {model.topConnected.map((entity) => {
-              const degree = entity.upstream_keys.length + entity.downstream_keys.length;
-              return (
-                <button
-                  key={`${entity.layer}:${entity.name}`}
-                  type="button"
-                  onClick={() => onOpenTrace?.(`${entity.layer.toLowerCase()}::${entity.name}`, { direction: "both", depth: 2 })}
-                  className="grid w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30 md:grid-cols-[minmax(0,1fr)_120px_90px] md:items-center"
-                >
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span className="grid h-8 w-8 place-items-center rounded-lg shrink-0" style={{ background: "var(--color-surface)", color: "var(--color-brand)" }}>
-                      {entity.layer.toLowerCase() === "gold" ? <Table2 className="h-4 w-4" /> : <Database className="h-4 w-4" />}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.name}>{lineageNodeLabel(entity)}</p>
-                      <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>{formatLayer(entity.layer)}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {entity.upstream_keys.length} up · {entity.downstream_keys.length} down
-                  </p>
-                  <p className="text-right text-sm font-semibold" style={{ color: "var(--color-text)" }}>{degree}</p>
-                </button>
-              );
-            })}
-          </div>
-        </Panel>
+
       </div>
     </div>
   );
