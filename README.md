@@ -237,6 +237,19 @@ npm run deploy           # Deploy naar productie (zie hieronder)
 Latero Control draait in productie op een Hetzner VPS (SSH alias `latero-prod`).
 De deploy pipeline gebruikt Docker Compose en wordt getriggerd met één commando vanuit de repository root.
 
+### Productie-domeinen
+
+De productie-opstelling gebruikt meerdere hostnames op dezelfde Hetzner VPS:
+
+| Hostname | Functie | Runtime |
+|----------|---------|---------|
+| `latero.nl` | Publieke marketingwebsite | Statische site via Caddy file server |
+| `www.latero.nl` | Canonieke redirect | `301` redirect naar `https://latero.nl` |
+| `control.latero.nl` | Latero Control applicatie | Next.js app (`insights-app`) |
+| `sso.latero.nl` | Keycloak / OIDC provider | Keycloak (`insights-keycloak`) |
+
+De publieke website draait dus **niet** onder `control.latero.nl`. Dat subdomein blijft exclusief voor de Control-app.
+
 ### Vereisten
 
 - SSH-toegang tot `latero-prod` (`root@195.201.99.215`) — configureer dit als SSH-alias
@@ -257,15 +270,33 @@ Dit voert `infra/scripts/deploy-remote.sh` uit, dat:
 4. **Containers herstarten** — herstart `insights-app` en `insights-caddy` via Docker Compose
 5. **Health check** — verifieert dat `/api/health` HTTP 200 teruggeeft
 
+> **Let op:** deze standaard deploy-route verwacht een schone git-worktree op de server, omdat `deploy.sh` een `git pull` uitvoert. Als er bewust lokale productie-aanpassingen op `latero-prod` staan die nog niet gecommit zijn, gebruik dan eerst een handmatige build/restart-flow of commit de wijzigingen voordat je `npm run deploy` gebruikt.
+
 ### Productie-omgeving
 
 | Component | Details |
 |-----------|---------|
 | Server | Hetzner VPS, Ubuntu |
-| URL | `https://control.latero.nl` (via Caddy reverse proxy) |
+| Publieke site | `https://latero.nl` (via Caddy static file serving) |
+| App URL | `https://control.latero.nl` (via Caddy reverse proxy) |
+| SSO URL | `https://sso.latero.nl` (via Caddy reverse proxy) |
 | App container | `insights-app` (Next.js standalone, poort 3000 intern) |
+| Website files | `/opt/latero-website/dist` (read-only gemount in Caddy) |
 | Database | `insights-postgres` (PostgreSQL 16, schema `meta` + `public`) |
 | Caddy | `insights-caddy` (TLS-terminatie, reverse proxy) |
+
+### DNS bij STRATO
+
+De DNS-zone mag bij STRATO blijven. Gebruik voor de productie-opstelling **DNS-records**, niet STRATO web-forwarding:
+
+| Host | Type | Waarde |
+|------|------|--------|
+| `latero.nl` | `A` | `195.201.99.215` |
+| `www.latero.nl` | `CNAME` | `latero.nl` |
+| `control` | `A` | `195.201.99.215` |
+| `sso` | `A` | `195.201.99.215` |
+
+Na het omzetten van `latero.nl` en `www.latero.nl` kan Caddy op Hetzner automatisch Let's Encrypt-certificaten aanvragen voor die hostnames.
 
 ### Persistente volumes
 
@@ -295,3 +326,12 @@ npm run deploy
 
 Na de eerste deploy: open `https://control.latero.nl/settings`, sla Databricks-credentials op en trigger een eerste sync.
 
+### Publieke website op dezelfde server
+
+De marketingwebsite uit de aparte repo `Git/Latero  website` wordt statisch gebouwd en gedeployed naar:
+
+```text
+/opt/latero-website/dist
+```
+
+Caddy serveert deze directory rechtstreeks voor `latero.nl`. Daardoor kunnen de publieke website en de Control-app veilig naast elkaar op dezelfde Hetzner VPS draaien, elk met hun eigen hostname.

@@ -23,6 +23,40 @@ Docker file locations:
 - `infra/docker/docker-compose.prod.yml`
 - `infra/docker/docker-compose.sso.yml`  ← SSO test stack (Keycloak + Caddy)
 
+## Production topology
+
+Op productie draait Caddy als centrale ingress voor meerdere hostnames op dezelfde Hetzner VPS:
+
+| Hostname | Afhandeling |
+|----------|-------------|
+| `latero.nl` | statische website uit `/opt/latero-website/dist` |
+| `www.latero.nl` | redirect naar `https://latero.nl` |
+| `control.latero.nl` | reverse proxy naar `insights-app:3000` |
+| `sso.latero.nl` | reverse proxy naar `insights-keycloak:8080` |
+
+De publieke website blijft dus gescheiden van de Control-app, ook al gebruiken ze dezelfde server en dezelfde Caddy-container.
+
+### DNS model
+
+De DNS-zone kan bij STRATO blijven staan. Gebruik voor productie:
+
+| Host | Type | Waarde |
+|------|------|--------|
+| `latero.nl` | `A` | `195.201.99.215` |
+| `www.latero.nl` | `CNAME` | `latero.nl` |
+| `control` | `A` | `195.201.99.215` |
+| `sso` | `A` | `195.201.99.215` |
+
+Gebruik geen STRATO web-forwarding voor deze hostnames; Caddy op Hetzner handelt redirects en TLS zelf af.
+
+### TLS / certificaten
+
+Caddy haalt in productie automatisch Let's Encrypt-certificaten op voor alle hostnames die naar de Hetzner-server wijzen. Dat betekent:
+
+- geen wildcard-certificaat nodig zolang `latero.nl`, `www.latero.nl`, `control.latero.nl` en `sso.latero.nl` voldoende zijn
+- geen certificaatbeheer nodig in STRATO voor deze hostnames
+- poorten `80` en `443` moeten open blijven in de Hetzner firewall
+
 ---
 
 ## SSO test environment
@@ -151,4 +185,3 @@ docker exec -i insights-postgres psql -U insights -d insights < infra/sql/schema
 ```
 
 > **Let op:** `schema.sql` gebruikt `IF NOT EXISTS` en `ADD COLUMN IF NOT EXISTS` — veilig om meerdere keren uit te voeren op een bestaande database.
-

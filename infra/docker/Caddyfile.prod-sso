@@ -1,11 +1,39 @@
-# Caddyfile.prod-sso — productie TLS voor control.latero.nl + sso.latero.nl
+# Caddyfile.prod-sso — productie TLS voor latero.nl + control.latero.nl + sso.latero.nl
 #
 # Caddy haalt automatisch TLS-certificaten op via Let's Encrypt (ACME).
-# Vereist: DNS A-records voor beide (sub)domeinen wijzen naar het server-IP.
+# Vereist: DNS A-records voor alle (sub)domeinen wijzen naar het server-IP.
+#   latero.nl          →  <server-ip>
+#   www.latero.nl      →  <server-ip> of CNAME naar latero.nl
 #   control.latero.nl  →  <server-ip>
 #   sso.latero.nl      →  <server-ip>
 #
 # Poort 80 en 443 moeten open zijn in de Hetzner firewall.
+
+# ── Publieke website ───────────────────────────────────────────────────────────
+latero.nl {
+    root * /srv/latero-website
+    encode gzip
+    file_server
+
+    header {
+        -Server
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    log {
+        output file /var/log/caddy/site-access.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+    }
+}
+
+www.latero.nl {
+    redir https://latero.nl{uri} permanent
+}
 
 # ── Applicatie ────────────────────────────────────────────────────────────────
 control.latero.nl {
@@ -54,4 +82,3 @@ sso.latero.nl {
         }
     }
 }
-
