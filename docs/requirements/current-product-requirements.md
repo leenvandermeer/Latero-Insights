@@ -365,6 +365,31 @@ Requirements:
 5. The empty state message MUST differentiate between "no data" and
    "no results for current filters".
 
+---
+
+### LINS-027 — Mobile usability and header continuity
+
+Latero Control MUST remain fully usable on mobile devices and small touch
+viewports. Responsive behavior is not optional polish; it is a product
+requirement.
+
+Requirements:
+1. Core tenant and admin flows MUST remain usable on a mobile viewport down to
+   390px width (reference device class: iPhone 16 Pro).
+2. Every primary page MUST retain a visible page title and context header on
+   mobile. A desktop-only shell header MUST NOT cause the effective page header
+   to disappear on mobile.
+3. Navigation, filters, date controls, tables, tabs, and primary actions MUST
+   remain operable with touch input.
+4. Minimum touch target size on mobile MUST be 44px for actionable controls.
+5. Layouts MUST respect mobile safe areas and browser chrome. Critical UI MUST
+   NOT be obscured by notch, bottom browser bars, or sticky navigation.
+6. Horizontal overflow MAY be used for dense data tables, but page identity,
+   filter controls, and primary actions MUST remain visible without requiring
+   sideways discovery first.
+7. Mobile behavior MUST be validated as part of UX acceptance for any shell,
+   header, navigation, or dashboard-control redesign.
+
 ## Implemented (was Deferred Backlog)
 
 ### B-001 — Full Session Auth ✓ IMPLEMENTED

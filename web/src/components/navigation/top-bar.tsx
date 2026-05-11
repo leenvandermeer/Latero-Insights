@@ -4,13 +4,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  Activity,
+  Boxes,
+  GitBranch,
+  Package,
   ChevronDown,
   Check,
   LogOut,
   Moon,
   Settings,
+  Shield,
   Star,
   Sun,
+  TrendingUp,
   UserCircle,
   Building2,
 } from "lucide-react";
@@ -25,7 +31,7 @@ function envStyle(env: string): React.CSSProperties {
   return { background: "var(--color-brand-subtle)", color: "var(--color-brand)" };
 }
 
-function InstallationSwitcher() {
+function InstallationSwitcher({ compact = false }: { compact?: boolean }) {
   const {
     installation,
     installations,
@@ -76,7 +82,9 @@ function InstallationSwitcher() {
         type="button"
         onClick={() => isMulti && setOpen((value) => !value)}
         className={cn(
-          "flex min-w-0 items-center gap-2.5 rounded-xl border px-2.5 py-1.5 text-left transition-all",
+          compact
+            ? "flex min-w-0 items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left transition-all"
+            : "flex min-w-0 items-center gap-2.5 rounded-xl border px-2.5 py-1.5 text-left transition-all",
           isMulti && "cursor-pointer hover:shadow-sm"
         )}
         style={{
@@ -87,17 +95,22 @@ function InstallationSwitcher() {
         }}
       >
         <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-lg",
+            compact ? "h-7 w-7" : "h-8 w-8"
+          )}
           style={{ background: "var(--color-brand-subtle)", color: "var(--color-brand)" }}
         >
-          <Building2 className="h-3.5 w-3.5" />
+          <Building2 className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] leading-none" style={{ color: "var(--color-text-subtle)" }}>
-            Installation
-          </p>
-          <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-sm font-semibold leading-none">{label}</span>
+          {!compact ? (
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] leading-none" style={{ color: "var(--color-text-subtle)" }}>
+              Installation
+            </p>
+          ) : null}
+          <div className={cn("flex min-w-0 items-center gap-1.5", compact ? "" : "mt-0.5")}>
+            <span className={cn("truncate font-semibold leading-none", compact ? "max-w-[7rem] text-xs" : "text-sm")}>{label}</span>
             <span
               className="rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
               style={envStyle(installation.environment)}
@@ -116,7 +129,10 @@ function InstallationSwitcher() {
 
       {isMulti && open && (
         <div
-          className="absolute right-0 top-full z-50 mt-2 w-[21rem] overflow-hidden rounded-2xl border shadow-xl"
+          className={cn(
+            "absolute right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border shadow-xl",
+            compact ? "w-[min(20rem,calc(100vw-2rem))]" : "w-[21rem]"
+          )}
           style={{ background: "var(--color-surface)", borderColor: "var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
         >
           <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -199,7 +215,7 @@ function InstallationSwitcher() {
   );
 }
 
-function UserAvatarMenu() {
+function UserAvatarMenu({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useInstallation();
@@ -245,7 +261,10 @@ function UserAvatarMenu() {
           type="button"
           onClick={() => setOpen((value) => !value)}
           title={user?.email ?? "Account"}
-          className="flex items-center gap-2.5 rounded-xl border px-2.5 py-1.5 transition-all hover:shadow-sm"
+          className={cn(
+            "flex items-center rounded-xl border transition-all hover:shadow-sm",
+            compact ? "gap-2 px-2 py-1.5" : "gap-2.5 px-2.5 py-1.5"
+          )}
           style={{
             background: "var(--color-surface)",
             borderColor: "var(--color-border)",
@@ -254,23 +273,32 @@ function UserAvatarMenu() {
         }}
       >
         <div
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold"
+          className={cn(
+            "flex items-center justify-center rounded-full text-[11px] font-semibold",
+            compact ? "h-7 w-7" : "h-8 w-8"
+          )}
           style={{ background: "var(--color-brand)", color: "#fff" }}
         >
           {initials}
         </div>
-        <div className="hidden text-left xl:block">
+        <div className={cn("text-left", compact ? "hidden" : "hidden xl:block")}>
           <p className="max-w-[12rem] truncate text-sm font-semibold leading-none">{user?.email ?? "Account"}</p>
           <p className="mt-0.5 text-xs leading-none" style={{ color: "var(--color-text-muted)" }}>
             {isAdmin ? "Administrator" : "Member"}
           </p>
         </div>
-        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} style={{ color: "var(--color-text-muted)" }} />
+        <ChevronDown
+          className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
+          style={{ color: "var(--color-text-muted)" }}
+        />
       </button>
 
       {open && (
         <div
-          className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border p-2 shadow-xl"
+          className={cn(
+            "absolute right-0 top-full z-50 mt-2 rounded-2xl border p-2 shadow-xl",
+            compact ? "w-[min(18rem,calc(100vw-2rem))]" : "w-64"
+          )}
           style={{ background: "var(--color-surface)", borderColor: "var(--color-border)", boxShadow: "var(--shadow-dropdown)" }}
         >
           {user?.email && (
@@ -330,52 +358,83 @@ export function TopBar() {
   const runsRange = useDateRange({ scope: "monitor:runs", defaultPreset: "7d" });
 
   const pageHeader = (() => {
-    if (pathname === "/overview") return { title: "Estate Health", subtitle: `Current state with run and quality signals for ${overviewRange.summaryLabel}` };
-    if (pathname === "/quality") return { title: "Data Quality", subtitle: `Showing ${qualityRange.summaryLabel}` };
-    if (pathname === "/runs") return { title: "Runs", subtitle: `Showing ${runsRange.summaryLabel}` };
-    if (pathname === "/incidents") return { title: "Issues", subtitle: "Detected and reported trust issues for data products" };
-    if (pathname === "/compliance") return { title: "Compliance", subtitle: "Policy checks across your data estate" };
-    if (pathname === "/products") return { title: "Data Products", subtitle: "Browse operational products and surface governance gaps quickly." };
-    if (pathname === "/catalog") return { title: "Catalog", subtitle: "Data products, entities, and datasets" };
-    if (pathname === "/lineage") return { title: "Lineage", subtitle: "Upstream, downstream and column-level relationships across the estate" };
-    if (pathname === "/changes") return { title: "Change Intelligence", subtitle: "Detected drift and change events across your data estate" };
-    if (pathname === "/impact") return { title: "Business Impact", subtitle: "Business outputs and downstream impact analysis" };
-    if (pathname === "/consumers") return { title: "Consumers", subtitle: "Demand-side analytics per data product" };
-    if (pathname === "/dashboard") return { title: "Dashboards", subtitle: "Personal and shared operational views" };
-    if (pathname.startsWith("/dashboard/")) return { title: "Dashboard", subtitle: "Configurable view with date scope for period-based widgets" };
+    if (pathname === "/overview") return { title: "Estate Health", subtitle: `Current state with run and quality signals for ${overviewRange.summaryLabel}`, icon: Boxes };
+    if (pathname === "/quality") return { title: "Data Quality", subtitle: `Showing ${qualityRange.summaryLabel}`, icon: Shield };
+    if (pathname === "/runs") return { title: "Runs", subtitle: `Showing ${runsRange.summaryLabel}`, icon: Activity };
+    if (pathname === "/incidents") return { title: "Issues", subtitle: "Detected and reported trust issues for data products", icon: Shield };
+    if (pathname === "/compliance") return { title: "Compliance", subtitle: "Policy checks across your data estate", icon: Shield };
+    if (pathname === "/products") return { title: "Data Products", subtitle: "Browse operational products and surface governance gaps quickly.", icon: Package };
+    if (pathname === "/catalog") return { title: "Catalog", subtitle: "Data products, entities, and datasets", icon: Package };
+    if (pathname === "/lineage") return { title: "Lineage", subtitle: "Upstream, downstream and column-level relationships across the estate", icon: GitBranch };
+    if (pathname === "/changes") return { title: "Change Intelligence", subtitle: "Detected drift and change events across your data estate", icon: TrendingUp };
+    if (pathname === "/impact") return { title: "Business Impact", subtitle: "Business outputs and downstream impact analysis", icon: TrendingUp };
+    if (pathname === "/consumers") return { title: "Consumers", subtitle: "Demand-side analytics per data product", icon: UserCircle };
+    if (pathname === "/dashboard") return { title: "Dashboards", subtitle: "Personal and shared operational views", icon: Package };
+    if (pathname.startsWith("/dashboard/")) return { title: "Dashboard", subtitle: "Configurable view with date scope for period-based widgets", icon: Package };
     return null;
   })();
+  const MobileIcon = pageHeader?.icon;
 
   return (
-    <header
-      className="sticky top-0 z-20 hidden md:block"
-      style={{
-        background: "color-mix(in srgb, var(--color-bg) 92%, transparent)",
-        backdropFilter: "blur(18px)",
-        borderBottom: "1px solid var(--color-border)",
-      }}
-    >
-      <div className="page-content py-2">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            {pageHeader ? (
+    <>
+      {pageHeader ? (
+        <div className="page-content pb-1 pt-4 md:hidden">
+          <div className="space-y-3">
+            <div className="flex min-w-0 items-start gap-3">
+              <div
+                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                style={{ background: "var(--color-brand-subtle)", color: "var(--color-brand)" }}
+              >
+                {MobileIcon ? <MobileIcon className="h-4 w-4" /> : null}
+              </div>
               <div className="min-w-0">
-                <h1 className="truncate text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>
+                <h1 className="truncate text-2xl font-medium leading-tight" style={{ color: "var(--color-text)" }}>
                   {pageHeader.title}
                 </h1>
-                <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+                <p className="mt-1 text-sm leading-snug" style={{ color: "var(--color-text-muted)" }}>
                   {pageHeader.subtitle}
                 </p>
               </div>
-            ) : null}
-          </div>
+            </div>
 
-          <div className="flex shrink-0 items-center gap-2.5">
-            <InstallationSwitcher />
-            <UserAvatarMenu />
+            <div className="flex items-center justify-end gap-2">
+              <InstallationSwitcher compact />
+              <UserAvatarMenu compact />
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      ) : null}
+
+      <header
+        className="sticky top-0 z-20 hidden md:block"
+        style={{
+          background: "color-mix(in srgb, var(--color-bg) 92%, transparent)",
+          backdropFilter: "blur(18px)",
+          borderBottom: "1px solid var(--color-border)",
+        }}
+      >
+        <div className="page-content py-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              {pageHeader ? (
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-medium leading-tight" style={{ color: "var(--color-text)" }}>
+                    {pageHeader.title}
+                  </h1>
+                  <p className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    {pageHeader.subtitle}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2.5">
+              <InstallationSwitcher />
+              <UserAvatarMenu />
+            </div>
+          </div>
+        </div>
+      </header>
+    </>
   );
 }
