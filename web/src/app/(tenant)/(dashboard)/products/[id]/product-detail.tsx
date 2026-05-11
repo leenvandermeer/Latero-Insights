@@ -14,6 +14,7 @@ import {
 } from "@/hooks/use-data-products";
 import { useEntities } from "@/hooks/use-entities";
 import { useRefreshTrustScore, useTrustScore, type TrustFactor } from "@/hooks/use-trust-score";
+import { toast } from "sonner";
 import { useIncidents } from "@/hooks/use-incidents";
 import { TrustScoreBreakdown } from "@/components/trust/trust-score-breakdown";
 import { TrustScoreBadge } from "@/components/trust/trust-score-badge";
@@ -345,9 +346,13 @@ function ManageMembersModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Manage members"
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.4)" }}
       onClick={(event) => event.target === event.currentTarget && onClose()}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
       <div
         className="w-full max-w-2xl rounded-2xl p-6 flex flex-col gap-4"
@@ -514,17 +519,24 @@ function EditProductModal({
         sla_tier:       (form.sla_tier as "bronze" | "silver" | "gold") || null,
       };
       await update.mutateAsync(input);
+      toast.success("Product saved");
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      const msg = err instanceof Error ? err.message : "Save failed";
+      setError(msg);
+      toast.error("Save failed", { description: msg });
     }
   };
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Edit product"
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.4)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}  
     >
       <div
         className="w-full max-w-lg rounded-2xl p-6 flex flex-col gap-4"
@@ -654,17 +666,24 @@ function DeleteConfirmModal({
     setError(null);
     try {
       await del.mutateAsync(product.data_product_id);
+      toast.success(`"${product.display_name}" deleted`);
       onDeleted();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      const msg = err instanceof Error ? err.message : "Delete failed";
+      setError(msg);
+      toast.error("Delete failed", { description: msg });
     }
   };
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Delete product"
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.4)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
       <div
         className="w-full max-w-sm rounded-2xl p-6 flex flex-col gap-4"
@@ -786,6 +805,18 @@ function OverviewTab({
                 day: "2-digit", month: "short", year: "numeric",
               })}
             </dd>
+            {product.contract_ver && (
+              <>
+                <dt style={{ color: "var(--color-text-muted)" }}>Contract version</dt>
+                <dd style={{ color: "var(--color-text)" }} className="font-mono text-xs">{product.contract_ver}</dd>
+              </>
+            )}
+            {product.external_id && (
+              <>
+                <dt style={{ color: "var(--color-text-muted)" }}>External ID</dt>
+                <dd style={{ color: "var(--color-text-muted)" }} className="font-mono text-xs truncate" title={product.external_id}>{product.external_id}</dd>
+              </>
+            )}
           </dl>
           {product.description && (
             <p

@@ -159,7 +159,7 @@ export function AccountDashboard() {
       }
       setShowDisable(false);
       setDisableCode("");
-      window.location.reload();
+      setStep("idle");
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -438,7 +438,7 @@ export function AccountDashboard() {
                   Copy codes
                 </button>
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={() => { setSetupState(null); setStep("idle"); }}
                   className="rounded-lg px-4 py-2 text-sm font-medium"
                   style={{ background: "var(--color-accent)", color: "#fff" }}
                 >

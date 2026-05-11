@@ -14,6 +14,7 @@ import {
   GitBranch,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const statusIcon = (status: string) => {
@@ -37,6 +38,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function EntityDetail({ fqn }: { fqn: string }) {
+  const router = useRouter();
   const { data: entityData, isLoading, isError } = useEntityDetail(fqn);
   const { data: runsData } = useEntityRuns(fqn, 20);
   const { data: qualityData } = useEntityQuality(fqn);
@@ -158,7 +160,7 @@ export function EntityDetail({ fqn }: { fqn: string }) {
                     key={runId || i}
                     className="border-b last:border-0 hover:bg-[var(--color-surface-subtle)] cursor-pointer"
                     style={{ borderColor: "var(--color-border)" }}
-                    onClick={() => runId && (window.location.href = `/runs/${encodeURIComponent(runId)}`)}
+                    onClick={() => runId && router.push(`/runs/${encodeURIComponent(runId)}`)}  
                   >
                     <td className="px-5 py-3">
                       <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded", statusColor(String(run.status ?? "")))}>

@@ -3,8 +3,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3, PlusCircle, Pencil, Loader2 } from "lucide-react";
+import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3, PlusCircle, Pencil, Loader2, Download } from "lucide-react";
 import { useDataProducts, useUpdateDataProduct, type DataProduct } from "@/hooks/use-data-products";
+import { toast } from "sonner";
 import { useTrustScore } from "@/hooks/use-trust-score";
 import { TrustScoreBadge } from "@/components/trust/trust-score-badge";
 import { DataProductSlideOver } from "@/app/(tenant)/(dashboard)/catalog/data-product-slide-over";
@@ -123,17 +124,24 @@ function GovernanceModal({ product, onClose }: { product: Product; onClose: () =
         classification: (classification || null) as "public" | "internal" | "confidential" | "restricted" | null,
         retention_days: retDays,
       });
+      toast.success("Governance settings saved");
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setError(msg);
+      toast.error("Save failed", { description: msg });
     }
   };
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Governance — ${product.display_name}`}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.4)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
       <div
         className="w-full max-w-md rounded-2xl p-6 flex flex-col gap-4"
@@ -402,14 +410,47 @@ export function ProductRegistry() {
             </p>
           )}
         </div>
-        <button
-          onClick={() => setSlideOverOpen(true)}
-          className="inline-flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-opacity hover:opacity-90 sm:min-h-0 sm:w-auto sm:justify-start sm:py-1.5 sm:text-xs"
-          style={{ background: "var(--color-brand)", color: "#fff" }}
-        >
-          <PlusCircle className="h-3.5 w-3.5" />
-          New product
-        </button>
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+          <button
+            onClick={() => {
+              const header = ["Name","Domain","Owner","Data Steward","Classification","SLA Tier","External ID","Entities","Last Updated"].join(",");
+              const rows = filtered.map((p) =>
+                [
+                  JSON.stringify(p.display_name),
+                  JSON.stringify(p.domain ?? ""),
+                  JSON.stringify(p.owner ?? ""),
+                  JSON.stringify(p.data_steward ?? ""),
+                  p.classification ?? "",
+                  p.sla_tier ?? "",
+                  p.external_id ?? "",
+                  p.entity_count,
+                  new Date(p.updated_at).toISOString().slice(0, 10),
+                ].join(",")
+              );
+              const csv = [header, ...rows].join("\n");
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `data-products-${new Date().toISOString().slice(0, 10)}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="inline-flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-opacity hover:opacity-80 sm:min-h-0 sm:w-auto sm:justify-start sm:py-1.5 sm:text-xs"
+            style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </button>
+          <button
+            onClick={() => setSlideOverOpen(true)}
+            className="inline-flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-opacity hover:opacity-90 sm:min-h-0 sm:w-auto sm:justify-start sm:py-1.5 sm:text-xs"
+            style={{ background: "var(--color-brand)", color: "#fff" }}
+          >
+            <PlusCircle className="h-3.5 w-3.5" />
+            New product
+          </button>
+        </div>
       </div>
 
       <DataProductSlideOver open={slideOverOpen} onClose={() => setSlideOverOpen(false)} />
@@ -506,19 +547,33 @@ export function ProductRegistry() {
 
       {/* Empty */}
       {!error && filtered.length === 0 && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-2">
-          <Package className="h-8 w-8" style={{ color: "var(--color-text-muted)" }} />
-          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-            {query || domain || readiness !== "all" ? "No products match your filters." : "No data products registered yet."}
-          </p>
-          {(query || domain || readiness !== "all") && (
-            <button
-              onClick={() => { setQuery(""); setDomain(""); setReadiness("all"); }}
-              className="text-xs hover:underline"
-              style={{ color: "var(--color-brand)" }}
-            >
-              Clear filters
-            </button>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16">
+          <Package className="h-10 w-10" style={{ color: "var(--color-text-muted)", opacity: 0.5 }} />
+          {query || domain || readiness !== "all" ? (
+            <>
+              <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No products match your filters.</p>
+              <button
+                onClick={() => { setQuery(""); setDomain(""); setReadiness("all"); }}
+                className="text-xs hover:underline"
+                style={{ color: "var(--color-brand)" }}
+              >
+                Clear filters
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>No data products registered yet</p>
+              <p className="text-xs text-center max-w-xs" style={{ color: "var(--color-text-muted)" }}>
+                Data products are the building blocks of your data platform. Register your first product to start tracking lineage, quality, and ownership.
+              </p>
+              <button
+                onClick={() => router.push("/onboarding")}
+                className="mt-1 text-xs px-4 py-2 rounded-xl font-medium"
+                style={{ background: "var(--color-brand)", color: "#fff" }}
+              >
+                Register your first product
+              </button>
+            </>
           )}
         </div>
       )}

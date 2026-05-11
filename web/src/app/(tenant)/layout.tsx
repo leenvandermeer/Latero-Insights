@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { Toaster } from "sonner";
 import "../globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -36,6 +37,7 @@ export default function TenantRootLayout({
       <body className={`${inter.variable} ${fraunces.variable} font-sans`}>
         <QueryProvider>
           {children}
+          <Toaster position="bottom-right" richColors closeButton />
         </QueryProvider>
       </body>
     </html>

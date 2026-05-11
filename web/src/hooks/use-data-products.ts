@@ -16,6 +16,7 @@ export interface DataProduct {
   classification: "public" | "internal" | "confidential" | "restricted" | null;
   retention_days: number | null;
   sla_tier: "bronze" | "silver" | "gold" | null;
+  contract_ver: string | null;
   tags: Record<string, unknown>;
   entity_ids: string[];
   entity_count: number;
