@@ -816,7 +816,7 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
         </div>
 
         <div className="flex min-h-0 flex-1">
-          <div ref={canvasRef} className="relative min-h-0 flex-1">
+          <div ref={canvasRef} className="relative h-full min-h-0 flex-1">
             {trace.nodes.length === 0 ? (
               <div className="flex h-full items-center justify-center bg-[var(--color-bg)] p-6">
                 <div
@@ -838,10 +838,13 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
                 fitViewOptions={{ padding: 0.02, maxZoom: 3 }}
                 onInit={(instance) => {
                   flowInstanceRef.current = instance as unknown as TraceFlowInstance;
-                  scheduleFitView(0);
+                  // Direct instance call — bypasses scheduleFitView stale closure (nodes may be 0 at init time)
                   window.setTimeout(() => {
-                    scheduleFitView(0);
-                  }, 80);
+                    instance.fitView({ padding: 0.02, duration: 0, maxZoom: 3 });
+                  }, 120);
+                  window.setTimeout(() => {
+                    instance.fitView({ padding: 0.02, duration: 260, maxZoom: 3 });
+                  }, 360);
                 }}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
