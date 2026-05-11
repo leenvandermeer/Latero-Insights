@@ -760,10 +760,6 @@ export function ComplianceDashboard() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-0.5">
                             <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>{pol.name}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize"
-                              style={ACTION_BADGE_STYLE[pol.action] ?? ACTION_BADGE_STYLE.notify}>
-                              {pol.action}
-                            </span>
                             {pack && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded-full"
                                 style={{ background: "rgba(128,128,128,0.08)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}>
@@ -916,10 +912,6 @@ export function ComplianceDashboard() {
                             style={{ background: "var(--color-surface)", color: "var(--color-text)" }}>
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="truncate text-xs font-medium flex-1" title={pol.name}>{pol.name}</span>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 capitalize"
-                                style={ACTION_BADGE_STYLE[pol.action] ?? ACTION_BADGE_STYLE.notify}>
-                                {pol.action}
-                              </span>
                               <button onClick={() => setModalState({ open: true, policy: pol })}
                                 className="p-1 rounded flex-shrink-0"
                                 style={{ color: "var(--color-text-subtle)" }} title="Edit">
