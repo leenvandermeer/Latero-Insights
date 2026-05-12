@@ -49,9 +49,11 @@ control.latero.nl {
 
     header {
         -Server
+        -X-Powered-By
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
         X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "geolocation=(), camera=(), microphone=()"
@@ -82,7 +84,11 @@ sso.latero.nl {
         -Server
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
         X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), camera=(), microphone=()"
     }
 
     log {
