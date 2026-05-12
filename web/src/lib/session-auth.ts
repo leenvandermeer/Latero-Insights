@@ -261,8 +261,7 @@ export function attachSessionCookie(response: NextResponse, token: string, reque
     sameSite: "lax",
     secure: shouldUseSecureCookie(request),
     path: "/",
-    // No maxAge/expires → session cookie: browser close invalidates the cookie client-side.
-    // Server-side expiry (SESSION_TTL_MS) enforces the absolute maximum regardless.
+    maxAge: Math.floor(SESSION_TTL_MS / 1000), // browser and server TTL are now aligned
   });
 }
 

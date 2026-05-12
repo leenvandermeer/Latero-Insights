@@ -361,7 +361,7 @@ export function TopBar() {
     if (pathname === "/overview") return { title: "Operational Overview", subtitle: `Current state with run and quality signals for ${overviewRange.summaryLabel}`, icon: Boxes };
     if (pathname === "/quality") return { title: "Data Quality", subtitle: `Showing ${qualityRange.summaryLabel}`, icon: Shield };
     if (pathname === "/runs") return { title: "Runs", subtitle: `Showing ${runsRange.summaryLabel}`, icon: Activity };
-    if (pathname === "/incidents") return { title: "Issues", subtitle: "Detected and reported trust issues for data products", icon: Shield };
+    if (pathname === "/incidents") return { title: "Incidents", subtitle: "Detected and reported trust issues for data products", icon: Shield };
     if (pathname === "/compliance") return { title: "Compliance", subtitle: "Policy checks across your data estate", icon: Shield };
     if (pathname === "/products") return { title: "Data Products", subtitle: "Browse operational products and surface governance gaps quickly.", icon: Package };
     if (pathname === "/catalog") return { title: "Catalog", subtitle: "Data products, entities, and datasets", icon: Package };

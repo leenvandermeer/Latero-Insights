@@ -15,10 +15,12 @@ import {
   createPolicyPack,
   updatePolicyPack,
   deletePolicyPack,
+  listExceptions,
+  resolveException,
 } from "@/lib/api/policies";
-import type { Policy, PolicyPack, ComplianceMatrix } from "@/lib/api/policies";
+import type { Policy, PolicyPack, ComplianceMatrix, PolicyException } from "@/lib/api/policies";
 
-export type { Policy, PolicyPack, ComplianceMatrix };
+export type { Policy, PolicyPack, ComplianceMatrix, PolicyException };
 
 export function usePolicies() {
   const { installation } = useInstallation();
@@ -131,6 +133,28 @@ export function useRunAllCompliance() {
 }
 
 export type VerdictValue = "pass" | "fail" | "exception" | "unknown";
+
+export function useExceptions(status?: string) {
+  const { installation } = useInstallation();
+  const installationId = installation?.installation_id ?? null;
+  return useQuery({
+    queryKey: ["compliance-exceptions", installationId, status],
+    queryFn: () => listExceptions(status),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useResolveException() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, approved_by }: { id: number; status: "approved" | "declined"; approved_by?: string }) =>
+      resolveException(id, { status, approved_by }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["compliance-exceptions"] });
+    },
+  });
+}
 
 /**
  * Manages optimistic per-cell verdict overrides and runs single-cell checks.

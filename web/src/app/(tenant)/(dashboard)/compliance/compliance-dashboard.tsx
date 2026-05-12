@@ -18,6 +18,9 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  ToggleLeft,
+  ToggleRight,
+  Clock,
 } from "lucide-react";
 import {
   usePolicies,
@@ -31,8 +34,10 @@ import {
   useCreatePolicyPack,
   useUpdatePolicyPack,
   useDeletePolicyPack,
+  useExceptions,
+  useResolveException,
 } from "@/hooks/use-compliance";
-import type { VerdictValue, PolicyPack, Policy } from "@/hooks/use-compliance";
+import type { VerdictValue, PolicyPack, Policy, PolicyException } from "@/hooks/use-compliance";
 
 // ── Condition options (mirrors policy-engine.ts CONDITIONS) ──────────────────
 
@@ -381,6 +386,7 @@ function PolicyRow({
   onEdit: () => void;
 }) {
   const deletePolicy = useDeletePolicy();
+  const updatePolicy = useUpdatePolicy();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   let pass = 0, fail = 0, exception = 0, unknown = 0;
@@ -398,17 +404,44 @@ function PolicyRow({
     setConfirmDelete(false);
   };
 
+  const handleToggleActive = () => {
+    updatePolicy.mutate({ id: policy.id, active: !policy.active });
+  };
+
   return (
     <div
       className="rounded-xl px-4 py-3 flex items-center gap-4"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      style={{
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        opacity: policy.active ? 1 : 0.6,
+      }}
     >
+      {/* Active toggle */}
+      <button
+        onClick={handleToggleActive}
+        disabled={updatePolicy.isPending}
+        title={policy.active ? "Disable policy" : "Enable policy"}
+        className="flex-shrink-0 disabled:opacity-50"
+        style={{ color: policy.active ? "var(--color-brand)" : "var(--color-text-muted)" }}
+      >
+        {policy.active
+          ? <ToggleRight className="h-5 w-5" />
+          : <ToggleLeft className="h-5 w-5" />
+        }
+      </button>
+
       {/* Left: name + condition */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium truncate" style={{ color: "var(--color-text)" }}>
             {policy.name}
           </span>
+          {!policy.active && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--color-surface-raised)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}>
+              disabled
+            </span>
+          )}
         </div>
         <p className="text-xs mt-0.5" style={{ color: "var(--color-text-subtle)" }}>
           {conditionLabel(policy.rule as Record<string, unknown>)}
@@ -532,9 +565,147 @@ function MatrixCell({
   );
 }
 
+// ── Exceptions view ───────────────────────────────────────────────────────────
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+function ExceptionsView() {
+  const [statusFilter, setStatusFilter] = useState<"" | "pending" | "approved" | "declined">("");
+  const { data: exceptions = [], isLoading } = useExceptions(statusFilter || undefined);
+  const resolve = useResolveException();
+
+  const pending   = exceptions.filter((e) => e.status === "pending").length;
+  const approved  = exceptions.filter((e) => e.status === "approved").length;
+  const declined  = exceptions.filter((e) => e.status === "declined").length;
+
+  return (
+    <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
+      {/* Summary chips */}
+      <div className="px-4 py-3 flex flex-wrap gap-2 border-b" style={{ borderColor: "var(--color-border)" }}>
+        {([ ["", "All"],
+            ["pending", `Pending (${pending})`],
+            ["approved", `Approved (${approved})`],
+            ["declined", `Declined (${declined})`],
+        ] as [typeof statusFilter, string][]).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setStatusFilter(id)}
+            className="rounded-full px-2.5 py-1 text-[11px] font-medium"
+            style={{
+              background: statusFilter === id ? "var(--color-brand)" : "var(--color-surface-raised)",
+              color: statusFilter === id ? "#fff" : "var(--color-text-muted)",
+              border: statusFilter === id ? "none" : "1px solid var(--color-border)",
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
+      <div className="flex-1 overflow-y-auto">
+        {isLoading && (
+          <div className="flex items-center gap-2 p-6 text-sm" style={{ color: "var(--color-text-muted)" }}>
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          </div>
+        )}
+        {!isLoading && exceptions.length === 0 && (
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 p-12">
+            <CheckCircle2 className="h-8 w-8" style={{ color: "var(--color-text-muted)" }} />
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No exceptions found.</p>
+          </div>
+        )}
+        {exceptions.map((ex) => (
+          <ExceptionRow key={ex.id} exception={ex} onResolve={resolve.mutate} resolving={resolve.isPending} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ExceptionRow({
+  exception: ex,
+  onResolve,
+  resolving,
+}: {
+  exception: PolicyException & { policy_name?: string; pack_name?: string };
+  onResolve: (vars: { id: number; status: "approved" | "declined" }) => void;
+  resolving: boolean;
+}) {
+  const statusStyle =
+    ex.status === "approved" ? { bg: "#dcfce7", text: "#166534" } :
+    ex.status === "declined" ? { bg: "#fee2e2", text: "#b91c1c" } :
+    { bg: "#fef9c3", text: "#a16207" };
+
+  const isExpired = ex.status === "pending" && new Date(ex.expiry_date) < new Date();
+
+  return (
+    <div
+      className="px-4 py-3 flex items-start gap-4"
+      style={{ borderBottom: "1px solid var(--color-border)" }}
+    >
+      {/* Status badge */}
+      <span
+        className="text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize flex-shrink-0 mt-0.5"
+        style={{ background: statusStyle.bg, color: statusStyle.text }}
+      >
+        {ex.status}
+      </span>
+
+      {/* Details */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+          <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+            {(ex as PolicyException & { policy_name?: string }).policy_name ?? ex.policy_id}
+          </span>
+          <span className="text-xs font-mono" style={{ color: "var(--color-text-muted)" }}>
+            {ex.product_id}
+          </span>
+        </div>
+        <p className="text-xs mb-1" style={{ color: "var(--color-text)" }}>{ex.justification}</p>
+        <div className="flex flex-wrap gap-3 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            Expires {fmtDate(ex.expiry_date)}
+            {isExpired && <span style={{ color: "#b91c1c" }}>(expired)</span>}
+          </span>
+          {ex.approved_by && (
+            <span>{ex.status === "approved" ? "Approved" : "Declined"} by {ex.approved_by}</span>
+          )}
+          {ex.approved_at && <span>{fmtDate(ex.approved_at)}</span>}
+        </div>
+      </div>
+
+      {/* Actions for pending */}
+      {ex.status === "pending" && (
+        <div className="flex gap-1.5 flex-shrink-0">
+          <button
+            onClick={() => onResolve({ id: ex.id, status: "approved" })}
+            disabled={resolving}
+            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg font-medium disabled:opacity-50"
+            style={{ background: "rgba(16,185,129,0.12)", color: "#059669" }}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+          </button>
+          <button
+            onClick={() => onResolve({ id: ex.id, status: "declined" })}
+            disabled={resolving}
+            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg font-medium disabled:opacity-50"
+            style={{ background: "rgba(239,68,68,0.10)", color: "#dc2626" }}
+          >
+            <XCircle className="h-3.5 w-3.5" /> Decline
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-type ViewMode = "explorer" | "list" | "matrix";
+type ViewMode = "explorer" | "list" | "matrix" | "exceptions";
 
 export function ComplianceDashboard() {
   const [modalState, setModalState] = useState<{ open: boolean; policy?: Policy }>({ open: false });
@@ -624,9 +795,10 @@ export function ComplianceDashboard() {
           {/* Tabs */}
           <div className="flex items-center gap-1">
             {([
-              { id: "explorer", icon: <Search className="h-3.5 w-3.5" />, label: "Explorer" },
-              { id: "list",     icon: <List className="h-3.5 w-3.5" />,   label: "Policies" },
+              { id: "explorer",   icon: <Search className="h-3.5 w-3.5" />,     label: "Explorer" },
+              { id: "list",       icon: <List className="h-3.5 w-3.5" />,       label: "Policies" },
               ...(showMatrixToggle ? [{ id: "matrix", icon: <LayoutGrid className="h-3.5 w-3.5" />, label: "Matrix" }] : []),
+              { id: "exceptions", icon: <AlertTriangle className="h-3.5 w-3.5" />, label: "Exceptions" },
             ] as { id: ViewMode; icon: React.ReactNode; label: string }[]).map(({ id, icon, label }) => (
               <button
                 key={id}
@@ -943,6 +1115,9 @@ export function ComplianceDashboard() {
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No data products in scope yet.</p>
           </div>
         )}
+
+        {/* ── Exceptions view ───────────────────────────────────────────── */}
+        {!isLoading && viewMode === "exceptions" && <ExceptionsView />}
 
         {/* Empty — no policies */}
         {!isLoading && !hasData && (

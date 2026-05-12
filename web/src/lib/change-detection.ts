@@ -154,46 +154,36 @@ export async function detectContractDrift(
 
 /**
  * Detecteert schema-drift voor een dataset.
- * Compares current column set against previous temporal snapshot.
- * Triggered after run-ingest when temporal metadata exists.
+ * Caller levert before/after object_name; geen extra DB-query nodig.
+ * Triggered from writeMetaPipelineRun nadat de dataset upsert is gedaan.
  */
 export async function detectSchemaDrift(
   datasetId: string,
-  installationId: string
+  installationId: string,
+  before: { object_name: string | null },
+  after: { object_name: string | null }
 ): Promise<void> {
+  if (before.object_name === after.object_name) return;
+  if (!before.object_name) return; // First time seen — no drift, just creation
+
   const pool = getPgPool();
-
-  // Get the two most recent valid_from values for this dataset
-  const versionsRes = await pool.query(
-    `SELECT valid_from, object_name, dataset_id
-     FROM meta.datasets
-     WHERE installation_id = $1 AND dataset_id = $2
-     ORDER BY valid_from DESC
-     LIMIT 2`,
-    [installationId, datasetId]
-  );
-
-  if (versionsRes.rows.length < 2) return; // No previous version to compare
-
-  // For now: detect if the dataset was re-created (valid_to IS NOT NULL on previous)
-  // Full column-level drift detection requires a schema snapshot table (future enhancement)
-  const current = versionsRes.rows[0];
-  const previous = versionsRes.rows[1];
-
-  if (current.object_name !== previous.object_name) {
-    await writeChangeEvent(pool, {
-      installationId,
-      change_type: "schema_drift",
-      severity: "breaking",
-      entity_type: "dataset",
-      entity_id: datasetId,
-      diff: {
-        before: { object_name: previous.object_name },
-        after: { object_name: current.object_name },
-        affected_fields: ["object_name"],
-      },
-    });
-  }
+  await writeChangeEvent(pool, {
+    installationId,
+    change_type: "schema_drift",
+    severity: "breaking",
+    entity_type: "dataset",
+    entity_id: datasetId,
+    diff: {
+      before: { object_name: before.object_name },
+      after: { object_name: after.object_name },
+      affected_fields: ["object_name"],
+    },
+    risk_assessment: {
+      level: "high",
+      affected_outputs: [],
+      recommended_action: "Validate downstream dependencies — object was renamed or replaced.",
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -252,4 +242,96 @@ export async function detectStatisticalDrift(
       },
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Lineage drift
+// ---------------------------------------------------------------------------
+
+/**
+ * Detecteert lineage-drift door de INPUT-datasets van de huidige run
+ * te vergelijken met de vorige run van dezelfde job.
+ *
+ * - Nieuwe upstream input  → informational
+ * - Verdwenen upstream input → significant
+ * - Meerdere verdwenen inputs → breaking
+ */
+export async function detectLineageDrift(
+  jobId: string,
+  currentRunId: string,
+  installationId: string
+): Promise<void> {
+  const pool = getPgPool();
+
+  // Two most recent completed runs for this job (current first)
+  const runsRes = await pool.query(
+    `SELECT r.run_id
+     FROM meta.runs r
+     WHERE r.job_id = $1
+       AND r.installation_id = $2
+       AND r.status IN ('SUCCESS','FAILED','WARNING')
+     ORDER BY r.ended_at DESC NULLS LAST
+     LIMIT 2`,
+    [jobId, installationId]
+  );
+
+  if (runsRes.rows.length < 2) return; // No previous run to compare
+
+  const [latestRunId, previousRunId] = (runsRes.rows as Array<{ run_id: string }>).map(r => r.run_id);
+
+  // Verify the current run is the most recent (guard against late arrivals)
+  if (latestRunId !== currentRunId) return;
+
+  // Get INPUT datasets for both runs
+  const inputsRes = await pool.query(
+    `SELECT run_id, dataset_id
+     FROM meta.run_io
+     WHERE run_id = ANY($1)
+       AND role = 'INPUT'`,
+    [[currentRunId, previousRunId]]
+  );
+
+  const currentInputs = new Set(
+    (inputsRes.rows as Array<{ run_id: string; dataset_id: string }>)
+      .filter(r => r.run_id === currentRunId)
+      .map(r => r.dataset_id)
+  );
+  const previousInputs = new Set(
+    (inputsRes.rows as Array<{ run_id: string; dataset_id: string }>)
+      .filter(r => r.run_id === previousRunId)
+      .map(r => r.dataset_id)
+  );
+
+  if (currentInputs.size === 0 && previousInputs.size === 0) return;
+
+  const added   = [...currentInputs].filter(id => !previousInputs.has(id));
+  const removed = [...previousInputs].filter(id => !currentInputs.has(id));
+
+  if (added.length === 0 && removed.length === 0) return;
+
+  const severity: ChangeSeverity =
+    removed.length > 1 ? "breaking" :
+    removed.length === 1 ? "significant" :
+    "informational";
+
+  await writeChangeEvent(pool, {
+    installationId,
+    change_type: "lineage_drift",
+    severity,
+    entity_type: "dataset",
+    entity_id: currentRunId,
+    diff: {
+      before: { inputs: [...previousInputs] },
+      after:  { inputs: [...currentInputs] },
+      affected_fields: [
+        ...added.map(id => `added:${id}`),
+        ...removed.map(id => `removed:${id}`),
+      ],
+    },
+    risk_assessment: removed.length > 0 ? {
+      level: removed.length > 1 ? "high" : "medium",
+      affected_outputs: [],
+      recommended_action: `Upstream source${removed.length > 1 ? "s" : ""} removed: ${removed.join(", ")}. Verify pipeline configuration.`,
+    } : undefined,
+  });
 }

@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
   try {
     const result = await pool.query(
       `SELECT bo.*,
-              COUNT(pol.product_id)::int AS linked_product_count
+              COUNT(pol.product_id)::int AS linked_product_count,
+              COALESCE(array_agg(pol.product_id) FILTER (WHERE pol.product_id IS NOT NULL), '{}') AS linked_product_ids
        FROM meta.business_outputs bo
        LEFT JOIN meta.product_output_links pol
          ON pol.installation_id = bo.installation_id AND pol.output_id = bo.id

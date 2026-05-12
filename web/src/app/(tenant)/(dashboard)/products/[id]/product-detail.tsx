@@ -925,7 +925,7 @@ function IncidentsTab({ productId }: { productId: string }) {
               <Badge bg={sev.bg} text={sev.text} label={inc.severity} />
               <Badge bg={sts.bg} text={sts.text} label={inc.status.replace("_", " ")} />
               <span className="text-xs whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
-                {new Date(inc.opened_at ?? inc.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                {new Date(inc.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
               </span>
             </div>
           </div>

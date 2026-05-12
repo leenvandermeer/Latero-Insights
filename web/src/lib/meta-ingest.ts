@@ -7,6 +7,7 @@
  */
 
 import type { Pool } from "pg";
+import { detectStatisticalDrift, detectSchemaDrift, detectLineageDrift } from "./change-detection";
 
 // ---------------------------------------------------------------------------
 // Intern: helpers
@@ -61,6 +62,11 @@ export async function writeMetaPipelineRun(
   pool: Pool,
   params: MetaPipelineRunParams,
 ): Promise<void> {
+  const isTerminal = params.status !== "RUNNING";
+  let capturedJobId: string | null = null;
+  let capturedRunUuid: string | null = null;
+  let capturedObjectName: string | null = null;
+  let capturedPrevObjectName: string | null = null;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -91,6 +97,16 @@ export async function writeMetaPipelineRun(
     // 1. Upsert dataset — LINS-021: bare entity name as dataset_id, layer as separate column
     const objectName = extractObjectName(params.datasetId);
     const namespace = extractNamespace(params.datasetId);
+
+    // Read current object_name before upsert so schema drift can compare before/after.
+    const prevDatasetRes = await client.query(
+      `SELECT object_name FROM meta.datasets WHERE installation_id = $1 AND dataset_id = $2 AND layer = $3`,
+      [params.installationId, entityName, layer ?? 'unknown'],
+    );
+    const prevObjectName: string | null = (prevDatasetRes.rows[0]?.object_name as string | undefined) ?? null;
+    capturedPrevObjectName = prevObjectName;
+    capturedObjectName = objectName;
+
     await client.query(
       `
         INSERT INTO meta.datasets (
@@ -120,9 +136,9 @@ export async function writeMetaPipelineRun(
     );
     const jobId = jobResult.rows[0]?.job_id as string | undefined;
     if (!jobId) throw new Error("meta.jobs upsert returned no job_id");
+    capturedJobId = jobId;
 
     // 3. Upsert run (UPDATE then INSERT to avoid ON CONFLICT on generated column)
-    const isTerminal = params.status !== "RUNNING";
     const endedAt = isTerminal ? params.timestampUtc : null;
 
     const runDate = new Date(params.timestampUtc).toISOString().slice(0, 10);
@@ -173,6 +189,7 @@ export async function writeMetaPipelineRun(
       );
       runUuid = insertResult.rows[0].run_id as string;
     }
+    capturedRunUuid = runUuid;
 
     // 4. Upsert run_io (OUTPUT for the target dataset)
     await client.query(
@@ -190,6 +207,25 @@ export async function writeMetaPipelineRun(
     throw err;
   } finally {
     client.release();
+  }
+
+  // Fire-and-forget: drift detection after terminal runs.
+  // Runs asynchronously so it never blocks or errors the ingest path.
+  if (isTerminal) {
+    void detectStatisticalDrift(params.datasetId, params.installationId).catch(() => {});
+
+    if (capturedPrevObjectName !== null && capturedObjectName !== capturedPrevObjectName) {
+      void detectSchemaDrift(
+        params.datasetId,
+        params.installationId,
+        { object_name: capturedPrevObjectName },
+        { object_name: capturedObjectName },
+      ).catch(() => {});
+    }
+
+    if (capturedJobId && capturedRunUuid) {
+      void detectLineageDrift(capturedJobId, capturedRunUuid, params.installationId).catch(() => {});
+    }
   }
 }
 

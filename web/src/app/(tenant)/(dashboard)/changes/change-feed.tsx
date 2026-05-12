@@ -1,93 +1,223 @@
 "use client";
 
 import { useState } from "react";
-import { GitCommit, AlertTriangle, Info, AlertCircle } from "lucide-react";
+import { GitCommit, AlertTriangle, Info, AlertCircle, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+
+// DB severity vocabulary: informational | significant | breaking
+type DbSeverity = "informational" | "significant" | "breaking";
+type SeverityFilter = "all" | DbSeverity;
+
+interface Diff {
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  affected_fields: string[];
+}
+
+interface RiskAssessment {
+  level: string;
+  affected_outputs: string[];
+  recommended_action: string;
+}
 
 interface ChangeEvent {
   id: number;
-  installation_id: string;
   entity_id: string | null;
+  entity_type: string | null;
   change_type: string;
-  severity: "low" | "medium" | "high" | "critical";
-  summary: string;
-  diff: Record<string, unknown> | null;
-  risk_assessment: Record<string, unknown> | null;
+  severity: DbSeverity;
+  diff: Diff | null;
+  risk_assessment: RiskAssessment | null;
   detected_at: string;
 }
 
-const SEVERITY_STYLE: Record<string, { bg: string; text: string; Icon: React.ElementType }> = {
-  critical: { bg: "#fee2e2", text: "#b91c1c", Icon: AlertCircle },
-  high:     { bg: "#ffedd5", text: "#c2410c", Icon: AlertTriangle },
-  medium:   { bg: "#fef9c3", text: "#a16207", Icon: AlertTriangle },
-  low:      { bg: "#f0f9ff", text: "#0369a1", Icon: Info },
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+
+const SEVERITY_CONFIG: Record<DbSeverity, { bg: string; text: string; Icon: React.ElementType; label: string }> = {
+  breaking:      { bg: "#fee2e2", text: "#b91c1c", Icon: AlertCircle,   label: "Breaking" },
+  significant:   { bg: "#ffedd5", text: "#c2410c", Icon: AlertTriangle, label: "Significant" },
+  informational: { bg: "#f0f9ff", text: "#0369a1", Icon: Info,          label: "Informational" },
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  ownership_drift:  "Ownership drift",
-  contract_drift:   "Contract drift",
-  schema_drift:     "Schema drift",
-  statistical_drift:"Statistical drift",
+  ownership_drift:   "Ownership drift",
+  contract_drift:    "Contract drift",
+  schema_drift:      "Schema drift",
+  statistical_drift: "Statistical drift",
+  lineage_drift:     "Lineage drift",
 };
 
-async function fetchChanges(params: {
-  type?: string;
-  severity?: string;
-  from?: string;
-  limit?: number;
-}) {
+// ---------------------------------------------------------------------------
+// Summary builder — renders meaningful text from diff instead of empty field
+// ---------------------------------------------------------------------------
+
+function buildSummary(changeType: string, diff: Diff | null): string {
+  if (!diff) return "Change detected.";
+  const { before, after, affected_fields } = diff;
+  switch (changeType) {
+    case "ownership_drift": {
+      const prev = (before.owner as string | null) ?? "none";
+      const curr = (after.owner as string | null) ?? "none";
+      return `Owner changed from "${prev}" to "${curr}".`;
+    }
+    case "contract_drift": {
+      const parts: string[] = [];
+      if (affected_fields.includes("sla")) {
+        parts.push(`SLA: ${JSON.stringify(before.sla)} → ${JSON.stringify(after.sla)}`);
+      }
+      if (affected_fields.includes("contract_ver")) {
+        parts.push(`Contract version: ${before.contract_ver ?? "none"} → ${after.contract_ver ?? "none"}`);
+      }
+      return parts.join(" · ") || "Contract terms changed.";
+    }
+    case "schema_drift": {
+      const prev = (before.object_name as string | null) ?? "—";
+      const curr = (after.object_name as string | null) ?? "—";
+      return `Object name changed from "${prev}" to "${curr}".`;
+    }
+    case "statistical_drift": {
+      const z = (after.z_score as number | null) ?? null;
+      const latest = (after.latest_duration_ms as number | null) ?? null;
+      const avg = (before.avg_duration_ms as number | null) ?? null;
+      if (z !== null && latest !== null && avg !== null) {
+        const direction = latest > avg ? "slower" : "faster";
+        return `Run duration ${direction} than usual (z-score ${z}, latest ${latest}ms vs avg ${avg}ms).`;
+      }
+      return "Run duration anomaly detected.";
+    }
+    default: {
+      // lineage_drift: affected_fields = ["added:X", "removed:Y", ...]
+      if (changeType === "lineage_drift") {
+        const added   = affected_fields.filter(f => f.startsWith("added:")).map(f => f.slice(6));
+        const removed = affected_fields.filter(f => f.startsWith("removed:")).map(f => f.slice(8));
+        const parts: string[] = [];
+        if (added.length)   parts.push(`New upstream: ${added.join(", ")}.`);
+        if (removed.length) parts.push(`Upstream removed: ${removed.join(", ")}.`);
+        return parts.join(" ") || "Lineage inputs changed.";
+      }
+      return affected_fields.length > 0
+        ? `Changed: ${affected_fields.join(", ")}.`
+        : "Change detected.";
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ChangeRow
+// ---------------------------------------------------------------------------
+
+function ChangeRow({ event }: { event: ChangeEvent }) {
+  const cfg = SEVERITY_CONFIG[event.severity] ?? SEVERITY_CONFIG.informational;
+  const { Icon } = cfg;
+  const typeLabel = TYPE_LABELS[event.change_type] ?? event.change_type;
+  const summary = buildSummary(event.change_type, event.diff);
+  const when = new Date(event.detected_at).toLocaleString(undefined, {
+    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  const fields = event.diff?.affected_fields ?? [];
+  const action = event.risk_assessment?.recommended_action ?? null;
+
+  return (
+    <div
+      className="rounded-xl p-4 flex flex-col gap-2"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color: cfg.text }} />
+          <span className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>
+            {typeLabel}
+          </span>
+          <span
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: cfg.bg, color: cfg.text }}
+          >
+            {cfg.label}
+          </span>
+          {event.entity_id && (
+            <span
+              className="text-[10px] font-mono px-2 py-0.5 rounded-full"
+              style={{ background: "var(--color-surface-subtle)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}
+            >
+              {event.entity_id}
+            </span>
+          )}
+        </div>
+        <span className="text-[11px] whitespace-nowrap flex-shrink-0" style={{ color: "var(--color-text-muted)" }}>
+          {when}
+        </span>
+      </div>
+
+      {/* Summary */}
+      <p className="text-sm leading-snug" style={{ color: "var(--color-text)" }}>
+        {summary}
+      </p>
+
+      {/* Affected fields */}
+      {fields.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {fields.map((f) => (
+            <span
+              key={f}
+              className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+              style={{ background: "var(--color-surface-alt)", color: "var(--color-text-muted)" }}
+            >
+              {f}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Recommended action */}
+      {action && (
+        <div
+          className="flex items-start gap-1.5 rounded-lg px-3 py-2 text-xs"
+          style={{ background: `${cfg.bg}`, color: cfg.text }}
+        >
+          <ArrowRight className="h-3 w-3 mt-0.5 flex-shrink-0" />
+          {action}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// API fetch
+// ---------------------------------------------------------------------------
+
+// DB severity values for filter queries
+const DB_SEVERITY_VALUES: Record<SeverityFilter, string | undefined> = {
+  all:           undefined,
+  breaking:      "breaking",
+  significant:   "significant",
+  informational: "informational",
+};
+
+async function fetchChanges(params: { type?: string; severity?: string; limit?: number }) {
   const url = new URL("/api/changes", window.location.origin);
-  if (params.type) url.searchParams.set("type", params.type);
+  if (params.type)     url.searchParams.set("type",     params.type);
   if (params.severity) url.searchParams.set("severity", params.severity);
-  if (params.from) url.searchParams.set("from", params.from);
-  if (params.limit) url.searchParams.set("limit", String(params.limit));
+  if (params.limit)    url.searchParams.set("limit",    String(params.limit));
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error("Failed to load changes");
   const body = await res.json() as { data: ChangeEvent[] };
   return body.data;
 }
 
-function ChangeRow({ event }: { event: ChangeEvent }) {
-  const s = SEVERITY_STYLE[event.severity] ?? SEVERITY_STYLE.low;
-  const { Icon } = s;
-  const label = TYPE_LABELS[event.change_type] ?? event.change_type;
-  const when = new Date(event.detected_at).toLocaleString();
+// ---------------------------------------------------------------------------
+// ChangeFeed
+// ---------------------------------------------------------------------------
 
-  return (
-    <div
-      className="flex items-start gap-3 p-3 rounded-xl"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <Icon className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: s.text }} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-semibold" style={{ color: s.text }}>
-            {label}
-          </span>
-          <span
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize"
-            style={{ background: s.bg, color: s.text }}
-          >
-            {event.severity}
-          </span>
-        </div>
-        <p className="text-sm mt-0.5 line-clamp-2" style={{ color: "var(--color-text)" }}>
-          {event.summary}
-        </p>
-        {event.entity_id && (
-          <span className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            Entity: {event.entity_id}
-          </span>
-        )}
-      </div>
-      <span className="text-xs whitespace-nowrap flex-shrink-0 mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-        {when}
-      </span>
-    </div>
-  );
-}
-
-type SeverityFilter = "all" | "critical" | "high" | "medium" | "low";
+const SEVERITY_FILTERS: { id: SeverityFilter; label: string }[] = [
+  { id: "all",           label: "All" },
+  { id: "breaking",      label: "Breaking" },
+  { id: "significant",   label: "Significant" },
+  { id: "informational", label: "Informational" },
+];
 
 export function ChangeFeed() {
   const [severity, setSeverity] = useState<SeverityFilter>("all");
@@ -97,21 +227,13 @@ export function ChangeFeed() {
     queryKey: ["changes", severity, changeType],
     queryFn: () =>
       fetchChanges({
-        severity: severity === "all" ? undefined : severity,
-        type: changeType || undefined,
-        limit: 100,
+        severity: DB_SEVERITY_VALUES[severity],
+        type:     changeType || undefined,
+        limit:    100,
       }),
     staleTime: 30_000,
     retry: 1,
   });
-
-  const SEVERITY_FILTERS: { id: SeverityFilter; label: string }[] = [
-    { id: "all",      label: "All" },
-    { id: "critical", label: "Critical" },
-    { id: "high",     label: "High" },
-    { id: "medium",   label: "Medium" },
-    { id: "low",      label: "Low" },
-  ];
 
   return (
     <div className="page-content flex h-full flex-col overflow-x-hidden">

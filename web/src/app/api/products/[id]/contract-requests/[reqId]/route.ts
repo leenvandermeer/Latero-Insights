@@ -45,7 +45,7 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { status } = body as { status?: string };
+  const { status, reason } = body as { status?: string; reason?: string };
   if (!status || !VALID_STATUS.has(status))
     return NextResponse.json({ error: "status must be 'approved' or 'declined'" }, { status: 400 });
 
@@ -53,10 +53,10 @@ export async function PUT(
   try {
     const result = await pool.query(
       `UPDATE meta.contract_requests
-       SET status = $3, resolved_at = now(), resolved_by = $4
+       SET status = $3, resolved_at = now(), resolved_by = $4, reason = $6
        WHERE installation_id = $1 AND product_id = $2 AND id = $5 AND status = 'pending'
        RETURNING *`,
-      [installationId, id, status, resolvedBy, numReqId]
+      [installationId, id, status, resolvedBy, numReqId, reason?.trim() ?? null]
     );
 
     if (result.rows.length === 0) {

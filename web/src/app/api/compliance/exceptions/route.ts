@@ -13,6 +13,47 @@ async function resolveInstallation(request: NextRequest): Promise<string> {
 }
 
 /**
+ * GET /api/compliance/exceptions
+ * Lijst met policy-uitzonderingen, optioneel gefilterd op status.
+ * Query params: ?status=pending|approved|declined
+ */
+export async function GET(request: NextRequest) {
+  const { allowed } = rateLimit(ip(request));
+  if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  let installationId: string;
+  try { installationId = await resolveInstallation(request); } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const statusFilter = request.nextUrl.searchParams.get("status");
+  const VALID_STATUSES = new Set(["pending", "approved", "declined"]);
+
+  const pool = getPgPool();
+  try {
+    const result = await pool.query(
+      `SELECT e.*,
+              p.name AS policy_name,
+              p.rule AS policy_rule,
+              pk.name AS pack_name
+       FROM meta.policy_exceptions e
+       JOIN meta.policies p ON p.installation_id = e.installation_id AND p.id = e.policy_id
+       LEFT JOIN meta.policy_packs pk ON pk.installation_id = p.installation_id AND pk.id = p.pack_id
+       WHERE e.installation_id = $1
+         ${statusFilter && VALID_STATUSES.has(statusFilter) ? "AND e.status = $2" : ""}
+       ORDER BY e.created_at DESC`,
+      statusFilter && VALID_STATUSES.has(statusFilter)
+        ? [installationId, statusFilter]
+        : [installationId]
+    );
+    return NextResponse.json({ data: result.rows });
+  } catch (err) {
+    console.error("[GET /api/compliance/exceptions]", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+/**
  * POST /api/compliance/exceptions
  * Dient een uitzondering in voor een policy × product.
  * Body: { policy_id, product_id, justification, expiry_date }

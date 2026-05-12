@@ -30,7 +30,7 @@ const MONITOR_NAV = [
   { label: "Overview",     href: "/overview",    icon: LayoutDashboard },
   { label: "Runs",         href: "/runs",         icon: Activity },
   { label: "Data Quality", href: "/quality",      icon: ShieldCheck },
-  { label: "Issues",       href: "/incidents",    icon: AlertTriangle },
+  { label: "Incidents",     href: "/incidents",    icon: AlertTriangle },
   { label: "Compliance",   href: "/compliance",   icon: ClipboardList },
 ];
 

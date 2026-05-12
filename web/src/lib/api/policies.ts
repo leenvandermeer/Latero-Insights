@@ -159,6 +159,14 @@ export async function resolveException(
   return body.data;
 }
 
+export async function listExceptions(status?: string): Promise<PolicyException[]> {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+  const res = await fetch(`/api/compliance/exceptions${qs}`);
+  if (!res.ok) throw new Error("Failed to load exceptions");
+  const body = await res.json() as { data: PolicyException[] };
+  return body.data;
+}
+
 export async function runAllCompliance(): Promise<void> {
   const res = await fetch("/api/compliance", { method: "POST" });
   if (!res.ok) throw new Error("Failed to run all compliance checks");
