@@ -68,6 +68,11 @@ control.latero.nl {
 
 # ── Keycloak SSO ──────────────────────────────────────────────────────────────
 sso.latero.nl {
+    handle /BingSiteAuth.xml {
+        header Content-Type application/xml
+        respond `<?xml version="1.0"?><users><user>40D637468CD7C6434DC36B588C9A717D</user></users>` 200
+    }
+
     reverse_proxy keycloak:8080
 
     encode gzip
