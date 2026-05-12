@@ -106,6 +106,16 @@ docker compose \
   -f "${COMPOSE_SSO}" \
   --env-file "${ENV_FILE}" \
   up -d --no-deps app caddy
+
+# Caddy expliciet herladen met de bijgewerkte Caddyfile (vangnet voor bind-mount inode issues)
+sleep 2
+CADDY_CONTAINER="insights-caddy"
+CADDYFILE_HOST="${REPO_DIR}/infra/docker/Caddyfile.prod-sso"
+if docker ps -q -f name="${CADDY_CONTAINER}" | grep -q .; then
+  docker cp "${CADDYFILE_HOST}" "${CADDY_CONTAINER}:/tmp/Caddyfile_deploy"
+  docker exec "${CADDY_CONTAINER}" caddy reload --config /tmp/Caddyfile_deploy 2>&1 | grep -E "info|error" || true
+  echo "   ✓  Caddy config herladen"
+fi
 echo ""
 
 # ── Stap 5: Health check ───────────────────────────────────────────────────
