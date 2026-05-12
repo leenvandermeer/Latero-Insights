@@ -8,7 +8,7 @@ import "react-grid-layout/css/styles.css";
 import { Settings2, X, GripVertical, LayoutGrid, Pencil, RotateCcw, Copy, Trash2, Check, MoreHorizontal, Sparkles, Plus, Globe, Star } from "lucide-react";
 import { useDateRange } from "@/hooks/use-date-range";
 import { useHealth } from "@/hooks/use-health";
-import { DateRangePicker, Button, SourceIndicator } from "@/components/ui";
+import { DateRangePicker, Button } from "@/components/ui";
 import { useDashboards } from "@/contexts/dashboard-context";
 import { useInstallation } from "@/contexts/installation-context";
 import { useSharedWidgets, useUpdateSharedWidget } from "@/hooks/use-shared-widgets";
@@ -346,14 +346,6 @@ export function DashboardCanvas({ dashboardId }: Props) {
 
           {/* Right: date + controls */}
           <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-            {health && (() => {
-              let source: string | null = null;
-              if (health.cache.cacheOnly) source = "cache";
-              else if (health.status === "ok") source = "insights-saas";
-              else if (health.cache.fileCount > 0) source = "fallback";
-              return source ? <SourceIndicator source={source} /> : null;
-            })()}
-
             <div className="flex flex-col items-end gap-1">
               <DateRangePicker from={from} to={to} preset={preset} onChange={setRange} onPresetChange={setPreset} />
               <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>

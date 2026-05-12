@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLineageEntities, useLineageAttributes } from "@/hooks";
-import { SourceIndicator, ErrorMessage } from "@/components/ui";
+import { ErrorMessage } from "@/components/ui";
 import { Skeleton } from "@/components/ui/loading-skeleton";
 import { isNoDataError } from "@/lib/api";
 import { TraceView } from "./trace-view";
@@ -193,7 +193,6 @@ export function LineageDashboard() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
-            {entitiesRes && <SourceIndicator source={entitiesRes.source} cachedAt={entitiesRes.cachedAt} />}
             <button
               onClick={() => downloadEntitiesAsJSON(entities)}
               disabled={entities.length === 0}

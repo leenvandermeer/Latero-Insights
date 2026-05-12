@@ -41,7 +41,16 @@ export async function GET(
 
     // I/O datasets
     const ioRes = await pool.query(
-      `SELECT io.dataset_id, d.fqn AS entity_fqn, d.layer, io.role, io.observed_at
+      `SELECT io.dataset_id,
+              COALESCE(
+                NULLIF(CONCAT_WS('.', NULLIF(d.namespace, ''), NULLIF(d.object_name, '')), ''),
+                NULLIF(d.dataset_name, ''),
+                d.dataset_id,
+                io.dataset_id
+              ) AS entity_fqn,
+              COALESCE(io.layer, d.layer) AS layer,
+              io.role,
+              io.observed_at
        FROM meta.run_io io
        LEFT JOIN meta.datasets d
          ON d.installation_id = io.installation_id AND d.dataset_id = io.dataset_id
@@ -65,7 +74,18 @@ export async function GET(
     // Lineage edges observed in this run
     const edgesRes = await pool.query(
       `SELECT e.source_dataset_id, e.target_dataset_id,
-              src.fqn AS source_fqn, tgt.fqn AS target_fqn,
+              COALESCE(
+                NULLIF(CONCAT_WS('.', NULLIF(src.namespace, ''), NULLIF(src.object_name, '')), ''),
+                NULLIF(src.dataset_name, ''),
+                src.dataset_id,
+                e.source_dataset_id
+              ) AS source_fqn,
+              COALESCE(
+                NULLIF(CONCAT_WS('.', NULLIF(tgt.namespace, ''), NULLIF(tgt.object_name, '')), ''),
+                NULLIF(tgt.dataset_name, ''),
+                tgt.dataset_id,
+                e.target_dataset_id
+              ) AS target_fqn,
               e.observation_count
        FROM meta.lineage_edges e
        LEFT JOIN meta.datasets src

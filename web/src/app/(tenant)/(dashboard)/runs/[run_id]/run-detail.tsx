@@ -1,6 +1,7 @@
 "use client";
 
 import { useRunDetail } from "@/hooks/use-runs";
+import { ApiClientError } from "@/lib/api";
 import {
   Activity,
   ArrowLeft,
@@ -31,8 +32,9 @@ const statusBadge = (s: string) => cn(
 );
 
 export function RunDetail({ runId }: { runId: string }) {
-  const { data, isLoading, isError } = useRunDetail(runId);
+  const { data, error, isLoading, isError } = useRunDetail(runId);
   const run = data?.data as Record<string, unknown> | undefined;
+  const apiError = error instanceof ApiClientError ? error : null;
 
   if (isLoading) {
     return (
@@ -43,9 +45,15 @@ export function RunDetail({ runId }: { runId: string }) {
   }
 
   if (isError || !run) {
+    const message = apiError?.status === 404
+      ? "Run not found."
+      : apiError?.status === 401
+        ? "You are not authorized to view this run."
+        : "Failed to load run details.";
+
     return (
       <div className="page-content flex h-full flex-col items-center justify-center gap-3">
-        <p className="text-red-500">Run not found.</p>
+        <p className="text-red-500">{message}</p>
         <Link href="/runs" className="text-sm hover:underline" style={{ color: "var(--color-brand)" }}>
           ← Back to Runs
         </Link>
@@ -104,12 +112,12 @@ export function RunDetail({ runId }: { runId: string }) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["Dataset", "Rol"].map((h) => (
-                  <th key={h} className="text-left px-4 py-2 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+                {["Dataset", "Role"].map((h) => (
+                <th key={h} className="text-left px-4 py-2 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
               {io.map((d, i) => (
                 <tr key={i} className="border-b last:border-0" style={{ borderColor: "var(--color-border)" }}>
                   <td className="px-4 py-2.5 font-mono text-xs" style={{ color: "var(--color-text)" }}>{String(d.dataset_id ?? "—")}</td>
@@ -133,7 +141,7 @@ export function RunDetail({ runId }: { runId: string }) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["Check", "Status", "Resultaat"].map((h) => (
+                {["Check", "Status", "Result"].map((h) => (
                   <th key={h} className="text-left px-4 py-2 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>{h}</th>
                 ))}
               </tr>
@@ -166,7 +174,7 @@ export function RunDetail({ runId }: { runId: string }) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["Status", "Step", "Gestart"].map((h) => (
+                {["Status", "Step", "Started"].map((h) => (
                   <th key={h} className="text-left px-4 py-2 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>{h}</th>
                 ))}
               </tr>

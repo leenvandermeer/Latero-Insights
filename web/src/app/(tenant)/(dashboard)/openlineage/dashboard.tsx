@@ -5,7 +5,6 @@ import { useLineage, useDateRange } from "@/hooks";
 import {
   PageHeader,
   DateRangePicker,
-  SourceIndicator,
   ErrorMessage,
   EmptyState,
 } from "@/components/ui";
@@ -116,7 +115,6 @@ export function OpenLineageDashboard() {
         icon={Network}
         actions={
           <div className="flex items-center gap-1.5">
-            {response && <SourceIndicator source={response.source} cachedAt={response.cachedAt} />}
             <DateRangePicker from={from} to={to} onChange={setRange} />
           </div>
         }
