@@ -732,14 +732,20 @@ export function ComplianceDashboard() {
                   return (
                     <div key={pol.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
                       {/* Policy header row */}
-                      <button
-                        type="button"
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setExpandedPolicies((prev) => {
                           const next = new Set(prev);
                           isExpanded ? next.delete(pol.id) : next.add(pol.id);
                           return next;
                         })}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[rgba(128,128,128,0.04)]"
+                        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setExpandedPolicies((prev) => {
+                          const next = new Set(prev);
+                          isExpanded ? next.delete(pol.id) : next.add(pol.id);
+                          return next;
+                        })}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[rgba(128,128,128,0.04)] cursor-pointer"
                       >
                         {/* Expand chevron */}
                         <span className="shrink-0" style={{ color: "var(--color-text-muted)" }}>
@@ -797,7 +803,7 @@ export function ComplianceDashboard() {
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
-                      </button>
+                      </div>
                       {/* Expanded: product chips */}
                       {isExpanded && (
                         <div className="px-10 pb-3 flex flex-wrap gap-1.5">
