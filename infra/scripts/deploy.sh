@@ -47,6 +47,10 @@ echo ""
 
 # ── Stap 2: Docker build ───────────────────────────────────────────────────
 echo "▶  2/4  Docker build (kan even duren)..."
+
+# Ruim eventuele stale BuildKit state op van vorige pogingen
+docker buildx prune -f --filter "until=1h" > /dev/null 2>&1 || true
+
 docker build \
   --no-cache \
   -f "${REPO_DIR}/infra/docker/Dockerfile" \
