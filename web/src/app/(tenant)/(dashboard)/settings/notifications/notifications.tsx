@@ -123,7 +123,12 @@ export function NotificationsSettings() {
 
   return (
     <div className="space-y-6">
-      <PageHeader icon={Bell} title="Drift Notifications" subtitle="Configure how drift events are delivered to your team" />
+      <div>
+        <PageHeader icon={Bell} title="Drift Notifications" />
+        <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+          Configure how drift events are delivered to your team
+        </p>
+      </div>
 
       {saveError && (
         <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm" style={{ color: "var(--color-error)" }}>
