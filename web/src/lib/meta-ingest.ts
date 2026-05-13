@@ -7,7 +7,7 @@
  */
 
 import type { Pool } from "pg";
-import { detectStatisticalDrift, detectSchemaDrift, detectLineageDrift, detectOutputLineageDrift } from "./change-detection";
+import { detectStatisticalDrift, detectSchemaDrift, detectLineageDrift, detectOutputLineageDrift, detectOwnershipDrift, detectContractDrift } from "./change-detection";
 
 // ---------------------------------------------------------------------------
 // Intern: helpers
