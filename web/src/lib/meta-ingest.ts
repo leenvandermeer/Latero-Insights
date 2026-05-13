@@ -809,10 +809,8 @@ export async function writeMetaDataProduct(
       void detectContractDrift(
         capturedDataProductId,
         params.installationId,
-        capturedPrevSlaTier ?? '',
-        slaTier ?? '',
-        capturedPrevContractVer ?? '',
-        params.contractVer ?? '',
+        { sla_tier: capturedPrevSlaTier, contract_ver: capturedPrevContractVer },
+        { sla_tier: slaTier, contract_ver: params.contractVer },
       ).catch(() => {});
     }
   }
