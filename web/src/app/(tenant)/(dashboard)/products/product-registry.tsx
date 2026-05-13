@@ -7,7 +7,6 @@ import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, L
 import { useDataProducts, useUpdateDataProduct, type DataProduct } from "@/hooks/use-data-products";
 import { toast } from "sonner";
 import { useTrustScore } from "@/hooks/use-trust-score";
-import { TrustScoreBadge } from "@/components/trust/trust-score-badge";
 import { DataProductSlideOver } from "@/app/(tenant)/(dashboard)/catalog/data-product-slide-over";
 
 type Product = DataProduct;
@@ -210,20 +209,26 @@ function GovernanceModal({ product, onClose }: { product: Product; onClose: () =
 function ProductCard({ product }: { product: Product }) {
   const { data: trustData } = useTrustScore(product.data_product_id);
   const issues = getProductIssues(product);
-  const readiness = getReadinessState(product);
+  const isReady = issues.length === 0;
   const [editOpen, setEditOpen] = useState(false);
+  const score = (trustData as { score?: number } | undefined)?.score;
+
+  const accentColor = isReady ? "var(--color-success)" : "var(--color-warning)";
 
   return (
     <>
       {editOpen && <GovernanceModal product={product} onClose={() => setEditOpen(false)} />}
       <div
-        className="rounded-xl p-4 flex flex-col gap-3 hover:shadow-sm transition-shadow relative group"
+        className="rounded-xl flex flex-col hover:shadow-sm transition-shadow relative group overflow-hidden"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
+        {/* Readiness accent bar */}
+        <div className="h-0.5 w-full" style={{ background: accentColor }} />
+
         {/* Edit governance button — top-right, visible on hover */}
         <button
           onClick={() => setEditOpen(true)}
-          className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
           style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
           title="Edit governance"
         >
@@ -232,44 +237,54 @@ function ProductCard({ product }: { product: Product }) {
 
         <Link
           href={`/products/${encodeURIComponent(product.data_product_id)}`}
-          className="flex flex-col gap-3"
+          className="flex flex-col gap-0 flex-1 p-4"
         >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold truncate" style={{ color: "var(--color-text)" }}>
-                  {product.display_name}
-                </span>
-                <SlaBadge tier={product.sla_tier} />
-              </div>
-              {product.domain && (
-                <span className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-                  {product.domain}
-                </span>
-              )}
-            </div>
-            <TrustScoreBadge score={(trustData as { score?: number } | undefined)?.score} />
-          </div>
-
-          {product.description && (
-            <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "var(--color-text-muted)" }}>
-              {product.description}
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-1.5">
-            <StatusPill label={readiness === "ready" ? "Ready" : "Needs attention"} tone={readiness === "ready" ? "success" : "warning"} />
-            {issues.slice(0, 2).map((issue) => (
-              <StatusPill key={issue} label={issue} tone="neutral" />
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3 mt-auto text-xs" style={{ color: "var(--color-text-muted)" }}>
-            {product.owner && <span>Owner: {product.owner}</span>}
-            {product.classification && (
-              <span className="capitalize">{product.classification}</span>
+          {/* Header: name + trust score */}
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <span className="text-sm font-semibold leading-snug" style={{ color: "var(--color-text)" }}>
+              {product.display_name}
+            </span>
+            {score != null && (
+              <span
+                className="text-xs font-bold tabular-nums shrink-0 mt-0.5"
+                style={{ color: score >= 90 ? "var(--color-success)" : score >= 60 ? "var(--color-warning)" : "var(--color-error)" }}
+              >
+                {score}
+              </span>
             )}
-            <span>{product.entity_count ?? 0} entities</span>
+          </div>
+
+          {/* Subtitle: domain · SLA */}
+          <div className="flex items-center gap-1.5 text-xs mb-3" style={{ color: "var(--color-text-muted)" }}>
+            {product.domain && <span>{product.domain}</span>}
+            {product.domain && product.sla_tier && <span>·</span>}
+            {product.sla_tier && <span className="capitalize">{product.sla_tier}</span>}
+          </div>
+
+          {/* Governance status — single line */}
+          <div className="mt-auto">
+            {isReady ? (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: "var(--color-success-subtle)", color: "var(--color-success)" }}
+              >
+                Ready
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: "var(--color-warning-subtle)", color: "var(--color-warning)" }}
+                title={issues.join(", ")}
+              >
+                {issues.length} {issues.length === 1 ? "issue" : "issues"}
+              </span>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center gap-2 mt-3 pt-3 text-[11px]" style={{ borderTop: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
+            {product.owner && <span className="truncate">{product.owner}</span>}
+            <span className="ml-auto shrink-0">{product.entity_count ?? 0} entities</span>
           </div>
         </Link>
       </div>
