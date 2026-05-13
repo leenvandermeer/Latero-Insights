@@ -28,7 +28,14 @@ export async function GET(
     const runRes = await pool.query(
       `SELECT r.run_id, r.external_run_id, j.job_name, j.dataset_id,
               r.status, r.environment,
-              r.started_at, r.ended_at, r.duration_ms, r.parent_run_id, r.run_facets
+              r.started_at, r.ended_at,
+              COALESCE(
+                r.duration_ms,
+                CASE WHEN r.ended_at IS NOT NULL AND r.started_at IS NOT NULL
+                     THEN ROUND(EXTRACT(EPOCH FROM (r.ended_at - r.started_at)) * 1000)
+                     ELSE NULL END
+              ) AS duration_ms,
+              r.parent_run_id, r.run_facets
        FROM meta.runs r
        JOIN meta.jobs j USING (job_id)
        WHERE r.run_id = $1 AND r.installation_id = $2`,
@@ -39,9 +46,10 @@ export async function GET(
     }
     const run = runRes.rows[0];
 
-    // I/O datasets
+    // I/O datasets — deduplicated per (dataset, role, layer)
     const ioRes = await pool.query(
-      `SELECT io.dataset_id,
+      `SELECT DISTINCT ON (io.dataset_id, io.role, COALESCE(io.layer, d.layer))
+              io.dataset_id,
               COALESCE(
                 NULLIF(CONCAT_WS('.', NULLIF(d.namespace, ''), NULLIF(d.object_name, '')), ''),
                 NULLIF(d.dataset_name, ''),
@@ -49,13 +57,12 @@ export async function GET(
                 io.dataset_id
               ) AS entity_fqn,
               COALESCE(io.layer, d.layer) AS layer,
-              io.role,
-              io.observed_at
+              io.role
        FROM meta.run_io io
        LEFT JOIN meta.datasets d
          ON d.installation_id = io.installation_id AND d.dataset_id = io.dataset_id
        WHERE io.run_id = $1 AND io.installation_id = $2
-       ORDER BY io.role, io.observed_at`,
+       ORDER BY io.dataset_id, io.role, COALESCE(io.layer, d.layer)`,
       [run_id, installationId]
     );
 

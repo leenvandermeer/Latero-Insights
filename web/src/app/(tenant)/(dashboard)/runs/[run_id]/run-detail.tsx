@@ -15,6 +15,20 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+function formatDuration(raw: unknown): string {
+  if (raw == null) return "—";
+  const ms = Number(raw);
+  if (!Number.isFinite(ms) || ms < 0) return "—";
+  const totalSeconds = Math.round(ms / 1000);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes < 60) return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}u ${mins}m` : `${hours}u`;
+}
+
 const statusIcon = (s: string) => ({
   SUCCESS: <CheckCircle className="h-4 w-4 text-green-500" />,
   FAILED:  <XCircle    className="h-4 w-4 text-red-500"   />,
@@ -97,7 +111,7 @@ export function RunDetail({ runId }: { runId: string }) {
           { label: "Job",         value: String(run.job_name ?? run.dataset_id ?? "—") },
           { label: "Environment", value: String(run.environment ?? "—") },
           { label: "Started",     value: run.started_at ? new Date(String(run.started_at)).toLocaleString() : "—" },
-          { label: "Duration",    value: run.duration_ms != null ? `${Math.round(Number(run.duration_ms) / 1000)}s` : "—" },
+          { label: "Duration",    value: formatDuration(run.duration_ms) },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-lg border px-4 py-3" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
             <p className="text-xs mb-1" style={{ color: "var(--color-text-muted)" }}>{label}</p>
@@ -108,11 +122,11 @@ export function RunDetail({ runId }: { runId: string }) {
 
       {/* I/O datasets */}
       {io.length > 0 && (
-        <Section icon={<Database className="h-4 w-4" />} title={`I/O datasets (${io.length})`}>
+        <Section icon={<Database className="h-4 w-4" />} title={`Betrokken datasets (${io.length})`}>
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["Dataset", "Role"].map((h) => (
+                {["Dataset", "Layer", "Role"].map((h) => (
                 <th key={h} className="text-left px-4 py-2 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>{h}</th>
               ))}
             </tr>
@@ -120,7 +134,8 @@ export function RunDetail({ runId }: { runId: string }) {
           <tbody>
               {io.map((d, i) => (
                 <tr key={i} className="border-b last:border-0" style={{ borderColor: "var(--color-border)" }}>
-                  <td className="px-4 py-2.5 font-mono text-xs" style={{ color: "var(--color-text)" }}>{String(d.dataset_id ?? "—")}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs" style={{ color: "var(--color-text)" }}>{String(d.entity_fqn ?? d.dataset_id ?? "—")}</td>
+                  <td className="px-4 py-2.5 text-xs" style={{ color: "var(--color-text-muted)" }}>{String(d.layer ?? "—")}</td>
                   <td className="px-4 py-2.5">
                     <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded uppercase",
                       d.role === "INPUT"  ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
@@ -141,7 +156,7 @@ export function RunDetail({ runId }: { runId: string }) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["Check", "Status", "Result"].map((h) => (
+                {["Check", "Status", "Categorie", "Prioriteit"].map((h) => (
                   <th key={h} className="text-left px-4 py-2 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>{h}</th>
                 ))}
               </tr>
@@ -149,7 +164,7 @@ export function RunDetail({ runId }: { runId: string }) {
             <tbody>
               {dqChecks.map((c, i) => (
                 <tr key={i} className="border-b last:border-0" style={{ borderColor: "var(--color-border)" }}>
-                  <td className="px-4 py-2.5 text-xs" style={{ color: "var(--color-text)" }}>{String(c.check_id ?? "—")}</td>
+                  <td className="px-4 py-2.5 text-xs" style={{ color: "var(--color-text)" }}>{String(c.check_name ?? c.check_id ?? "—")}</td>
                   <td className="px-4 py-2.5">
                     <span className={cn("inline-flex items-center gap-1 text-xs font-medium",
                       c.status === "SUCCESS" ? "text-green-600" : "text-red-600"
@@ -158,8 +173,22 @@ export function RunDetail({ runId }: { runId: string }) {
                       {String(c.status ?? "—")}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-xs font-mono" style={{ color: "var(--color-text-muted)" }}>
-                    {c.check_result ? JSON.stringify(c.check_result).slice(0, 80) : "—"}
+                  <td className="px-4 py-2.5 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    {c.check_result
+                      ? JSON.stringify(c.check_result).slice(0, 80)
+                      : c.check_category
+                        ? <span className="px-1.5 py-0.5 rounded bg-[var(--color-surface-subtle)] text-[10px] font-medium uppercase tracking-wide">{String(c.check_category)}</span>
+                        : "—"}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    {c.severity
+                      ? <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
+                          String(c.severity).toUpperCase() === "CRITICAL" ? "bg-red-100 text-red-700" :
+                          String(c.severity).toUpperCase() === "HIGH"     ? "bg-orange-100 text-orange-700" :
+                          String(c.severity).toUpperCase() === "MEDIUM"   ? "bg-yellow-100 text-yellow-700" :
+                          "bg-gray-100 text-gray-500"
+                        )}>{String(c.severity)}</span>
+                      : "—"}
                   </td>
                 </tr>
               ))}

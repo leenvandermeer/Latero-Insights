@@ -15,9 +15,10 @@ export function usePinnedDashboards(installationId?: string) {
     if (typeof window === "undefined") return;
     try {
       const raw = window.localStorage.getItem(getKey(installationId));
-      setPinnedIds(raw ? (JSON.parse(raw) as string[]) : []);
+      // Default: pin the Personal Dashboard ("default") on first visit
+      setPinnedIds(raw ? (JSON.parse(raw) as string[]) : ["default"]);
     } catch {
-      setPinnedIds([]);
+      setPinnedIds(["default"]);
     }
   }, [installationId]);
 

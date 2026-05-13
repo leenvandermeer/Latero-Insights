@@ -51,6 +51,7 @@ async function getPipelineRunsFromMetaStore(range: DateRange): Promise<PipelineR
       ) d ON true
       LEFT JOIN meta.runs pr ON pr.run_id = r.parent_run_id
       WHERE r.run_date BETWEEN $1 AND $2${installationFilter}
+        AND r.parent_run_id IS NULL
       ORDER BY r.started_at DESC
     `,
     values,
