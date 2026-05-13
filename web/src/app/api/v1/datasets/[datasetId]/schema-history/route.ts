@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPgPool } from "@/lib/insights-saas-db";
-import { requireSessionInstallationId } from "@/lib/session-auth";
+import { requireSession } from "@/lib/session-auth";
 
 /**
  * GET /api/v1/datasets/[datasetId]/schema-history
@@ -21,9 +21,11 @@ export async function GET(
   { params }: { params: { datasetId: string } }
 ) {
   try {
-    const installationId = await requireSessionInstallationId(req);
+    const session = await requireSession(req);
+    const installationId = session.active_installation_id;
+
     if (!installationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "No active installation" }, { status: 400 });
     }
 
     const url = new URL(req.url);
@@ -101,9 +103,11 @@ export async function POST(
   { params }: { params: { datasetId: string } }
 ) {
   try {
-    const installationId = await requireSessionInstallationId(req);
+    const session = await requireSession(req);
+    const installationId = session.active_installation_id;
+
     if (!installationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "No active installation" }, { status: 400 });
     }
 
     const body = await req.json();

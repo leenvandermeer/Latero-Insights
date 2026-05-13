@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSessionInstallationId } from "@/lib/session-auth";
+import { requireSession } from "@/lib/session-auth";
 import { getNotificationConfig, updateNotificationConfig } from "@/lib/notifications";
 
 /**
@@ -10,9 +10,11 @@ import { getNotificationConfig, updateNotificationConfig } from "@/lib/notificat
  */
 export async function GET(req: NextRequest) {
   try {
-    const installationId = await requireSessionInstallationId(req);
+    const session = await requireSession(req);
+    const installationId = session.active_installation_id;
+
     if (!installationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "No active installation" }, { status: 400 });
     }
 
     const config = await getNotificationConfig(installationId);
@@ -57,9 +59,11 @@ export async function GET(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
-    const installationId = await requireSessionInstallationId(req);
+    const session = await requireSession(req);
+    const installationId = session.active_installation_id;
+
     if (!installationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "No active installation" }, { status: 400 });
     }
 
     const body = await req.json();
@@ -120,9 +124,11 @@ export async function PUT(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const installationId = await requireSessionInstallationId(req);
+    const session = await requireSession(req);
+    const installationId = session.active_installation_id;
+
     if (!installationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "No active installation" }, { status: 400 });
     }
 
     const body = await req.json();
