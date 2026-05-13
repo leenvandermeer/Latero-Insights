@@ -8,11 +8,11 @@ import { useDatasets } from "@/hooks/use-datasets";
 // ── Layer badge ───────────────────────────────────────────────────────────────
 
 const LAYER_COLORS: Record<string, { bg: string; text: string }> = {
-  landing: { bg: "#f3f4f6", text: "#374151" },
-  raw:     { bg: "#e0e7ff", text: "#3730a3" },
-  bronze:  { bg: "#fed7aa", text: "#c2410c" },
-  silver:  { bg: "#cffafe", text: "#0e7490" },
-  gold:    { bg: "#fef9c3", text: "#a16207" },
+  landing: { bg: "var(--color-surface-raised)",  text: "var(--color-text-muted)" },
+  raw:     { bg: "var(--color-brand-subtle)",     text: "var(--color-brand)" },
+  bronze:  { bg: "var(--color-accent-subtle)",    text: "var(--color-accent)" },
+  silver:  { bg: "var(--color-brand-subtle)",     text: "var(--color-brand-light)" },
+  gold:    { bg: "var(--color-warning-subtle)",   text: "var(--color-warning)" },
 };
 
 function LayerBadge({ layer }: { layer: string }) {
@@ -30,10 +30,10 @@ function LayerBadge({ layer }: { layer: string }) {
 // ── Status dot ────────────────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, string> = {
-  SUCCESS: "#22c55e",
-  FAILED:  "#ef4444",
-  WARNING: "#f59e0b",
-  RUNNING: "#3b82f6",
+  SUCCESS: "var(--color-success)",
+  FAILED:  "var(--color-error)",
+  WARNING: "var(--color-warning)",
+  RUNNING: "var(--color-brand)",
 };
 
 function StatusDot({ status }: { status: string | null }) {

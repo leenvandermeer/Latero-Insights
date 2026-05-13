@@ -8,11 +8,11 @@ import { useEntities } from "@/hooks/use-entities";
 // ── Status badge ─────────────────────────────────────────────────────────────
 
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
-  SUCCESS: { bg: "#dcfce7", text: "#15803d" },
-  FAILED:  { bg: "#fee2e2", text: "#dc2626" },
-  WARNING: { bg: "#fef9c3", text: "#a16207" },
-  UNKNOWN: { bg: "var(--color-surface)", text: "var(--color-text-muted)" },
-  RUNNING: { bg: "#dbeafe", text: "#1d4ed8" },
+  SUCCESS: { bg: "var(--color-success-subtle)",  text: "var(--color-success)" },
+  FAILED:  { bg: "var(--color-error-subtle)",    text: "var(--color-error)" },
+  WARNING: { bg: "var(--color-warning-subtle)",  text: "var(--color-warning)" },
+  UNKNOWN: { bg: "var(--color-surface-raised)",  text: "var(--color-text-muted)" },
+  RUNNING: { bg: "var(--color-brand-subtle)",    text: "var(--color-brand)" },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -30,11 +30,11 @@ function StatusBadge({ status }: { status: string }) {
 // ── Layer pill ────────────────────────────────────────────────────────────────
 
 const LAYER_COLORS: Record<string, { bg: string; text: string }> = {
-  landing: { bg: "#f3f4f6", text: "#374151" },
-  raw:     { bg: "#e0e7ff", text: "#3730a3" },
-  bronze:  { bg: "#fed7aa", text: "#c2410c" },
-  silver:  { bg: "#cffafe", text: "#0e7490" },
-  gold:    { bg: "#fef9c3", text: "#a16207" },
+  landing: { bg: "var(--color-surface-raised)",  text: "var(--color-text-muted)" },
+  raw:     { bg: "var(--color-brand-subtle)",     text: "var(--color-brand)" },
+  bronze:  { bg: "var(--color-accent-subtle)",    text: "var(--color-accent)" },
+  silver:  { bg: "var(--color-brand-subtle)",     text: "var(--color-brand-light)" },
+  gold:    { bg: "var(--color-warning-subtle)",   text: "var(--color-warning)" },
 };
 
 function LayerPill({ layer, status }: { layer: string; status: string }) {
@@ -45,10 +45,10 @@ function LayerPill({ layer, status }: { layer: string; status: string }) {
     <span
       className="text-[10px] font-mono px-2 py-0.5 rounded capitalize"
       style={{
-        background: failed ? "#fee2e2" : unknown ? "var(--color-surface)" : c.bg,
-        color: failed ? "#dc2626" : unknown ? "var(--color-text-muted)" : c.text,
+        background: failed ? "var(--color-error-subtle)" : unknown ? "var(--color-surface-raised)" : c.bg,
+        color: failed ? "var(--color-error)" : unknown ? "var(--color-text-muted)" : c.text,
         border: unknown ? "1px solid var(--color-border)" : "none",
-        opacity: unknown ? 0.6 : 1,
+        opacity: unknown ? 0.7 : 1,
       }}
     >
       {layer}
