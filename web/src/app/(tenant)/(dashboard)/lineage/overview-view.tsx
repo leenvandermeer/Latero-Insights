@@ -2,13 +2,11 @@
 
 import { useMemo } from "react";
 import {
-  AlertTriangle,
   ArrowRight,
   CheckCircle2,
   CircleDot,
   Columns3,
   Layers3,
-  Minus,
   ShieldAlert,
 } from "lucide-react";
 import type { LineageAttribute, LineageEntity } from "@/lib/adapters/types";
@@ -279,7 +277,6 @@ function ChainReadinessRow({
   };
   onOpenTrace?: (anchorKey: string) => void;
 }) {
-  const missingLayers = LAYER_ORDER.filter((layer) => !chain.layers.includes(layer));
   const coverageColor = chain.coverage === 100
     ? "#10B981"
     : chain.coverage >= 60
@@ -288,72 +285,35 @@ function ChainReadinessRow({
   const canTrace = Boolean(chain.anchorKey && onOpenTrace);
 
   return (
-    <div className="px-4 py-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-semibold" style={{ color: "var(--color-text)" }} title={chain.id}>
-              {chain.name}
-            </p>
-            <StatusPill status={chain.status} />
-          </div>
-          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-            Dataset: {chain.id} ·{" "}
-            {chain.entities} entities · {chain.layers.length} of {LAYER_ORDER.length} layers present
-            {missingLayers.length > 0 ? ` · missing ${missingLayers.map(formatLayer).join(", ")}` : " · complete chain"}
-          </p>
-        </div>
-        <div className="grid min-w-[160px] gap-1 text-left lg:text-right">
-          <p className="text-2xl font-semibold leading-none" style={{ color: coverageColor }}>
-            {chain.coverage}%
-          </p>
-          <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
-            Last success: {formatTime(chain.latest)}
-          </p>
-          {canTrace && (
-            <button
-              type="button"
-              onClick={() => chain.anchorKey && onOpenTrace?.(chain.anchorKey)}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold transition-colors lg:justify-end"
-              style={{ color: "var(--color-brand)" }}
-            >
-              Open advanced trace
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+    <button
+      type="button"
+      disabled={!canTrace}
+      onClick={() => canTrace && chain.anchorKey && onOpenTrace?.(chain.anchorKey)}
+      className="flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/30 disabled:cursor-default"
+    >
+      {/* Status dot */}
+      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: statusMeta(chain.status).color }} />
+
+      {/* Name + subtitle */}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={chain.id}>
+          {chain.name}
+        </p>
+        <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+          {chain.layers.map(formatLayer).join(" → ")} · {chain.entities} entities
+        </p>
       </div>
 
-      <div className="mt-3">
-        <div
-          className="h-2 overflow-hidden rounded-full"
-          style={{ background: "var(--color-surface)" }}
-          aria-label={`Chain coverage ${chain.coverage}%`}
-        >
+      {/* Coverage bar + % */}
+      <div className="flex items-center gap-2 shrink-0 w-[120px]">
+        <div className="flex-1 h-1.5 overflow-hidden rounded-full" style={{ background: "var(--color-surface)" }}>
           <div className="h-full rounded-full" style={{ width: `${chain.coverage}%`, background: coverageColor }} />
         </div>
-        <div className="mt-3 grid grid-cols-5 gap-2">
-          {LAYER_ORDER.map((layer) => {
-            const active = chain.layers.includes(layer);
-            return (
-              <div
-                key={layer}
-                className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1.5"
-                style={{
-                  background: active ? "var(--color-brand-subtle)" : "var(--color-surface)",
-                  border: "1px solid var(--color-border)",
-                  color: active ? "var(--color-brand)" : "var(--color-text-muted)",
-                }}
-                  title={active ? `${formatLayer(layer)} present` : `${formatLayer(layer)} missing`}
-              >
-                {active ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <Minus className="h-3.5 w-3.5 shrink-0" />}
-                <span className="truncate text-[10px] font-semibold uppercase">{layer}</span>
-              </div>
-            );
-          })}
-        </div>
+        <span className="text-xs font-semibold tabular-nums w-8 text-right" style={{ color: coverageColor }}>
+          {chain.coverage}%
+        </span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -490,12 +450,12 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
           style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
         >
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="min-w-[190px]">
+            <div className="shrink-0">
               <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
                 Status mix
               </p>
-              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                Last refresh: {formatTime(refreshedAt)}
+              <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                {formatTime(refreshedAt)}
               </p>
             </div>
             <div className="flex min-w-0 flex-1 overflow-hidden rounded-full" style={{ background: "var(--color-surface)" }}>
@@ -539,22 +499,32 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
                     }
                     onOpenTab("trace");
                   }}
-                  className="grid w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30 md:grid-cols-[120px_minmax(0,1fr)_220px] md:items-center"
+                  className="flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/30"
                 >
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>{formatLayer(row.layer)}</p>
-                    <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{row.total} entities</p>
+                  <div className="w-20 shrink-0">
+                    <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>{formatLayer(row.layer)}</p>
+                    <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>{row.total} entities</p>
                   </div>
-                  <div className="flex h-2.5 overflow-hidden rounded-full" style={{ background: "var(--color-surface)" }}>
+                  <div className="flex flex-1 h-2 overflow-hidden rounded-full" style={{ background: "var(--color-surface)" }}>
                     <div style={{ width: `${pct(row.success, row.total)}%`, background: "#10B981" }} />
                     <div style={{ width: `${pct(row.warning, row.total)}%`, background: "#F59E0B" }} />
                     <div style={{ width: `${pct(row.failed, row.total)}%`, background: "#EF4444" }} />
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    <span>{row.success} ok</span>
-                    <span>{row.warning} warning</span>
-                    <span>{row.failed} failed</span>
-                  </div>
+                  {row.failed > 0 && (
+                    <span className="text-[11px] font-semibold shrink-0 w-16 text-right" style={{ color: "#EF4444" }}>
+                      {row.failed} failed
+                    </span>
+                  )}
+                  {row.failed === 0 && row.warning > 0 && (
+                    <span className="text-[11px] font-semibold shrink-0 w-16 text-right" style={{ color: "#F59E0B" }}>
+                      {row.warning} warn
+                    </span>
+                  )}
+                  {row.failed === 0 && row.warning === 0 && (
+                    <span className="text-[11px] font-semibold shrink-0 w-16 text-right" style={{ color: "#10B981" }}>
+                      All ok
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -572,20 +542,23 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
                   key={`${entity.layer}:${entity.name}`}
                   type="button"
                   onClick={() => onOpenTrace?.(`${entity.layer.toLowerCase()}::${entity.name}`, { direction: "upstream", depth: 2 })}
-                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30"
                 >
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: statusMeta(entity.end_to_end_status).color }} />
+                  <span className="h-2 w-2 shrink-0 rounded-full mt-0.5" style={{ background: statusMeta(entity.end_to_end_status).color }} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.name}>
-                        {lineageNodeLabel(entity)}
-                      </p>
-                      <StatusPill status={entity.end_to_end_status} />
-                    </div>
-                    <p className="mt-1 truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    <p className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }} title={entity.name}>
+                      {lineageNodeLabel(entity)}
+                    </p>
+                    <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
                       {formatLayer(entity.layer)} · {entity.upstream_keys.length} upstream · {entity.downstream_keys.length} downstream
                     </p>
                   </div>
+                  <span
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                    style={{ background: statusMeta(entity.end_to_end_status).bg, color: statusMeta(entity.end_to_end_status).color }}
+                  >
+                    {statusMeta(entity.end_to_end_status).label}
+                  </span>
                 </button>
               ))}
             </div>
