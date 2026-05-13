@@ -209,8 +209,8 @@ export function AlertRoutingSettings() {
   const [rules, setRules] = useState<RoutingRule[]>([]);
   const [dirty, setDirty] = useState(false);
 
-  const { data: allProducts } = useDataProducts();
-  const productList: DataProduct[] = allProducts ?? [];
+  const { data: allProductsResponse } = useDataProducts();
+  const productList: DataProduct[] = (allProductsResponse as { data?: DataProduct[] } | null)?.data ?? [];
   const domains = [...new Set(productList.map((p) => p.domain).filter((d): d is string => d != null))];
   const products = productList.map((p) => ({ id: p.data_product_id, label: p.display_name }));
 
