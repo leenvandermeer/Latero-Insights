@@ -246,7 +246,7 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
         GROUP BY es.entity_id
       )
       SELECT
-
+        d.entity_guid                                                 AS entity_guid,
         d.dataset_id                                                  AS dataset_id,
         d.dataset_id                                                  AS name,
         d.layer                                                       AS layer,
@@ -283,6 +283,7 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
   );
 
   return result.rows.map((row: {
+    entity_guid: string;
     dataset_id: string | null;
     name: string;
     layer: string;
@@ -295,6 +296,7 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
     node_kind: string;
     entity_name: string | null;
   }) => ({
+    entity_guid: row.entity_guid,                         // LADR-079: always present in SaaS mode
     dataset_id: row.dataset_id,
     name: row.name,
     layer: row.layer,

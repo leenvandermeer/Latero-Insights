@@ -40,16 +40,17 @@ function downloadEntitiesAsJSON(entities: LineageEntity[]) {
 
 export function LineageDashboard() {
   const searchParams = useSearchParams();
+  const initialGuid = searchParams.get("guid") ?? undefined;
   const initialEntityFqn = searchParams.get("entity_fqn") ?? undefined;
 
-  const [activeTab, setActiveTab] = useState<Tab>(initialEntityFqn ? "trace" : "overview");
+  const [activeTab, setActiveTab] = useState<Tab>((initialGuid || initialEntityFqn) ? "trace" : "overview");
   const [columnsSearch, setColumnsSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [traceRequest, setTraceRequest] = useState<TraceRequest | null>(null);
 
   useEffect(() => {
-    if (initialEntityFqn) setActiveTab("trace");
-  }, [initialEntityFqn]);
+    if (initialGuid || initialEntityFqn) setActiveTab("trace");
+  }, [initialGuid, initialEntityFqn]);
 
   const {
     data: entitiesRes,
@@ -244,7 +245,8 @@ export function LineageDashboard() {
           <TraceView
             entities={entities}
             attributes={attributes}
-            initialFocus={initialEntityFqn}
+            initialGuid={initialGuid}
+            initialEntityFqn={initialEntityFqn}
             request={traceRequest}
             onOpenColumns={(query) => {
               setColumnsSearch(query ?? "");

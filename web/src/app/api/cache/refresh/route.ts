@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { DatabricksAdapter } from "@/lib/adapters/databricks";
 import { rateLimit } from "@/lib/rate-limit";
 import { clearCache, writeToCache } from "@/lib/cache";
+import { getLineageEntitiesFromSaaS, getLineageAttributesFromSaaS } from "@/lib/insights-saas-read";
+import { requireSession } from "@/lib/session-auth";
 
 const adapter = new DatabricksAdapter();
 
@@ -13,6 +15,18 @@ export async function POST(request: NextRequest) {
       { error: "Too many requests" },
       { status: 429, headers: { "Retry-After": "60", "X-RateLimit-Remaining": "0" } }
     );
+  }
+
+  // LADR-079: Require authentication to get installation_id
+  let installationId: string;
+  try {
+    const session = await requireSession(request);
+    if (!session.active_installation_id) {
+      return NextResponse.json({ error: "No active installation" }, { status: 400 });
+    }
+    installationId = session.active_installation_id;
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const params = request.nextUrl.searchParams;
@@ -51,14 +65,16 @@ export async function POST(request: NextRequest) {
           break;
         }
         case "lineage-entities": {
-          const data = await adapter.getLineageEntities();
-          writeToCache("lineage-entities", { scope: "current" }, data);
+          // LADR-079: Read from Postgres (canonical store with GUID), not directly from Databricks
+          const data = await getLineageEntitiesFromSaaS(installationId);
+          writeToCache("lineage-entities", { scope: "current", installationId }, data);
           results["lineage-entities"] = `refreshed (${data.length} records)`;
           break;
         }
         case "lineage-attributes": {
-          const data = await adapter.getLineageAttributes();
-          writeToCache("lineage-attributes", { scope: "current" }, data);
+          // LADR-079: Read from Postgres (canonical store), not directly from Databricks
+          const data = await getLineageAttributesFromSaaS(installationId);
+          writeToCache("lineage-attributes", { scope: "current", installationId }, data);
           results["lineage-attributes"] = `refreshed (${data.length} records)`;
           break;
         }

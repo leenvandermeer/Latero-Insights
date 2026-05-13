@@ -64,6 +64,7 @@ export interface LineageHop {
 }
 
 export interface LineageEntity {
+  entity_guid: string;                       // LADR-079: stable UUID for URL-safe identification (required, always present)
   dataset_id?: string | null;
   name: string;
   layer: string;

@@ -315,37 +315,14 @@ export class DatabricksAdapter implements DataAdapter {
   }
 
   async getLineageEntities(): Promise<LineageEntity[]> {
-    const id = this.installationId;
-    const columns = await describeColumns("lineage_entities_current", id);
-    const lineageGroupColumn = preferredColumn(columns, "lineage_group_id", "latest_lineage_group_id");
-    const lastCompletedColumn = preferredColumn(columns, "last_completed_layer");
-    const datasetColumn = preferredColumn(columns, "dataset_id");
-    // LADR-064: source_dataset_names toegevoegd in WP-3
-    const sourceDatasetNamesColumn = preferredColumn(columns, "source_dataset_names");
-    const entityGroupColumn = preferredColumn(columns, "entity_group_id");
-    const entityNameColumn = preferredColumn(columns, "entity_name");
-    const sql = `SELECT ${datasetColumn ? `${datasetColumn} AS dataset_id, ` : "CAST(NULL AS STRING) AS dataset_id, "}entity_fqn AS name, layer, latest_status, end_to_end_status, latest_success_at, upstream_entity_fqns AS upstream_keys, downstream_entity_fqns AS downstream_keys${lineageGroupColumn ? `, ${lineageGroupColumn} AS lineage_group_id` : ", CAST(NULL AS STRING) AS lineage_group_id"}${lastCompletedColumn ? `, ${lastCompletedColumn} AS last_completed_layer` : ", CAST(NULL AS STRING) AS last_completed_layer"}${sourceDatasetNamesColumn ? `, ${sourceDatasetNamesColumn} AS source_dataset_names` : ""}${entityGroupColumn ? `, ${entityGroupColumn} AS entity_group_id` : ""}${entityNameColumn ? `, ${entityNameColumn} AS entity_name` : ""} FROM ${fqTable("lineage_entities_current", id)}${await scopedWhereClause("lineage_entities_current", columns, [], id)}`;
-    const resp = await executeStatement(sql, undefined, id);
-    return mapRows(resp, (row, cols) => {
-      const layer = (col(row, cols, "layer") ?? "").toLowerCase();
-      const sourceDatasets = parseJsonArray(col(row, cols, "source_dataset_names"));
-      return {
-        dataset_id: col(row, cols, "dataset_id"),
-        name: col(row, cols, "name") ?? "",
-        layer,
-        latest_status: (col(row, cols, "latest_status") ?? "UNKNOWN").toUpperCase(),
-        end_to_end_status: (col(row, cols, "end_to_end_status") ?? "UNKNOWN").toUpperCase(),
-        latest_success_at: col(row, cols, "latest_success_at"),
-        upstream_keys: parseJsonArray(col(row, cols, "upstream_keys")),
-        downstream_keys: parseJsonArray(col(row, cols, "downstream_keys")),
-        lineage_group_id: col(row, cols, "lineage_group_id"),
-        last_completed_layer: col(row, cols, "last_completed_layer"),
-        // LADR-064
-        node_kind: (layer === "silver" || layer === "gold") ? "entity" : "dataset",
-        entity_name: col(row, cols, "entity_name") ?? col(row, cols, "name") ?? "",
-        source_datasets: sourceDatasets,
-      };
-    });
+    // LADR-079: DEPRECATED - This method reads directly from Databricks without entity_guid.
+    // Production must use getLineageEntitiesFromSaaS() which reads from Postgres meta.datasets
+    // with stable entity_guid. Use POST /api/sync/databricks to sync Databricks → Postgres first.
+    throw new Error(
+      "DatabricksAdapter.getLineageEntities() is deprecated (LADR-079). " +
+      "Use getLineageEntitiesFromSaaS() to read from Postgres meta.datasets with entity_guid. " +
+      "Run POST /api/sync/databricks to sync Databricks data first."
+    );
   }
 
   async getLineageAttributes(): Promise<LineageAttribute[]> {

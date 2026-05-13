@@ -68,3 +68,4 @@ Naming note:
 | [LADR-076](20260511-catalog-products-separation.md) | 2026-05-11 | Catalog/Products separation: één eigenaar per domein — Data Products tab verwijderd uit Catalog | ACCEPTED |
 | [LADR-077](20260512-drift-detection-wiring.md) | 2026-05-12 | Drift detection wiring: detectSchemaDrift fix + detectLineageDrift + fire-and-forget integratie in meta-ingest | ACCEPTED |
 | [LADR-078](20260512-session-cookie-maxage-alignment.md) | 2026-05-12 | Session cookie maxAge: browser-TTL uitgelijnd met server-TTL — mobiel sessiebeheer gecorrigeerd | ACCEPTED |
+| [LADR-079](LADR-079-20260513-stable-entity-guid.md) | 2026-05-13 | Stable Entity GUID for URL-Safe Identification: LINS-021 compliance (no fuzzy matching) | PROPOSED |

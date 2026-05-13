@@ -40,7 +40,8 @@ interface TraceRequest {
 interface TraceViewProps {
   entities: LineageEntity[];
   attributes: LineageAttribute[];
-  initialFocus?: string;
+  initialGuid?: string;
+  initialEntityFqn?: string;
   request?: TraceRequest | null;
   onOpenColumns?: (query?: string) => void;
 }
@@ -155,13 +156,23 @@ function normalizeLineageEntities(entities: LineageEntity[]) {
   return [...merged.values()];
 }
 
-function resolveInitialAnchor(initialFocus: string | undefined, entities: LineageEntity[]) {
-  if (!initialFocus) return null;
-  const lower = initialFocus.toLowerCase();
-  const byKey = entities.find((entity) => lineageNodeKey(entity).toLowerCase() === lower);
-  if (byKey) return lineageNodeKey(byKey);
-  const byName = entities.find((entity) => entity.name.toLowerCase().includes(lower));
-  return byName ? lineageNodeKey(byName) : null;
+// LADR-079: Exact match only (LINS-021 compliance — no fuzzy matching)
+// guid: exact match on entity_guid (dataset-level, most specific)
+// entity_fqn: exact match on dataset_id (entity-level, backward compatible)
+function resolveInitialAnchor(
+  initialGuid: string | undefined,
+  initialEntityFqn: string | undefined,
+  entities: LineageEntity[]
+) {
+  if (initialGuid) {
+    const byGuid = entities.find((entity) => entity.entity_guid === initialGuid);
+    return byGuid ? lineageNodeKey(byGuid) : null;
+  }
+  if (initialEntityFqn) {
+    const byDatasetId = entities.find((entity) => entity.dataset_id === initialEntityFqn);
+    return byDatasetId ? lineageNodeKey(byDatasetId) : null;
+  }
+  return null;
 }
 
 function buildTraceScope(
@@ -426,7 +437,7 @@ function statusBadgeTone(status: string) {
   }
 }
 
-export function TraceView({ entities, attributes, initialFocus, request, onOpenColumns }: TraceViewProps) {
+export function TraceView({ entities, attributes, initialGuid, initialEntityFqn, request, onOpenColumns }: TraceViewProps) {
   const normalizedEntities = useMemo(() => normalizeLineageEntities(entities), [entities]);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const flowInstanceRef = useRef<TraceFlowInstance | null>(null);
@@ -449,9 +460,11 @@ export function TraceView({ entities, attributes, initialFocus, request, onOpenC
 
   useEffect(() => {
     if (anchorKey) return;
-    const resolved = resolveInitialAnchor(initialFocus, normalizedEntities) ?? entityOptions[0]?.key ?? null;
+    const resolved = resolveInitialAnchor(initialGuid, initialEntityFqn, normalizedEntities)
+      ?? entityOptions[0]?.key
+      ?? null;
     setAnchorKey(resolved);
-  }, [anchorKey, entityOptions, initialFocus, normalizedEntities]);
+  }, [anchorKey, entityOptions, initialGuid, initialEntityFqn, normalizedEntities]);
 
   useEffect(() => {
     if (!request) return;

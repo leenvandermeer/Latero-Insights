@@ -276,6 +276,7 @@ Forbidden patterns:
 - Constructing a job name as `{dataset_id}:{step}` or `{dataset_id}.{step}` — removed; fallback is `dataset_id` (direct DB value)
 - Stripping layer prefixes from entity names (e.g. `"silver_gemeente_arbeid"` → `"gemeente_arbeid"`) — `stripLayerPrefix` removed
 - SQL `split_part(step, '_to_', N)` or `regexp_replace` to derive layer from step — removed from read queries
+- **Fuzzy matching on entity identifiers** (e.g. `.toLowerCase().includes()` for URL resolution) — removed in LADR-079; only exact match on `entity_guid` or `dataset_id` is permitted
 
 Allowed: writing `null` when a field is absent in the source.
 
