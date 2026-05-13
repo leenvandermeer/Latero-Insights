@@ -96,10 +96,8 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
         <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>Check details</h2>
         <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <Field label="Dataset" value={String(c.dataset_id ?? "—")} />
-          <Field label="Step" value={c.step ? String(c.step) : undefined} />
           <Field label="Category" value={c.check_category ? String(c.check_category) : undefined} />
           <Field label="Severity" value={c.severity ? String(c.severity) : undefined} />
-          <Field label="Mode" value={c.check_mode ? String(c.check_mode) : undefined} />
           <Field label="Policy version" value={c.policy_version ? String(c.policy_version) : undefined} />
           <Field label="Executed at" value={c.timestamp_utc ? new Date(String(c.timestamp_utc)).toLocaleString() : undefined} />
           {!!c.run_id && (
@@ -119,7 +117,7 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
 
       {/* Result card */}
       <div className="rounded-xl p-5" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-        <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>Resultaat</h2>
+        <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>Result</h2>
         <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {c.result_value != null && (
             <Field label="Result value" value={String(c.result_value)} />

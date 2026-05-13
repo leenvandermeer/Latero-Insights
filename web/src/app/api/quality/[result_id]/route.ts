@@ -36,7 +36,6 @@ export async function GET(
       qr.message,
       qr.check_result,
       qr.executed_at                           AS timestamp_utc,
-      '' AS step,
       COALESCE(r.external_run_id, qr.run_id::text, '') AS run_id,
       r.run_id::text                           AS internal_run_id
     FROM meta.quality_results qr
