@@ -28,7 +28,7 @@ export function NotificationsSettings() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [testing, setTesting] = useState<Record<string, boolean>>({});
-  const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+  const [testResults, setTestResults] = useState<Record<string, TestResult | null>>({});
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [config, setConfig] = useState<NotificationConfig>({
     enabled: false,
