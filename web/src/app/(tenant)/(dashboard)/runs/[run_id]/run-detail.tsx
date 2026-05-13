@@ -122,7 +122,7 @@ export function RunDetail({ runId }: { runId: string }) {
 
       {/* I/O datasets */}
       {io.length > 0 && (
-        <Section icon={<Database className="h-4 w-4" />} title={`Betrokken datasets (${io.length})`}>
+        <Section icon={<Database className="h-4 w-4" />} title={`Involved datasets (${io.length})`}>
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -156,7 +156,7 @@ export function RunDetail({ runId }: { runId: string }) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["Check", "Status", "Categorie", "Prioriteit"].map((h) => (
+                {["Check", "Status", "Category", "Priority"].map((h) => (
                   <th key={h} className="text-left px-4 py-2 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>{h}</th>
                 ))}
               </tr>
