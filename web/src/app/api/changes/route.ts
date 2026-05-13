@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
            dp.display_name,
            d.object_name,
            ent.entity_name,
-           ce.entity_id
+           j.job_name
          ) AS entity_name,
          ce.diff,
          ce.risk_assessment,
@@ -84,6 +84,11 @@ export async function GET(request: NextRequest) {
          ON ce.entity_type = 'entity'
         AND ent.installation_id = ce.installation_id
         AND ent.entity_id = ce.entity_id
+       LEFT JOIN meta.runs r
+         ON r.installation_id = ce.installation_id
+        AND r.run_id::text = ce.entity_id
+       LEFT JOIN meta.jobs j
+         ON j.job_id = r.job_id
        WHERE ce.installation_id = $1${where}
        ORDER BY ce.detected_at DESC
        LIMIT $${idx}`,
