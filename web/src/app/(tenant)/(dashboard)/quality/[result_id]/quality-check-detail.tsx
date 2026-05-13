@@ -96,10 +96,13 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
         <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>Check details</h2>
         <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <Field label="Dataset" value={String(c.dataset_id ?? "—")} />
+          <Field label="Layer" value={c.layer ? String(c.layer) : undefined} />
           <Field label="Category" value={c.check_category ? String(c.check_category) : undefined} />
           <Field label="Severity" value={c.severity ? String(c.severity) : undefined} />
+          <Field label="Environment" value={c.environment ? String(c.environment) : undefined} />
           <Field label="Policy version" value={c.policy_version ? String(c.policy_version) : undefined} />
           <Field label="Executed at" value={c.timestamp_utc ? new Date(String(c.timestamp_utc)).toLocaleString() : undefined} />
+          {!!c.job_name && <Field label="Job" value={String(c.job_name)} />}
           {!!c.run_id && (
             <div>
               <dt className="text-xs font-medium mb-0.5" style={{ color: "var(--color-text-muted)" }}>Run ID</dt>

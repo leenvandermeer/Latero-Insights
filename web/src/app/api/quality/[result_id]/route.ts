@@ -28,14 +28,16 @@ export async function GET(
       qr.status                                AS check_status,
       qru.check_category,
       qru.severity,
-      qru.check_mode,
       qru.policy_version,
       COALESCE(qru.dataset_id, qr.check_id)   AS dataset_id,
+      d.layer,
       qr.result_value,
       qr.threshold_value,
       qr.message,
       qr.check_result,
       qr.executed_at                           AS timestamp_utc,
+      r.environment,
+      j.job_name,
       COALESCE(r.external_run_id, qr.run_id::text, '') AS run_id,
       r.run_id::text                           AS internal_run_id
     FROM meta.quality_results qr
@@ -43,6 +45,11 @@ export async function GET(
       ON qru.installation_id = qr.installation_id
      AND qru.check_id        = qr.check_id
     LEFT JOIN meta.runs r ON r.run_id = qr.run_id
+    LEFT JOIN meta.jobs j ON j.job_id = r.job_id
+    LEFT JOIN meta.datasets d
+      ON d.installation_id = qr.installation_id
+     AND d.dataset_id      = qru.dataset_id
+     AND d.valid_to IS NULL
     WHERE qr.result_id = $1
       AND qr.installation_id = $2
     LIMIT 1
