@@ -3,6 +3,7 @@
 // Schrijft naar meta.change_events; deduplicatie: max 1 event per entity+type per 5 minuten.
 
 import { getPgPool } from "@/lib/insights-saas-db";
+import { notifyOnDrift, getNotificationConfig } from "@/lib/notifications";
 import type { Pool } from "pg";
 
 // ---------------------------------------------------------------------------
@@ -55,10 +56,11 @@ async function writeChangeEvent(pool: Pool, event: ChangeEventInput): Promise<vo
   );
   if (skip) return;
 
-  await pool.query(
+  const insertRes = await pool.query(
     `INSERT INTO meta.change_events
        (installation_id, change_type, severity, entity_type, entity_id, diff, risk_assessment)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id`,
     [
       event.installationId,
       event.change_type,
@@ -69,6 +71,32 @@ async function writeChangeEvent(pool: Pool, event: ChangeEventInput): Promise<vo
       event.risk_assessment ? JSON.stringify(event.risk_assessment) : null,
     ]
   );
+
+  // Fire-and-forget notifications (LADR-077 Phase 3)
+  if (insertRes.rows.length > 0) {
+    const eventId = insertRes.rows[0].id as string;
+    void (async () => {
+      try {
+        const config = await getNotificationConfig(event.installationId);
+        if (config && Object.keys(config).length > 0) {
+          // Convert DB event to notification event format
+          const notifEvent = {
+            id: eventId,
+            change_type: event.change_type,
+            severity: event.severity,
+            entity_type: event.entity_type,
+            entity_id: event.entity_id,
+            diff: event.diff,
+            risk_assessment: event.risk_assessment,
+            detected_at: new Date().toISOString(),
+          };
+          await notifyOnDrift(notifEvent, event.installationId, config);
+        }
+      } catch (err) {
+        console.error("Notification dispatch failed:", err);
+      }
+    })().catch(() => {});
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -335,3 +363,100 @@ export async function detectLineageDrift(
     } : undefined,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Output lineage drift (LADR-077 Phase 2c)
+// ---------------------------------------------------------------------------
+
+/**
+ * Detecteert output-lineage drift door de OUTPUT-datasets van de huidige run
+ * te vergelijken met de vorige run van dezelfde job.
+ *
+ * - Nieuwe output dataset          → informational
+ * - Verdwenen output dataset       → significant
+ * - Meerdere verdwenen outputs     → breaking
+ */
+export async function detectOutputLineageDrift(
+  jobId: string,
+  currentRunId: string,
+  installationId: string
+): Promise<void> {
+  const pool = getPgPool();
+
+  // Two most recent completed runs for this job
+  const runsRes = await pool.query(
+    `SELECT r.run_id
+     FROM meta.runs r
+     WHERE r.job_id = $1
+       AND r.installation_id = $2
+       AND r.status IN ('SUCCESS','FAILED','WARNING')
+     ORDER BY r.ended_at DESC NULLS LAST
+     LIMIT 2`,
+    [jobId, installationId]
+  );
+
+  if (runsRes.rows.length < 2) return; // No previous run to compare
+
+  const [latestRunId, previousRunId] = (runsRes.rows as Array<{ run_id: string }>).map(r => r.run_id);
+
+  // Verify the current run is the most recent
+  if (latestRunId !== currentRunId) return;
+
+  // Get OUTPUT datasets for both runs
+  const outputsRes = await pool.query(
+    `SELECT run_id, dataset_id
+     FROM meta.run_io
+     WHERE run_id = ANY($1)
+       AND role = 'OUTPUT'`,
+    [[currentRunId, previousRunId]]
+  );
+
+  const currentOutputs = new Set(
+    (outputsRes.rows as Array<{ run_id: string; dataset_id: string }>)
+      .filter(r => r.run_id === currentRunId)
+      .map(r => r.dataset_id)
+  );
+  const previousOutputs = new Set(
+    (outputsRes.rows as Array<{ run_id: string; dataset_id: string }>)
+      .filter(r => r.run_id === previousRunId)
+      .map(r => r.dataset_id)
+  );
+
+  // Detect changes
+  const added = [...currentOutputs].filter(id => !previousOutputs.has(id));
+  const removed = [...previousOutputs].filter(id => !currentOutputs.has(id));
+
+  if (added.length === 0 && removed.length === 0) return; // No change
+
+  // Classify severity
+  let severity: ChangeSeverity = "informational";
+  if (removed.length >= 2) {
+    severity = "breaking";
+  } else if (removed.length === 1) {
+    severity = "significant";
+  } else if (added.length > 0) {
+    severity = "informational";
+  }
+
+  await writeChangeEvent(pool, {
+    installationId,
+    change_type: "lineage_drift",
+    severity,
+    entity_type: "dataset",
+    entity_id: currentRunId,
+    diff: {
+      before: { outputs: [...previousOutputs] },
+      after:  { outputs: [...currentOutputs] },
+      affected_fields: [
+        ...added.map(id => `added:${id}`),
+        ...removed.map(id => `removed:${id}`),
+      ],
+    },
+    risk_assessment: removed.length > 0 ? {
+      level: removed.length > 1 ? "high" : "medium",
+      affected_outputs: removed,
+      recommended_action: `Output dataset${removed.length > 1 ? "s" : ""} removed: ${removed.join(", ")}. Verify job configuration and downstream dependencies.`,
+    } : undefined,
+  });
+}
+

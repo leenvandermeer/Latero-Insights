@@ -7,7 +7,7 @@
  */
 
 import type { Pool } from "pg";
-import { detectStatisticalDrift, detectSchemaDrift, detectLineageDrift } from "./change-detection";
+import { detectStatisticalDrift, detectSchemaDrift, detectLineageDrift, detectOutputLineageDrift } from "./change-detection";
 
 // ---------------------------------------------------------------------------
 // Intern: helpers
@@ -122,6 +122,17 @@ export async function writeMetaPipelineRun(
       [entityName, params.installationId, namespace, objectName, params.sourceSystem, layer ?? 'unknown'],
     );
 
+    // Capture schema snapshot for audit trail (LADR-077 Phase 2b)
+    // Only for terminal runs to reduce storage; snapshot tied to run completion
+    if (isTerminal) {
+      await client.query(
+        `INSERT INTO meta.dataset_snapshots
+         (dataset_id, installation_id, layer, object_name, platform, captured_by)
+         VALUES ($1, $2, $3, $4, $5, 'run_completion')`,
+        [entityName, params.installationId, layer ?? 'unknown', objectName, 'UNKNOWN'],
+      );
+    }
+
     // 2. Upsert job — gebruik native job_name indien aanwezig (LINS-020), anders dataset_id
     const jobName = params.jobName?.trim() || params.datasetId;
     const jobResult = await client.query(
@@ -225,6 +236,7 @@ export async function writeMetaPipelineRun(
 
     if (capturedJobId && capturedRunUuid) {
       void detectLineageDrift(capturedJobId, capturedRunUuid, params.installationId).catch(() => {});
+      void detectOutputLineageDrift(capturedJobId, capturedRunUuid, params.installationId).catch(() => {});
     }
   }
 }
@@ -705,10 +717,30 @@ export async function writeMetaDataProduct(
   }
 
   const client = await pool.connect();
+  let capturedDataProductId: string | null = null;
+  let capturedPrevOwner: string | null = null;
+  let capturedPrevSlaTier: string | null = null;
+  let capturedPrevContractVer: string | null = null;
+
   try {
+    // Query previous state before upsert for drift detection (LADR-077 Phase 2a)
+    const prevStateRes = await client.query(
+      `SELECT data_product_id, owner, sla_tier, contract_ver FROM meta.data_products
+       WHERE installation_id = $1 AND external_id = $2 AND valid_to IS NULL
+       LIMIT 1`,
+      [params.installationId, params.externalId],
+    );
+
+    if (prevStateRes.rows.length > 0) {
+      capturedDataProductId = prevStateRes.rows[0].data_product_id as string;
+      capturedPrevOwner = (prevStateRes.rows[0].owner as string | null) ?? null;
+      capturedPrevSlaTier = (prevStateRes.rows[0].sla_tier as string | null) ?? null;
+      capturedPrevContractVer = (prevStateRes.rows[0].contract_ver as string | null) ?? null;
+    }
+
     // Upsert by external_id: Latero assigns the internal UUID on first encounter.
     // If a record with this external_id already exists, update metadata only.
-    await client.query(
+    const upsertRes = await client.query(
       `INSERT INTO meta.data_products (
          installation_id, data_product_id, external_id, display_name, description,
          owner, data_steward, domain, classification,
@@ -746,7 +778,42 @@ export async function writeMetaDataProduct(
         params.tags ? JSON.stringify(params.tags) : null,
       ],
     );
+
+    // Capture product ID if this is a new record (INSERT path)
+    if (!capturedDataProductId && upsertRes.rowCount === 1) {
+      const newProductRes = await client.query(
+        `SELECT data_product_id FROM meta.data_products
+         WHERE installation_id = $1 AND external_id = $2 AND valid_to IS NULL
+         LIMIT 1`,
+        [params.installationId, params.externalId],
+      );
+      capturedDataProductId = (newProductRes.rows[0]?.data_product_id as string | undefined) ?? null;
+    }
   } finally {
     client.release();
+  }
+
+  // Fire-and-forget drift detection (LADR-077 Phase 2a)
+  // Triggers after ingest completes, non-blocking
+  if (capturedDataProductId) {
+    if (capturedPrevOwner !== params.owner) {
+      void detectOwnershipDrift(
+        capturedDataProductId,
+        params.installationId,
+        capturedPrevOwner,
+        params.owner ?? null,
+      ).catch(() => {});
+    }
+
+    if (capturedPrevSlaTier !== slaTier || capturedPrevContractVer !== params.contractVer) {
+      void detectContractDrift(
+        capturedDataProductId,
+        params.installationId,
+        capturedPrevSlaTier ?? '',
+        slaTier ?? '',
+        capturedPrevContractVer ?? '',
+        params.contractVer ?? '',
+      ).catch(() => {});
+    }
   }
 }
