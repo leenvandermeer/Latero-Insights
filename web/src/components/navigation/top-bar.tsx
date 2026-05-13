@@ -367,8 +367,6 @@ export function TopBar() {
     if (pathname === "/catalog") return { title: "Catalog", subtitle: "Data products, entities, and datasets", icon: Package };
     if (pathname === "/lineage") return { title: "Lineage", subtitle: "Current flow across sources, transformations, and outputs", icon: GitBranch };
     if (pathname === "/changes") return { title: "Change Intelligence", subtitle: "Detected drift and change events across your data estate", icon: TrendingUp };
-    if (pathname === "/impact") return { title: "Business Impact", subtitle: "Business outputs and downstream impact analysis", icon: TrendingUp };
-    if (pathname === "/consumers") return { title: "Consumers", subtitle: "Demand-side analytics per data product", icon: UserCircle };
     if (pathname === "/dashboard") return { title: "Dashboards", subtitle: "Personal and shared operational views", icon: Package };
     if (pathname.startsWith("/dashboard/")) return { title: "Dashboard", subtitle: "Configurable view with date scope for period-based widgets", icon: Package };
     return null;

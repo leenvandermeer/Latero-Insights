@@ -68,36 +68,6 @@ export type {
   UpdateIncidentInput,
 } from "./incidents";
 export {
-  listBusinessOutputs,
-  createBusinessOutput,
-  getProductBusinessOutputs,
-  linkBusinessOutput,
-  unlinkBusinessOutput,
-  getEntityImpact,
-} from "./business-outputs";
-export type {
-  BusinessOutput,
-  BusinessOutputType,
-  BusinessOutputCriticality,
-  CreateBusinessOutputInput,
-  ListBusinessOutputsOptions,
-} from "./business-outputs";
-export {
-  getProductConsumers,
-  registerConsumer,
-  getProductUsage,
-  logUsageEvent,
-  submitContractRequest,
-  resolveContractRequest,
-} from "./demand-side";
-export type {
-  ProductConsumer,
-  ProductUsageDay,
-  ContractRequest,
-  ConsumerType,
-  ContractRequestStatus,
-} from "./demand-side";
-export {
   listPolicies,
   getPolicy,
   createPolicy,
