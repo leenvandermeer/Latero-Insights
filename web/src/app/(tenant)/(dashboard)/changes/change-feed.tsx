@@ -23,6 +23,7 @@ interface RiskAssessment {
 interface ChangeEvent {
   id: number;
   entity_id: string | null;
+  entity_name: string | null;
   entity_type: string | null;
   change_type: string;
   severity: DbSeverity;
@@ -137,12 +138,12 @@ function ChangeRow({ event }: { event: ChangeEvent }) {
           >
             {cfg.label}
           </span>
-          {event.entity_id && (
+          {(event.entity_name ?? event.entity_id) && (
             <span
-              className="text-[10px] font-mono px-2 py-0.5 rounded-full"
+              className="text-[10px] font-medium px-2 py-0.5 rounded-full"
               style={{ background: "var(--color-surface-subtle)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}
             >
-              {event.entity_id}
+              {event.entity_name ?? event.entity_id}
             </span>
           )}
         </div>

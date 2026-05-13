@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3, PlusCircle, Pencil, Loader2, Download } from "lucide-react";
+import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3, PlusCircle, Pencil, Loader2, Download, RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useDataProducts, useUpdateDataProduct, type DataProduct } from "@/hooks/use-data-products";
 import { toast } from "sonner";
 import { useTrustScore } from "@/hooks/use-trust-score";
@@ -380,6 +381,27 @@ export function ProductRegistry() {
     });
   }, [products, query, domain, sortBy, readiness]);
 
+  const qc = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refreshAllScores = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.allSettled(
+        products.map((p) =>
+          fetch(`/api/products/${encodeURIComponent(p.data_product_id)}/trust?refresh=true`, { cache: "no-store" })
+        )
+      );
+      await qc.invalidateQueries({ queryKey: ["trust-score"] });
+      toast.success("Trust scores updated");
+    } catch {
+      toast.error("Failed to refresh some scores");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [products, refreshing, qc]);
+
   const metrics = useMemo(() => {
     const ready = products.filter((product) => getReadinessState(product) === "ready").length;
     const missingOwner = products.filter((product) => !product.owner).length;
@@ -456,6 +478,15 @@ export function ProductRegistry() {
           >
             <Download className="h-3.5 w-3.5" />
             Export CSV
+          </button>
+          <button
+            onClick={refreshAllScores}
+            disabled={refreshing}
+            className="inline-flex min-h-[var(--touch-target-min)] w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-opacity hover:opacity-80 sm:min-h-0 sm:w-auto sm:justify-start sm:py-1.5 sm:text-xs disabled:opacity-50"
+            style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh scores
           </button>
           <button
             onClick={() => setSlideOverOpen(true)}
