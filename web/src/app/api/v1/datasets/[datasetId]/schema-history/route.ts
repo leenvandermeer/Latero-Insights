@@ -18,11 +18,12 @@ import { requireSession } from "@/lib/session-auth";
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { datasetId: string } }
+  { params }: { params: Promise<{ datasetId: string }> }
 ) {
   try {
     const session = await requireSession(req);
     const installationId = session.active_installation_id;
+    const { datasetId } = await params;
 
     if (!installationId) {
       return NextResponse.json({ error: "No active installation" }, { status: 400 });
@@ -54,7 +55,7 @@ export async function GET(
         AND dataset_id = $2
     `;
 
-    const params_: any[] = [installationId, params.datasetId];
+    const params_: any[] = [installationId, datasetId];
 
     if (layer) {
       query += ` AND layer = $${params_.length + 1}`;
@@ -77,7 +78,7 @@ export async function GET(
     const result = await pool.query(query, params_);
 
     return NextResponse.json({
-      dataset_id: params.datasetId,
+      dataset_id: datasetId,
       installation_id: installationId,
       layer: layer || null,
       snapshots: result.rows,
@@ -100,11 +101,12 @@ export async function GET(
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { datasetId: string } }
+  { params }: { params: Promise<{ datasetId: string }> }
 ) {
   try {
     const session = await requireSession(req);
     const installationId = session.active_installation_id;
+    const { datasetId } = await params;
 
     if (!installationId) {
       return NextResponse.json({ error: "No active installation" }, { status: 400 });
@@ -119,7 +121,7 @@ export async function POST(
     const datasetRes = await pool.query(
       `SELECT object_name, platform FROM meta.datasets
        WHERE installation_id = $1 AND dataset_id = $2`,
-      [installationId, params.datasetId]
+      [installationId, datasetId]
     );
 
     if (datasetRes.rows.length === 0) {
@@ -138,7 +140,7 @@ export async function POST(
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING snapshot_id, captured_at`,
       [
-        params.datasetId,
+        datasetId,
         installationId,
         "unknown", // Layer not specified for manual capture
         dataset.object_name,
