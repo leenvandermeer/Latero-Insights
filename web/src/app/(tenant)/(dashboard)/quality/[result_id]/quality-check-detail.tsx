@@ -118,33 +118,35 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
         </dl>
       </div>
 
-      {/* Result card */}
-      <div className="rounded-xl p-5" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-        <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>Result</h2>
-        <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {c.result_value != null && (
-            <Field label="Result value" value={String(c.result_value)} />
+      {/* Result card — only render when there is result data */}
+      {(c.result_value != null || c.threshold_value != null || !!c.check_result || !!c.message) && (
+        <div className="rounded-xl p-5" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+          <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>Result</h2>
+          <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {c.result_value != null && (
+              <Field label="Result value" value={String(c.result_value)} />
+            )}
+            {c.threshold_value != null && (
+              <Field label="Threshold" value={String(c.threshold_value)} />
+            )}
+            {!!c.check_result && (
+              <Field label="Check result" value={String(c.check_result)} />
+            )}
+          </dl>
+          {!!c.message && (
+            <div className="mt-4">
+              <dt className="text-xs font-medium mb-1" style={{ color: "var(--color-text-muted)" }}>Message</dt>
+              <dd className="text-sm rounded-lg px-3 py-2.5 font-mono whitespace-pre-wrap break-words" style={{
+                background: "var(--color-surface-subtle, var(--color-bg))",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+              }}>
+                {String(c.message)}
+              </dd>
+            </div>
           )}
-          {c.threshold_value != null && (
-            <Field label="Threshold" value={String(c.threshold_value)} />
-          )}
-          {!!c.check_result && (
-            <Field label="Check result" value={String(c.check_result)} />
-          )}
-        </dl>
-        {!!c.message && (
-          <div className="mt-4">
-            <dt className="text-xs font-medium mb-1" style={{ color: "var(--color-text-muted)" }}>Message</dt>
-            <dd className="text-sm rounded-lg px-3 py-2.5 font-mono whitespace-pre-wrap break-words" style={{
-              background: "var(--color-surface-subtle, var(--color-bg))",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
-            }}>
-              {String(c.message)}
-            </dd>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
