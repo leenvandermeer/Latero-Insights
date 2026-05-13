@@ -2,7 +2,7 @@
 -- Purpose: Enable audit trail of schema changes for drift detection
 -- LADR-077 Phase 2b: Schema snapshot history for historical comparison
 
--- Create snapshot table: captures dataset state at meaningful points (e.g., after run completion)
+-- Create snapshot table: captures dataset state at meaningful points
 CREATE TABLE IF NOT EXISTS meta.dataset_snapshots (
   snapshot_id BIGSERIAL PRIMARY KEY,
   dataset_id TEXT NOT NULL,
@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS meta.dataset_snapshots (
   platform TEXT,
   column_count INT,
   captured_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  captured_by TEXT NOT NULL DEFAULT 'run_completion',  -- run_completion | dq_check | api
-  payload JSONB,  -- Optional: extended schema metadata (columns, types, etc.)
+  captured_by TEXT NOT NULL DEFAULT 'run_completion',
+  payload JSONB,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -21,21 +21,16 @@ CREATE TABLE IF NOT EXISTS meta.dataset_snapshots (
 CREATE INDEX IF NOT EXISTS idx_snapshots_entity
   ON meta.dataset_snapshots (installation_id, dataset_id, layer, captured_at DESC);
 
--- Index for filtering by captured_by (to find snapshots from specific source)
+-- Index for filtering by captured_by
 CREATE INDEX IF NOT EXISTS idx_snapshots_source
   ON meta.dataset_snapshots (installation_id, dataset_id, layer, captured_by, captured_at DESC);
 
--- Index for retention policy queries (cleanup old snapshots)
+-- Index for retention policy queries
 CREATE INDEX IF NOT EXISTS idx_snapshots_age
   ON meta.dataset_snapshots (captured_at DESC)
   WHERE captured_at < now() - INTERVAL '90 days';
 
--- Add check constraint to validate captured_by is one of known sources
-ALTER TABLE meta.dataset_snapshots ADD CONSTRAINT check_captured_by
-  CHECK (captured_by IN ('run_completion', 'dq_check', 'api'))
-  NOT VALID;
-
--- View: Latest snapshot per dataset (for quick access to current schema state)
+-- View: Latest snapshot per dataset
 CREATE OR REPLACE VIEW meta.dataset_latest_snapshots AS
 SELECT DISTINCT ON (installation_id, dataset_id, layer)
   snapshot_id,
@@ -63,7 +58,6 @@ SELECT
   platform,
   captured_at,
   captured_by,
-  -- Compare with previous snapshot to detect changes
   LAG(object_name) OVER (
     PARTITION BY installation_id, dataset_id, layer
     ORDER BY captured_at
@@ -72,7 +66,6 @@ SELECT
     PARTITION BY installation_id, dataset_id, layer
     ORDER BY captured_at
   ) AS prev_column_count,
-  -- Flag if schema changed since last snapshot
   CASE
     WHEN LAG(object_name) OVER (
       PARTITION BY installation_id, dataset_id, layer
