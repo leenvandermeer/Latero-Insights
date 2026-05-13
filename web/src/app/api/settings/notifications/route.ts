@@ -19,21 +19,25 @@ export async function GET(req: NextRequest) {
 
     const config = await getNotificationConfig(installationId);
 
-    // Sanitize: don't return webhook URLs or tokens
+    // Sanitize: don't return webhook URLs or tokens, but keep structure for frontend
     const sanitized = {
-      slack: config.slack
-        ? { enabled: config.slack.enabled, severity_filter: config.slack.severity_filter }
-        : null,
-      pagerduty: config.pagerduty
-        ? { enabled: config.pagerduty.enabled, severity_filter: config.pagerduty.severity_filter }
-        : null,
-      email: config.email
-        ? {
-            enabled: config.email.enabled,
-            recipient_count: config.email.recipients?.length || 0,
-            severity_filter: config.email.severity_filter,
-          }
-        : null,
+      enabled: true, // Default enabled for the notification system
+      min_severity: "significant",
+      channels: {
+        slack: config.slack
+          ? { enabled: config.slack.enabled, severity_filter: config.slack.severity_filter }
+          : { enabled: false, webhook_url: "", severity_filter: "significant" },
+        pagerduty: config.pagerduty
+          ? { enabled: config.pagerduty.enabled, severity_filter: config.pagerduty.severity_filter }
+          : { enabled: false, token: "", service_id: "", severity_filter: "significant" },
+        email: config.email
+          ? {
+              enabled: config.email.enabled,
+              recipients: config.email.recipients || [],
+              severity_filter: config.email.severity_filter,
+            }
+          : { enabled: false, recipients: [], severity_filter: "significant" },
+      },
     };
 
     return NextResponse.json(sanitized);

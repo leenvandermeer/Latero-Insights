@@ -1,10 +1,6 @@
-import type { Metadata } from "next";
-import { NotificationsSettings } from "./notifications";
-
-export const metadata: Metadata = {
-  title: "Notifications — Settings | Latero Control",
-};
+import { redirect } from "next/navigation";
 
 export default function NotificationsPage() {
-  return <NotificationsSettings />;
+  // Redirect to settings with notifications tab active
+  redirect("/settings?tab=notifications");
 }

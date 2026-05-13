@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLineageEntities, useLineageAttributes } from "@/hooks";
 import { ErrorMessage } from "@/components/ui";
@@ -10,7 +10,7 @@ import { TraceView } from "./trace-view";
 import { ColumnsView } from "./columns-view";
 import { LineageOverview } from "./overview-view";
 import type { LineageEntity } from "@/lib/adapters/types";
-import { Columns3, LayoutDashboard, RefreshCw, Loader2, GitBranch, Download, Settings, Route } from "lucide-react";
+import { Columns3, LayoutDashboard, RefreshCw, Loader2, GitBranch, Download, Settings, Route, Clock, X } from "lucide-react";
 
 type Tab = "overview" | "trace" | "columns";
 type TraceDirection = "upstream" | "downstream" | "both";
@@ -47,6 +47,9 @@ export function LineageDashboard() {
   const [columnsSearch, setColumnsSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [traceRequest, setTraceRequest] = useState<TraceRequest | null>(null);
+  const [asOf, setAsOf] = useState<string>("");
+
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     if (initialGuid || initialEntityFqn) setActiveTab("trace");
@@ -63,9 +66,10 @@ export function LineageDashboard() {
     data: attributesRes,
     isLoading: attributesLoading,
     refetch: refetchAttributes,
-  } = useLineageAttributes();
+  } = useLineageAttributes(asOf || null);
 
   const handleRefresh = async () => {
+    if (asOf) return;
     setRefreshing(true);
     try {
       await Promise.all([refetchEntities(), refetchAttributes()]);
@@ -194,6 +198,33 @@ export function LineageDashboard() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
+            {/* Time travel date picker */}
+            <div
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+              style={{ border: `1px solid ${asOf ? "rgba(245,158,11,0.5)" : "var(--color-border)"}`, background: asOf ? "rgba(245,158,11,0.06)" : "var(--color-surface)" }}
+              title="View column lineage as it was on a specific date"
+            >
+              <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: asOf ? "#B45309" : "var(--color-text-muted)" }} />
+              <input
+                type="date"
+                value={asOf}
+                max={todayIso}
+                onChange={(e) => setAsOf(e.target.value)}
+                className="bg-transparent text-xs outline-none"
+                style={{ color: asOf ? "#B45309" : "var(--color-text-muted)", width: asOf ? "auto" : "6rem" }}
+                title="As of date"
+              />
+              {asOf && (
+                <button
+                  onClick={() => setAsOf("")}
+                  className="ml-0.5 rounded p-0.5 transition-colors hover:bg-amber-100"
+                  title="Clear — return to current state"
+                >
+                  <X className="h-3 w-3" style={{ color: "#B45309" }} />
+                </button>
+              )}
+            </div>
+
             <button
               onClick={() => downloadEntitiesAsJSON(entities)}
               disabled={entities.length === 0}
@@ -206,9 +237,10 @@ export function LineageDashboard() {
             </button>
             <button
               onClick={handleRefresh}
-              disabled={refreshing || entitiesLoading}
+              disabled={refreshing || entitiesLoading || !!asOf}
               className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 disabled:opacity-40"
               style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)", background: "var(--color-surface)" }}
+              title={asOf ? "Clear the date filter to refresh" : undefined}
             >
               {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
               {refreshing ? "Refreshing…" : "Refresh"}
@@ -224,6 +256,21 @@ export function LineageDashboard() {
         >
           {modeSummary}
         </div>
+        {asOf && (
+          <div
+            className="flex items-center gap-2 px-4 py-2 text-xs font-medium shrink-0"
+            style={{ background: "rgba(245,158,11,0.08)", borderBottom: "1px solid rgba(245,158,11,0.25)", color: "#92400E" }}
+          >
+            <Clock className="h-3.5 w-3.5 shrink-0" />
+            Viewing column lineage as of <strong className="mx-1">{asOf}</strong> — historical snapshot. Entity graph still shows the current state.
+            <button
+              onClick={() => setAsOf("")}
+              className="ml-auto text-[10px] font-semibold underline underline-offset-2 hover:no-underline"
+            >
+              Back to current
+            </button>
+          </div>
+        )}
         {isLoading ? (
           <Skeleton className="w-full h-full" />
         ) : activeTab === "overview" ? (
@@ -258,6 +305,7 @@ export function LineageDashboard() {
             attributes={attributes}
             entities={entities}
             initialSearch={columnsSearch}
+            asOf={asOf || undefined}
             onOpenTrace={() => setActiveTab("trace")}
           />
         )}

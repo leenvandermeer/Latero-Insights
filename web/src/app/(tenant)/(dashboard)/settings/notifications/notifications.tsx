@@ -207,7 +207,7 @@ export function NotificationsSettings() {
         config={config}
         setConfig={setConfig}
         testing={testing}
-        testResult={testResults.slack}
+        testResult={testResults.slack ?? undefined}
         onTest={() => handleTestChannel("slack")}
         showPassword={showPasswords.slack}
         setShowPassword={(show) => setShowPasswords((prev) => ({ ...prev, slack: show }))}
@@ -229,7 +229,7 @@ export function NotificationsSettings() {
         config={config}
         setConfig={setConfig}
         testing={testing}
-        testResult={testResults.pagerduty}
+        testResult={testResults.pagerduty ?? undefined}
         onTest={() => handleTestChannel("pagerduty")}
         showPassword={showPasswords.pagerduty}
         setShowPassword={(show) => setShowPasswords((prev) => ({ ...prev, pagerduty: show }))}
@@ -257,7 +257,7 @@ export function NotificationsSettings() {
         config={config}
         setConfig={setConfig}
         testing={testing}
-        testResult={testResults.email}
+        testResult={testResults.email ?? undefined}
         onTest={() => handleTestChannel("email")}
         showPassword={showPasswords.email}
         setShowPassword={(show) => setShowPasswords((prev) => ({ ...prev, email: show }))}
@@ -330,7 +330,7 @@ function ChannelCard({
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="rounded-xl p-2.5" style={{ background: "var(--color-surface)" }}>
-            <Icon className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+            <Icon className="h-4 w-4 text-accent" />
           </div>
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
             {title}

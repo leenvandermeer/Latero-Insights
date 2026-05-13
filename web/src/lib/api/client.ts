@@ -94,9 +94,12 @@ export function fetchLineageEntities(installationId?: string | null): Promise<Ap
   return request(`/lineage/entities${params}`);
 }
 
-export function fetchLineageAttributes(installationId?: string | null): Promise<ApiResponse<LineageAttribute[]>> {
-  const params = installationId ? `?installation_id=${encodeURIComponent(installationId)}` : "";
-  return request(`/lineage/attributes${params}`);
+export function fetchLineageAttributes(installationId?: string | null, asOf?: string | null): Promise<ApiResponse<LineageAttribute[]>> {
+  const p = new URLSearchParams();
+  if (installationId) p.set("installation_id", installationId);
+  if (asOf) p.set("as_of", asOf);
+  const qs = p.toString();
+  return request(`/lineage/attributes${qs ? `?${qs}` : ""}`);
 }
 
 export function fetchInstallations(): Promise<{ installations: Array<{ installation_id: string; label: string | null; environment: string; active: boolean }> }> {

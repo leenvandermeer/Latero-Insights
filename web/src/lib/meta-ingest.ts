@@ -608,7 +608,19 @@ export async function writeMetaLineage(
 // ---------------------------------------------------------------------------
 // writeMetaColumnLineage — LADR-058
 // Synchroniseert kolom-niveau lineage van lineage_attributes_current (Databricks)
-// naar meta.lineage_columns (Postgres). Gebruikt layer-scoped dataset IDs.
+// naar meta.lineage_columns (Postgres). Slaat alle SCD2-versies op zodat point-in-time
+// queries via ?as_of= ook historische versies kunnen ophalen (LADR-014).
+//
+// Required migration:
+//   UPDATE meta.lineage_columns SET valid_from = first_observed_at WHERE valid_from IS NULL;
+//   ALTER TABLE meta.lineage_columns ALTER COLUMN valid_from SET NOT NULL;
+//   ALTER TABLE meta.lineage_columns ALTER COLUMN valid_from SET DEFAULT TIMESTAMPTZ '1970-01-01';
+//   -- drop de bestaande PK/unique constraint, bijv.:
+//   ALTER TABLE meta.lineage_columns DROP CONSTRAINT IF EXISTS lineage_columns_pkey;
+//   ALTER TABLE meta.lineage_columns ADD PRIMARY KEY (
+//     installation_id, source_dataset_id, source_layer, source_column,
+//     target_dataset_id, target_layer, target_column, valid_from
+//   );
 // ---------------------------------------------------------------------------
 
 export interface MetaColumnLineageParams {
@@ -620,6 +632,8 @@ export interface MetaColumnLineageParams {
   sourceLayer: string | null;
   targetLayer: string | null;
   transformationType: string | null; // OpenLineage: "DIRECT" | "INDIRECT" | "UNKNOWN"
+  validFrom?: string | null;  // LADR-014: SCD2 validity window van Databricks meta.lineage_attribute
+  validTo?: string | null;
 }
 
 const OL_TRANSFORM_TYPES = new Set(["DIRECT", "INDIRECT", "UNKNOWN"]);
@@ -641,6 +655,9 @@ export async function writeMetaColumnLineage(
     ? params.transformationType
     : null;
 
+  const validFrom = params.validFrom ?? null;
+  const validTo = params.validTo ?? null;
+
   const client = await pool.connect();
   try {
     await client.query(
@@ -650,13 +667,18 @@ export async function writeMetaColumnLineage(
           source_dataset_id, source_layer, source_column,
           target_dataset_id, target_layer, target_column,
           transformation_type,
+          valid_from, valid_to,
           first_observed_at, last_observed_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
+                  COALESCE($9::timestamptz, TIMESTAMPTZ '1970-01-01'),
+                  $10::timestamptz,
+                  now(), now())
         ON CONFLICT (installation_id, source_dataset_id, source_layer, source_column,
-                     target_dataset_id, target_layer, target_column)
+                     target_dataset_id, target_layer, target_column, valid_from)
         DO UPDATE SET
           last_observed_at    = now(),
-          transformation_type = COALESCE(EXCLUDED.transformation_type, meta.lineage_columns.transformation_type)
+          transformation_type = COALESCE(EXCLUDED.transformation_type, meta.lineage_columns.transformation_type),
+          valid_to            = EXCLUDED.valid_to
       `,
       [
         params.installationId,
@@ -667,6 +689,8 @@ export async function writeMetaColumnLineage(
         targetLayerNorm,
         params.targetColumn,
         transformationType,
+        validFrom,
+        validTo,
       ],
     );
   } finally {

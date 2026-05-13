@@ -94,6 +94,9 @@ export interface LineageAttribute {
   source_layer?: string | null;
   target_layer?: string | null;
   is_current: boolean;
+  // SCD2 validity window (LADR-014). Null when table predates schema migration.
+  valid_from?: string | null;
+  valid_to?: string | null;
   // OpenLineage ColumnLineageFacet — afgeleid van is_direct + transformation_mode in Databricks
   transformation_type?: "DIRECT" | "INDIRECT" | "UNKNOWN" | null;
   transformation_subtype?: string | null;
@@ -117,7 +120,11 @@ export interface DataAdapter {
   getDataQualityChecks(range: DateRange): Promise<DataQualityCheck[]>;
   getLineageHops(range: DateRange): Promise<LineageHop[]>;
   getLineageEntities(): Promise<LineageEntity[]>;
-  getLineageAttributes(): Promise<LineageAttribute[]>;
+  getLineageAttributes(asOf?: string): Promise<LineageAttribute[]>;
+  // LADR-014: returns all SCD2 versions (current + historical) from the raw lineage_attribute table.
+  // Optional — only implemented by adapters whose source carries SCD2 history.
+  // Falls back to getLineageAttributes() in sync when absent.
+  getLineageAttributeHistory?(): Promise<LineageAttribute[]>;
   getLineageSchemaInventory(): Promise<LineageSchemaInventory>;
   getFieldValueReferences(): Promise<import("@/lib/widget-field-reference").FieldReference[]>;
   testConnection(): Promise<boolean>;

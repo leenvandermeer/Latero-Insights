@@ -606,45 +606,6 @@ export function LineageOverview({ entities, attributes, refreshedAt, onOpenTab, 
               ))}
             </div>
           </Panel>
-
-          <Panel title="Investigation entry points" action={<TabAction onClick={() => onOpenTab("columns")}>Open column mappings</TabAction>}>
-            <div className="grid gap-3 p-4 md:grid-cols-3">
-              <button
-                type="button"
-                onClick={() => onOpenTab("trace")}
-                className="rounded-xl px-4 py-4 text-left transition-colors hover:bg-muted/30"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-              >
-                <ShieldAlert className="h-5 w-5" style={{ color: "#EF4444" }} />
-                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Open advanced trace</p>
-                <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-                  Follow one entity path upstream or downstream with explicit depth controls.
-                </p>
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenTab("columns")}
-                className="rounded-xl px-4 py-4 text-left transition-colors hover:bg-muted/30"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-              >
-                <Columns3 className="h-5 w-5" style={{ color: "#D97706" }} />
-                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Review column mappings</p>
-                <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-                  Check whether attribute-level evidence exists for the path you are investigating.
-                </p>
-              </button>
-              <div
-                className="rounded-xl px-4 py-4"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-              >
-                <Layers3 className="h-5 w-5" style={{ color: "var(--color-brand)" }} />
-                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Use trace for deeper investigation</p>
-                <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-                  Use direction, depth, layers, and drag controls inside Advanced Trace instead of switching to a second graph mode.
-                </p>
-              </div>
-            </div>
-          </Panel>
         </div>
 
 

@@ -35,9 +35,10 @@ describe('Change Detection Engine', () => {
       const before = { object_name: 'schema_v1' };
       const after = { object_name: 'schema_v2' };
 
-      (mockPool.query as any).mockResolvedValueOnce({
-        rows: [{ id: 'evt-1' }],
-      });
+      // Mock: deduplication check returns false (no duplicate)
+      (mockPool.query as any)
+        .mockResolvedValueOnce({ rows: [] }) // shouldSkipDuplicate returns false
+        .mockResolvedValueOnce({ rows: [{ id: 'evt-1' }] }); // INSERT returns event
 
       await detectSchemaDrift('dataset1', 'inst1', before, after);
 
@@ -52,9 +53,10 @@ describe('Change Detection Engine', () => {
       const before = { object_name: 'schema_v1' };
       const after = { object_name: null };
 
-      (mockPool.query as any).mockResolvedValueOnce({
-        rows: [{ id: 'evt-1' }],
-      });
+      // Mock: deduplication check returns false (no duplicate)
+      (mockPool.query as any)
+        .mockResolvedValueOnce({ rows: [] }) // shouldSkipDuplicate returns false
+        .mockResolvedValueOnce({ rows: [{ id: 'evt-1' }] }); // INSERT returns event
 
       await detectSchemaDrift('dataset1', 'inst1', before, after);
 
@@ -68,9 +70,10 @@ describe('Change Detection Engine', () => {
       const before = { object_name: null };
       const after = { object_name: 'schema_v1' };
 
-      (mockPool.query as any).mockResolvedValueOnce({
-        rows: [{ id: 'evt-1' }],
-      });
+      // Mock: deduplication check returns false (no duplicate)
+      (mockPool.query as any)
+        .mockResolvedValueOnce({ rows: [] }) // shouldSkipDuplicate returns false
+        .mockResolvedValueOnce({ rows: [{ id: 'evt-1' }] }); // INSERT returns event
 
       await detectSchemaDrift('dataset1', 'inst1', before, after);
 
@@ -263,41 +266,44 @@ describe('Change Detection Engine', () => {
 
   describe('detectContractDrift', () => {
     it('should detect drift when SLA changes', async () => {
-      (mockPool.query as any).mockResolvedValueOnce({
-        rows: [{ id: 'evt-1' }],
-      });
+      // Mock: deduplication check returns false (no duplicate)
+      (mockPool.query as any)
+        .mockResolvedValueOnce({ rows: [] }) // shouldSkipDuplicate returns false
+        .mockResolvedValueOnce({ rows: [{ id: 'evt-1' }] }); // INSERT returns event
 
       await detectContractDrift(
         'product1',
         'inst1',
-        'SLA_TIER_1',
-        'SLA_TIER_2',
-        'v1.0',
-        'v1.0'
+        { sla: 'SLA_TIER_1', contract_ver: 'v1.0' },
+        { sla: 'SLA_TIER_2', contract_ver: 'v1.0' }
       );
 
       expect((mockPool.query as any).mock.calls.length).toBeGreaterThan(0);
     });
 
     it('should detect drift when contract_ver changes', async () => {
-      (mockPool.query as any).mockResolvedValueOnce({
-        rows: [{ id: 'evt-1' }],
-      });
+      // Mock: deduplication check returns false (no duplicate)
+      (mockPool.query as any)
+        .mockResolvedValueOnce({ rows: [] }) // shouldSkipDuplicate returns false
+        .mockResolvedValueOnce({ rows: [{ id: 'evt-1' }] }); // INSERT returns event
 
       await detectContractDrift(
         'product1',
         'inst1',
-        'SLA_TIER_1',
-        'SLA_TIER_1',
-        'v1.0',
-        'v2.0'
+        { sla: 'SLA_TIER_1', contract_ver: 'v1.0' },
+        { sla: 'SLA_TIER_1', contract_ver: 'v2.0' }
       );
 
       expect((mockPool.query as any).mock.calls.length).toBeGreaterThan(0);
     });
 
     it('should skip when both SLA and contract_ver unchanged', async () => {
-      await detectContractDrift('product1', 'inst1', 'SLA_TIER_1', 'SLA_TIER_1', 'v1.0', 'v1.0');
+      await detectContractDrift(
+        'product1',
+        'inst1',
+        { sla: 'SLA_TIER_1', contract_ver: 'v1.0' },
+        { sla: 'SLA_TIER_1', contract_ver: 'v1.0' }
+      );
 
       expect((mockPool.query as any).mock.calls.length).toBe(0);
     });

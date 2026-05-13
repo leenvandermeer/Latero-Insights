@@ -313,9 +313,18 @@ async function getLineageEntitiesFromMetaStore(installationId?: string | null): 
   })) as LineageEntity[];
 }
 
-async function getLineageAttributesFromMetaStore(installationId?: string | null): Promise<LineageAttribute[]> {
+async function getLineageAttributesFromMetaStore(installationId?: string | null, asOf?: string | null): Promise<LineageAttribute[]> {
   if (!installationId) return [];
   const pool = getPgPool();
+
+  const values: Array<string> = [installationId];
+  let temporalFilter = "";
+  if (asOf) {
+    values.push(asOf);
+    // Point-in-time filter: rows whose validity window includes asOf (LADR-014).
+    // Falls back gracefully when valid_from/valid_to are NULL (pre-migration rows).
+    temporalFilter = ` AND (c.valid_from IS NULL OR c.valid_from <= $${values.length}::timestamptz) AND (c.valid_to IS NULL OR c.valid_to > $${values.length}::timestamptz)`;
+  }
 
   const result = await pool.query(
     `
@@ -327,12 +336,14 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
         c.target_dataset_id                       AS target_name,
         c.target_column                           AS target_attribute,
         c.source_layer                            AS source_layer,
-        c.target_layer                            AS target_layer
+        c.target_layer                            AS target_layer,
+        c.valid_from,
+        c.valid_to
       FROM meta.lineage_columns c
-      WHERE c.installation_id = $1
+      WHERE c.installation_id = $1${temporalFilter}
       ORDER BY source_name, c.source_column
     `,
-    [installationId],
+    values,
   );
 
   return result.rows.map((row: {
@@ -344,6 +355,8 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
     target_attribute: string;
     source_layer: string | null;
     target_layer: string | null;
+    valid_from: string | null;
+    valid_to: string | null;
   }) => ({
     source_dataset_id: row.source_dataset_id,
     target_dataset_id: row.target_dataset_id,
@@ -353,6 +366,8 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null)
     target_attribute: row.target_attribute,
     source_layer: row.source_layer,
     target_layer: row.target_layer,
+    valid_from: row.valid_from,
+    valid_to: row.valid_to,
     is_current: true,
     provenance: "lineage_attributes_current" as const,
   })) as LineageAttribute[];
@@ -378,6 +393,6 @@ export async function getLineageEntitiesFromSaaS(installationId?: string | null)
   return getLineageEntitiesFromMetaStore(installationId);
 }
 
-export async function getLineageAttributesFromSaaS(installationId?: string | null): Promise<LineageAttribute[]> {
-  return getLineageAttributesFromMetaStore(installationId);
+export async function getLineageAttributesFromSaaS(installationId?: string | null, asOf?: string | null): Promise<LineageAttribute[]> {
+  return getLineageAttributesFromMetaStore(installationId, asOf);
 }

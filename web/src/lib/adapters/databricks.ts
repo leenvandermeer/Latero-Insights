@@ -325,10 +325,11 @@ export class DatabricksAdapter implements DataAdapter {
     );
   }
 
-  async getLineageAttributes(): Promise<LineageAttribute[]> {
+  async getLineageAttributes(asOf?: string): Promise<LineageAttribute[]> {
     const id = this.installationId;
     const columns = await describeColumns("lineage_attributes_current", id);
     const hasIsCurrent = hasColumn(columns, "is_current");
+    const hasValidFrom = hasColumn(columns, "valid_from");
     const datasetColumn = preferredColumn(columns, "dataset_id");
     const sourceLayerColumn = preferredColumn(columns, "source_layer");
     const targetLayerColumn = preferredColumn(columns, "target_layer");
@@ -342,7 +343,19 @@ export class DatabricksAdapter implements DataAdapter {
     const transformationModeExpr = hasTransformationMode
       ? ", transformation_mode AS transformation_subtype"
       : ", CAST(NULL AS STRING) AS transformation_subtype";
-    const sql = `SELECT ${datasetColumn ? `${datasetColumn} AS dataset_id, ` : "CAST(NULL AS STRING) AS dataset_id, "}source_entity_fqn AS source_name, source_attribute, target_entity_fqn AS target_name, target_attribute${sourceLayerColumn ? `, ${sourceLayerColumn} AS source_layer` : ", CAST(NULL AS STRING) AS source_layer"}${targetLayerColumn ? `, ${targetLayerColumn} AS target_layer` : ", CAST(NULL AS STRING) AS target_layer"}${hasIsCurrent ? ", is_current" : ", true AS is_current"}${isDirectExpr}${transformationModeExpr} FROM ${fqTable("lineage_attributes_current", id)}${await scopedWhereClause("lineage_attributes_current", columns, hasIsCurrent ? ["is_current = true"] : [], id)}`;
+    const validFromExpr = hasValidFrom ? ", valid_from, valid_to" : ", CAST(NULL AS STRING) AS valid_from, CAST(NULL AS STRING) AS valid_to";
+
+    // Point-in-time filter: when asOf is provided and the table has SCD2 columns, filter
+    // to rows whose validity window covers the requested date. Falls back to is_current=true
+    // when the column is absent (pre-migration instances).
+    let whereConditions: string[];
+    if (asOf && hasValidFrom) {
+      whereConditions = [`'${asOf}' >= valid_from`, `(valid_to IS NULL OR '${asOf}' < valid_to)`];
+    } else {
+      whereConditions = hasIsCurrent ? ["is_current = true"] : [];
+    }
+
+    const sql = `SELECT ${datasetColumn ? `${datasetColumn} AS dataset_id, ` : "CAST(NULL AS STRING) AS dataset_id, "}source_entity_fqn AS source_name, source_attribute, target_entity_fqn AS target_name, target_attribute${sourceLayerColumn ? `, ${sourceLayerColumn} AS source_layer` : ", CAST(NULL AS STRING) AS source_layer"}${targetLayerColumn ? `, ${targetLayerColumn} AS target_layer` : ", CAST(NULL AS STRING) AS target_layer"}${hasIsCurrent ? ", is_current" : ", true AS is_current"}${validFromExpr}${isDirectExpr}${transformationModeExpr} FROM ${fqTable("lineage_attributes_current", id)}${await scopedWhereClause("lineage_attributes_current", columns, whereConditions, id)}`;
     const resp = await executeStatement(sql, undefined, id);
     return mapRows(resp, (row, cols) => ({
       dataset_id: col(row, cols, "dataset_id"),
@@ -353,8 +366,67 @@ export class DatabricksAdapter implements DataAdapter {
       source_layer: col(row, cols, "source_layer"),
       target_layer: col(row, cols, "target_layer"),
       is_current: parseBoolean(col(row, cols, "is_current")),
+      valid_from: col(row, cols, "valid_from") ?? null,
+      valid_to: col(row, cols, "valid_to") ?? null,
       transformation_type: (col(row, cols, "transformation_type") as "DIRECT" | "INDIRECT" | "UNKNOWN" | null) ?? "UNKNOWN",
       transformation_subtype: col(row, cols, "transformation_subtype"),
+      provenance: "lineage_attributes_current",
+    }));
+  }
+
+  async getLineageAttributeHistory(): Promise<LineageAttribute[]> {
+    const id = this.installationId;
+    const rawTable = "lineage_attribute";
+    const columns = await describeColumns(rawTable, id);
+
+    // Fall back to current-only if SCD2 columns not yet present on this instance.
+    if (!hasColumn(columns, "valid_from")) {
+      return this.getLineageAttributes();
+    }
+
+    const sourceLayerExpr = hasColumn(columns, "source_layer") ? "source_layer" : "CAST(NULL AS STRING) AS source_layer";
+    const targetLayerExpr = hasColumn(columns, "target_layer") ? "target_layer" : "CAST(NULL AS STRING) AS target_layer";
+    const transformationExpr = hasColumn(columns, "transformation_mode")
+      ? "transformation_mode AS transformation_type"
+      : "CAST('UNKNOWN' AS STRING) AS transformation_type";
+    const datasetExpr = hasColumn(columns, "dataset_id") ? "dataset_id" : "CAST(NULL AS STRING) AS dataset_id";
+
+    const basePredicates = [
+      "lineage_group_id IS NOT NULL",
+      "target_attribute IS NOT NULL",
+      "COALESCE(hop_kind, 'data_flow') != 'context'",
+    ];
+
+    const sql = `
+      SELECT
+        ${datasetExpr},
+        source_entity   AS source_name,
+        source_attribute,
+        target_entity   AS target_name,
+        target_attribute,
+        ${sourceLayerExpr},
+        ${targetLayerExpr},
+        valid_from,
+        valid_to,
+        is_current,
+        ${transformationExpr}
+      FROM ${fqTable(rawTable, id)}
+      ${await scopedWhereClause(rawTable, columns, basePredicates, id)}
+    `;
+
+    const resp = await executeStatement(sql, undefined, id);
+    return mapRows(resp, (row, cols) => ({
+      dataset_id: col(row, cols, "dataset_id"),
+      source_name: col(row, cols, "source_name") ?? "",
+      source_attribute: col(row, cols, "source_attribute") ?? "",
+      target_name: col(row, cols, "target_name") ?? "",
+      target_attribute: col(row, cols, "target_attribute") ?? "",
+      source_layer: col(row, cols, "source_layer"),
+      target_layer: col(row, cols, "target_layer"),
+      valid_from: col(row, cols, "valid_from"),
+      valid_to: col(row, cols, "valid_to"),
+      is_current: parseBoolean(col(row, cols, "is_current")),
+      transformation_type: (col(row, cols, "transformation_type") as "DIRECT" | "INDIRECT" | "UNKNOWN" | null) ?? "UNKNOWN",
       provenance: "lineage_attributes_current",
     }));
   }

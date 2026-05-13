@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EntityDetail } from "./entity-detail";
+import { EntityDetailHub } from "./entity-detail-hub";
 
 export const metadata: Metadata = {
   title: "Entity — Latero Control",
@@ -11,5 +11,5 @@ export default async function EntityDetailPage({
   params: Promise<{ fqn: string }>;
 }) {
   const { fqn } = await params;
-  return <EntityDetail fqn={decodeURIComponent(fqn)} />;
+  return <EntityDetailHub entityFqn={decodeURIComponent(fqn)} />;
 }

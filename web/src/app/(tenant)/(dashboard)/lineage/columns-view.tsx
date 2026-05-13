@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, ArrowRight, AlertCircle } from "lucide-react";
+import { Search, ArrowRight, AlertCircle, ChevronDown } from "lucide-react";
 import type { LineageAttribute, LineageEntity } from "@/lib/adapters/types";
 import { lineageKeyLabel } from "./lineage-utils";
 
@@ -9,10 +9,11 @@ interface ColumnsViewProps {
   attributes: LineageAttribute[];
   entities?: LineageEntity[];
   initialSearch?: string;
+  asOf?: string;
   onOpenTrace?: () => void;
 }
 
-export function ColumnsView({ attributes, entities = [], initialSearch = "", onOpenTrace }: ColumnsViewProps) {
+export function ColumnsView({ attributes, entities = [], initialSearch = "", asOf, onOpenTrace }: ColumnsViewProps) {
   const [search, setSearch] = useState("");
   const [entityFilter, setEntityFilter] = useState("all");
 
@@ -83,35 +84,44 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "", onO
           )}
 
           {/* Entity filter */}
-          <select
-            value={entityFilter}
-            onChange={(e) => setEntityFilter(e.target.value)}
-            className="text-xs rounded-lg px-2.5 py-1.5 outline-none max-w-[240px]"
-            style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+          <div
+            className="flex items-center gap-1.5 rounded-lg px-3 py-2 max-w-[320px]"
+            style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
           >
-            <option value="all">All source entities ({coveredFqns.size} with coverage)</option>
-            {allSourceEntities.map((fqn) => {
-              const hasCoverage = coveredFqns.has(fqn);
-              return (
-                <option key={fqn} value={fqn} title={fqn}
-                  style={{ color: hasCoverage ? "var(--color-text)" : "var(--color-text-muted)" }}
-                >
-                  {lineageKeyLabel(fqn)}{hasCoverage ? "" : " (no coverage)"}
-                </option>
-              );
-            })}
-          </select>
+            <select
+              value={entityFilter}
+              onChange={(e) => setEntityFilter(e.target.value)}
+              className="bg-transparent text-xs outline-none pr-1 min-w-0 w-56"
+              style={{ color: "var(--color-text)" }}
+            >
+              <option value="all">All source entities ({coveredFqns.size} with coverage)</option>
+              {allSourceEntities.map((fqn) => {
+                const hasCoverage = coveredFqns.has(fqn);
+                return (
+                  <option key={fqn} value={fqn} title={fqn}
+                    style={{ color: hasCoverage ? "var(--color-text)" : "var(--color-text-muted)" }}
+                  >
+                    {lineageKeyLabel(fqn)}{hasCoverage ? "" : " (no coverage)"}
+                  </option>
+                );
+              })}
+            </select>
+            <ChevronDown className="h-3.5 w-3.5 pointer-events-none shrink-0" style={{ color: "var(--color-text-muted)" }} />
+          </div>
 
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: "var(--color-text-muted)" }} />
+          <div
+            className="flex items-center gap-2 rounded-lg px-3 py-2"
+            style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
+          >
+            <Search className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-text-muted)" }} />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search attribute or entity..."
-              className="text-xs rounded-lg pl-7 pr-3 py-1.5 w-52 outline-none"
-              style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+              className="bg-transparent text-xs outline-none w-56"
+              style={{ color: "var(--color-text)" }}
             />
           </div>
         </div>
@@ -225,10 +235,12 @@ export function ColumnsView({ attributes, entities = [], initialSearch = "", onO
                   <td className="px-3 py-2.5">
                     <span
                       className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                      style={{ background: "rgba(16,185,129,0.14)", color: "#047857" }}
-                      title={a.evidence ?? ""}
+                      style={asOf
+                        ? { background: "rgba(245,158,11,0.12)", color: "#B45309" }
+                        : { background: "rgba(16,185,129,0.14)", color: "#047857" }}
+                      title={asOf ? `Valid from ${a.valid_from ?? "unknown"}` : (a.evidence ?? "")}
                     >
-                      Current mapping
+                      {asOf ? `As of ${asOf}` : "Current mapping"}
                     </span>
                   </td>
                 </tr>

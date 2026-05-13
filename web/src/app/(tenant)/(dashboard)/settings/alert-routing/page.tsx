@@ -1,10 +1,6 @@
-import type { Metadata } from "next";
-import { AlertRoutingSettings } from "./alert-routing";
-
-export const metadata: Metadata = {
-  title: "Alert Routing — Settings | Latero Control",
-};
+import { redirect } from "next/navigation";
 
 export default function AlertRoutingPage() {
-  return <AlertRoutingSettings />;
+  // Redirect to settings with alert-routing tab active
+  redirect("/settings?tab=alert-routing");
 }

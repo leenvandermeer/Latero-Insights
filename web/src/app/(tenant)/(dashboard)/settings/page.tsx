@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionFromToken, checkIsAdmin } from "@/lib/session-auth";
-import { SettingsDashboard } from "./dashboard";
+import { SettingsHub } from "./settings-hub";
 
 export const dynamic = "force-dynamic";
 
@@ -24,5 +24,5 @@ export default async function SettingsPage() {
     redirect("/pipelines");
   }
 
-  return <SettingsDashboard />;
+  return <SettingsHub />;
 }

@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
   }
 
   let installationId = request.nextUrl.searchParams.get("installation_id");
+  const asOf = request.nextUrl.searchParams.get("as_of") ?? undefined;
   try {
     const session = await requireSession(request);
     installationId = session.active_installation_id;
@@ -25,8 +26,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const cacheParams: Record<string, string> = installationId
-    ? { scope: "current", installationId }
-    : { scope: "current" };
+    ? { scope: asOf ? `as_of:${asOf}` : "current", installationId }
+    : { scope: asOf ? `as_of:${asOf}` : "current" };
 
   if (isCacheOnly(installationId)) {
     const cached = getFromCache<LineageAttribute[]>(CACHE_KEY, cacheParams);
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const attributes = await getLineageAttributesFromSaaS(installationId);
+    const attributes = await getLineageAttributesFromSaaS(installationId, asOf);
     writeToCache(CACHE_KEY, cacheParams, attributes);
     const response = NextResponse.json({
       data: attributes,

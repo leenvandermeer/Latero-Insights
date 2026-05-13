@@ -184,6 +184,11 @@ export async function detectContractDrift(
  * Detecteert schema-drift voor een dataset.
  * Caller levert before/after object_name; geen extra DB-query nodig.
  * Triggered from writeMetaPipelineRun nadat de dataset upsert is gedaan.
+ *
+ * Severity logic:
+ * - null→value = "informational" (schema now available)
+ * - value→null = "significant" (schema disappeared)
+ * - value→different value = "breaking" (schema changed)
  */
 export async function detectSchemaDrift(
   datasetId: string,
@@ -192,13 +197,34 @@ export async function detectSchemaDrift(
   after: { object_name: string | null }
 ): Promise<void> {
   if (before.object_name === after.object_name) return;
-  if (!before.object_name) return; // First time seen — no drift, just creation
+
+  // Determine severity based on change type
+  let severity: ChangeSeverity;
+  let riskLevel: string;
+  let recommendedAction: string;
+
+  if (!before.object_name && after.object_name) {
+    // null → value: schema now available
+    severity = "informational";
+    riskLevel = "low";
+    recommendedAction = "Schema now tracked — no action needed.";
+  } else if (before.object_name && !after.object_name) {
+    // value → null: schema disappeared
+    severity = "significant";
+    riskLevel = "medium";
+    recommendedAction = "Schema information lost — verify dataset still exists.";
+  } else {
+    // value → different value: schema changed
+    severity = "breaking";
+    riskLevel = "high";
+    recommendedAction = "Validate downstream dependencies — object was renamed or replaced.";
+  }
 
   const pool = getPgPool();
   await writeChangeEvent(pool, {
     installationId,
     change_type: "schema_drift",
-    severity: "breaking",
+    severity,
     entity_type: "dataset",
     entity_id: datasetId,
     diff: {
@@ -207,9 +233,9 @@ export async function detectSchemaDrift(
       affected_fields: ["object_name"],
     },
     risk_assessment: {
-      level: "high",
+      level: riskLevel,
       affected_outputs: [],
-      recommended_action: "Validate downstream dependencies — object was renamed or replaced.",
+      recommended_action: recommendedAction,
     },
   });
 }

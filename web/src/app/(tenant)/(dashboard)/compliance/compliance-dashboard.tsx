@@ -38,6 +38,7 @@ import {
   useResolveException,
 } from "@/hooks/use-compliance";
 import type { VerdictValue, PolicyPack, Policy, PolicyException } from "@/hooks/use-compliance";
+import { ImprovedExceptionsView } from "./improved-exceptions-view";
 
 // ── Condition options (mirrors policy-engine.ts CONDITIONS) ──────────────────
 
@@ -1117,7 +1118,7 @@ export function ComplianceDashboard() {
         )}
 
         {/* ── Exceptions view ───────────────────────────────────────────── */}
-        {!isLoading && viewMode === "exceptions" && <ExceptionsView />}
+        {!isLoading && viewMode === "exceptions" && <ImprovedExceptionsView />}
 
         {/* Empty — no policies */}
         {!isLoading && !hasData && (

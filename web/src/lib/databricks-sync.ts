@@ -63,9 +63,12 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
     adapter.getActiveEnvironmentScope(),
   ]);
 
-  // Column lineage: snapshot uit lineage_attributes_current (niet tijdgebonden)
-  // Wordt geparallel opgehaald want onafhankelijk van date range
-  const attributes = await adapter.getLineageAttributes();
+  // Column lineage: alle SCD2-versies via getLineageAttributeHistory() zodat historische
+  // versies ook naar Postgres worden geschreven. Valt terug op getLineageAttributes() als
+  // de raw tabel nog geen SCD2-kolommen heeft (pre-migratie instanties).
+  const attributes = adapter.getLineageAttributeHistory
+    ? await adapter.getLineageAttributeHistory()
+    : await adapter.getLineageAttributes();
 
   if (runs.length === 0 && checks.length === 0 && hops.length === 0) {
     console.warn(
@@ -133,6 +136,8 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       sourceLayer: attr.source_layer ?? null,
       targetLayer: attr.target_layer ?? null,
       transformationType: attr.transformation_type ?? null,
+      validFrom: attr.valid_from ?? null,
+      validTo: attr.valid_to ?? null,
     });
   }
 
