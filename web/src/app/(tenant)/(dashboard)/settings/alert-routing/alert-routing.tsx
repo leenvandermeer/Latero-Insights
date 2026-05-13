@@ -3,6 +3,21 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, GripVertical, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useDataProducts, DataProduct } from "@/hooks/use-data-products";
+
+const CHANGE_TYPES = [
+  { value: "schema_drift",      label: "Schema drift" },
+  { value: "contract_drift",    label: "Contract drift" },
+  { value: "ownership_drift",   label: "Ownership drift" },
+  { value: "statistical_drift", label: "Statistical drift" },
+  { value: "lineage_drift",     label: "Lineage drift" },
+];
+
+const SEVERITIES = [
+  { value: "breaking",      label: "Breaking" },
+  { value: "significant",   label: "Significant" },
+  { value: "informational", label: "Informational" },
+];
 
 interface RoutingRule {
   id: string;
@@ -32,12 +47,14 @@ function newRule(): RoutingRule {
   };
 }
 
-function RuleEditor({ rule, onChange, onDelete }: {
+function RuleEditor({ rule, onChange, onDelete, domains, products }: {
   rule: RoutingRule;
   onChange: (r: RoutingRule) => void;
   onDelete: () => void;
+  domains: string[];
+  products: { id: string; label: string }[];
 }) {
-  const inputStyle = {
+  const inputStyle: React.CSSProperties = {
     background: "var(--color-surface-raised)",
     border: "1px solid var(--color-border)",
     color: "var(--color-text)",
@@ -48,13 +65,19 @@ function RuleEditor({ rule, onChange, onDelete }: {
     width: "100%",
   };
 
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    appearance: "none" as React.CSSProperties["appearance"],
+    cursor: "pointer",
+  };
+
   return (
     <div className="rounded-xl p-4 flex gap-3"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
       <GripVertical className="h-4 w-4 mt-1 shrink-0" style={{ color: "var(--color-text-muted)" }} />
 
       <div className="flex-1 flex flex-col gap-3">
-        {/* Name + active */}
+        {/* Name + active + priority */}
         <div className="flex items-center gap-2">
           <input
             value={rule.name}
@@ -62,7 +85,7 @@ function RuleEditor({ rule, onChange, onDelete }: {
             style={{ ...inputStyle, flexGrow: 1 }}
             placeholder="Rule name"
           />
-          <label className="flex items-center gap-1 text-xs whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
+          <label className="flex items-center gap-1 text-xs whitespace-nowrap select-none" style={{ color: "var(--color-text-muted)" }}>
             <input type="checkbox" checked={rule.active} onChange={(e) => onChange({ ...rule, active: e.target.checked })} />
             Active
           </label>
@@ -71,44 +94,93 @@ function RuleEditor({ rule, onChange, onDelete }: {
             value={rule.priority}
             onChange={(e) => onChange({ ...rule, priority: parseInt(e.target.value, 10) || 0 })}
             style={{ ...inputStyle, width: "56px" }}
-            title="Priority (lower = higher)"
+            title="Priority (lower = evaluated first)"
             placeholder="0"
           />
         </div>
 
         {/* Conditions */}
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--color-text-muted)" }}>
+          <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--color-text-muted)" }}>
             Conditions
           </p>
           <div className="grid grid-cols-2 gap-2">
-            {(["type", "domain", "severity", "product_id"] as const).map((field) => (
-              <div key={field}>
-                <label className="text-[10px] mb-0.5 block" style={{ color: "var(--color-text-muted)" }}>{field}</label>
-                <input
-                  value={rule.conditions[field] ?? ""}
-                  onChange={(e) => onChange({ ...rule, conditions: { ...rule.conditions, [field]: e.target.value || undefined } })}
-                  style={inputStyle}
-                  placeholder={`any ${field}`}
-                />
-              </div>
-            ))}
+            {/* Type */}
+            <div>
+              <label className="text-[10px] mb-0.5 block" style={{ color: "var(--color-text-muted)" }}>Change type</label>
+              <select
+                value={rule.conditions.type ?? ""}
+                onChange={(e) => onChange({ ...rule, conditions: { ...rule.conditions, type: e.target.value || undefined } })}
+                style={selectStyle}
+              >
+                <option value="">Any type</option>
+                {CHANGE_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Severity */}
+            <div>
+              <label className="text-[10px] mb-0.5 block" style={{ color: "var(--color-text-muted)" }}>Severity</label>
+              <select
+                value={rule.conditions.severity ?? ""}
+                onChange={(e) => onChange({ ...rule, conditions: { ...rule.conditions, severity: e.target.value || undefined } })}
+                style={selectStyle}
+              >
+                <option value="">Any severity</option>
+                {SEVERITIES.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Domain */}
+            <div>
+              <label className="text-[10px] mb-0.5 block" style={{ color: "var(--color-text-muted)" }}>Domain</label>
+              <select
+                value={rule.conditions.domain ?? ""}
+                onChange={(e) => onChange({ ...rule, conditions: { ...rule.conditions, domain: e.target.value || undefined } })}
+                style={selectStyle}
+              >
+                <option value="">Any domain</option>
+                {domains.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Product */}
+            <div>
+              <label className="text-[10px] mb-0.5 block" style={{ color: "var(--color-text-muted)" }}>Product</label>
+              <select
+                value={rule.conditions.product_id ?? ""}
+                onChange={(e) => onChange({ ...rule, conditions: { ...rule.conditions, product_id: e.target.value || undefined } })}
+                style={selectStyle}
+              >
+                <option value="">Any product</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Actions */}
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--color-text-muted)" }}>
+          <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--color-text-muted)" }}>
             Actions
           </p>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] mb-0.5 block" style={{ color: "var(--color-text-muted)" }}>Notify (email/channel)</label>
+              <label className="text-[10px] mb-0.5 block" style={{ color: "var(--color-text-muted)" }}>Notify (email / channel)</label>
               <input
                 value={rule.actions.notify ?? ""}
                 onChange={(e) => onChange({ ...rule, actions: { ...rule.actions, notify: e.target.value || undefined } })}
                 style={inputStyle}
-                placeholder="e.g. data-team@example.com"
+                placeholder="data-team@example.com"
+                type="email"
               />
             </div>
             <div>
@@ -136,6 +208,11 @@ export function AlertRoutingSettings() {
   const qc = useQueryClient();
   const [rules, setRules] = useState<RoutingRule[]>([]);
   const [dirty, setDirty] = useState(false);
+
+  const { data: allProducts } = useDataProducts();
+  const productList: DataProduct[] = allProducts ?? [];
+  const domains = [...new Set(productList.map((p) => p.domain).filter((d): d is string => d != null))];
+  const products = productList.map((p) => ({ id: p.data_product_id, label: p.display_name }));
 
   const { data, isLoading } = useQuery({
     queryKey: ["alert-routing-rules"],
@@ -217,6 +294,8 @@ export function AlertRoutingSettings() {
             rule={rule}
             onChange={(r) => updateRule(idx, r)}
             onDelete={() => deleteRule(idx)}
+            domains={domains}
+            products={products}
           />
         ))}
       </div>
