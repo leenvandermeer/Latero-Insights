@@ -219,11 +219,8 @@ export class DatabricksAdapter implements DataAdapter {
     // source_layer/target_layer: LMETA-015 — aanwezig in Databricks workspace.meta.runs
     const optional = ["job_name", "parent_run_id", "source_layer", "target_layer"]
       .filter((name) => hasColumn(columns, name));
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, source_system, run_id, run_status, duration_ms, environment${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("runs", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("runs", columns, id)} ORDER BY timestamp_utc DESC`;
-    const resp = await executeStatement(sql, [
-      { name: "date_from", value: range.from, type: "STRING" },
-      { name: "date_to", value: range.to, type: "STRING" },
-    ], id);
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, source_system, run_id, run_status, duration_ms, environment${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("runs", id)} WHERE event_date >= '${escapeSqlString(range.from)}' AND event_date <= '${escapeSqlString(range.to)}'${await liveDataPredicate("runs", columns, id)} ORDER BY timestamp_utc DESC`;
+    const resp = await executeStatement(sql, undefined, id);
     return mapRows(resp, (row, cols) => ({
       event_type: col(row, cols, "event_type") ?? "",
       timestamp_utc: col(row, cols, "timestamp_utc") ?? "",
@@ -249,11 +246,8 @@ export class DatabricksAdapter implements DataAdapter {
     const optional = ["environment", "severity", "check_mode", "parent_run_id"]
       .filter((name) => hasColumn(columns, name));
     const checkResultExpr = checkResultCol ? `, ${checkResultCol} AS check_result` : "";
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, run_id, check_id, check_status, check_category, policy_version${optional.length > 0 ? `, ${optional.join(", ")}` : ""}${checkResultExpr} FROM ${fqTable("dq_results", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("dq_results", columns, id)} ORDER BY timestamp_utc DESC`;
-    const resp = await executeStatement(sql, [
-      { name: "date_from", value: range.from, type: "STRING" },
-      { name: "date_to", value: range.to, type: "STRING" },
-    ], id);
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, run_id, check_id, check_status, check_category, policy_version${optional.length > 0 ? `, ${optional.join(", ")}` : ""}${checkResultExpr} FROM ${fqTable("dq_results", id)} WHERE event_date >= '${escapeSqlString(range.from)}' AND event_date <= '${escapeSqlString(range.to)}'${await liveDataPredicate("dq_results", columns, id)} ORDER BY timestamp_utc DESC`;
+    const resp = await executeStatement(sql, undefined, id);
     return mapRows(resp, (row, cols) => ({
       event_type: col(row, cols, "event_type") ?? "",
       timestamp_utc: col(row, cols, "timestamp_utc") ?? "",
@@ -283,11 +277,8 @@ export class DatabricksAdapter implements DataAdapter {
       "source_system", "installation_id", "environment", "schema_version",
       "hop_kind", "source_layer", "target_layer", "lineage_group_id",
     ].filter((name) => hasColumn(columns, name));
-    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, run_id, source_entity, source_type, source_ref, ${sourceAttributeExpr}, target_entity, target_type, target_ref, ${targetAttributeExpr}${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("lineage_dataset", id)} WHERE event_date >= :date_from AND event_date <= :date_to${await liveDataPredicate("lineage_dataset", columns, id)} ORDER BY timestamp_utc DESC`;
-    const resp = await executeStatement(sql, [
-      { name: "date_from", value: range.from, type: "STRING" },
-      { name: "date_to", value: range.to, type: "STRING" },
-    ], id);
+    const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, run_id, source_entity, source_type, source_ref, ${sourceAttributeExpr}, target_entity, target_type, target_ref, ${targetAttributeExpr}${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("lineage_dataset", id)} WHERE event_date >= '${escapeSqlString(range.from)}' AND event_date <= '${escapeSqlString(range.to)}'${await liveDataPredicate("lineage_dataset", columns, id)} ORDER BY timestamp_utc DESC`;
+    const resp = await executeStatement(sql, undefined, id);
     return mapRows(resp, (row, cols) => ({
       event_type: col(row, cols, "event_type") ?? "",
       timestamp_utc: col(row, cols, "timestamp_utc") ?? "",
