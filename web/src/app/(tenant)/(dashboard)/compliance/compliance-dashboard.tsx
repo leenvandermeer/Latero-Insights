@@ -389,6 +389,7 @@ function PolicyRow({
   const deletePolicy = useDeletePolicy();
   const updatePolicy = useUpdatePolicy();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   let pass = 0, fail = 0, exception = 0, unknown = 0;
   for (const p of products) {
@@ -401,8 +402,13 @@ function PolicyRow({
   const total = products.length;
 
   const handleDelete = async () => {
-    await deletePolicy.mutateAsync(policy.id);
-    setConfirmDelete(false);
+    setDeleteError(null);
+    try {
+      await deletePolicy.mutateAsync(policy.id);
+      setConfirmDelete(false);
+    } catch {
+      setDeleteError("Verwijderen mislukt — probeer opnieuw.");
+    }
   };
 
   const handleToggleActive = () => {
@@ -478,21 +484,26 @@ function PolicyRow({
       <div className="flex items-center gap-1 flex-shrink-0">
         {confirmDelete ? (
           <>
-            <span className="text-xs mr-1" style={{ color: "var(--color-error)" }}>Delete?</span>
+            {deleteError && (
+              <span className="text-xs mr-1" style={{ color: "var(--color-error)" }}>{deleteError}</span>
+            )}
+            {!deleteError && (
+              <span className="text-xs mr-1" style={{ color: "var(--color-error)" }}>Verwijderen?</span>
+            )}
             <button
               onClick={handleDelete}
               disabled={deletePolicy.isPending}
               className="text-xs px-2 py-1 rounded font-medium disabled:opacity-50"
               style={{ background: "var(--color-error-subtle)", color: "var(--color-error)" }}
             >
-              {deletePolicy.isPending ? "…" : "Yes"}
+              {deletePolicy.isPending ? "…" : "Ja"}
             </button>
             <button
-              onClick={() => setConfirmDelete(false)}
+              onClick={() => { setConfirmDelete(false); setDeleteError(null); }}
               className="text-xs px-2 py-1 rounded"
               style={{ background: "var(--color-surface-alt)", color: "var(--color-text-muted)" }}
             >
-              No
+              Nee
             </button>
           </>
         ) : (
@@ -713,11 +724,13 @@ export function ComplianceDashboard() {
   const [showPacksModal, setShowPacksModal] = useState(false);
   const [viewMode, setViewMode]     = useState<ViewMode>("explorer");
   const [explorerQuery, setExplorerQuery] = useState("");
+  const [explorerConfirmDelete, setExplorerConfirmDelete] = useState<string | null>(null);
   const [expandedPolicies, setExpandedPolicies] = useState<Set<string>>(new Set());
 
   const { data: policiesData }              = usePolicies();
   const { data: complianceData, isLoading } = useComplianceMatrix();
   const runAll                              = useRunAllCompliance();
+  const deletePolicy                        = useDeletePolicy();
   const { runningCells, localVerdicts, runCell, resetLocalVerdicts } = useCellRunner();
 
   const policies = policiesData?.policies   ?? [];
@@ -966,16 +979,55 @@ export function ComplianceDashboard() {
                             </div>
                           </div>
                         )}
-                        {/* Edit button */}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); setModalState({ open: true, policy: pol }); }}
-                          className="p-1.5 rounded shrink-0"
-                          style={{ color: "var(--color-text-muted)" }}
-                          title="Edit policy"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                        {/* Edit + delete buttons */}
+                        <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {explorerConfirmDelete === pol.id ? (
+                            <>
+                              <span className="text-xs mr-1" style={{ color: "var(--color-error)" }}>Verwijderen?</span>
+                              <button
+                                type="button"
+                                disabled={deletePolicy.isPending}
+                                onClick={async () => {
+                                  try { await deletePolicy.mutateAsync(pol.id); }
+                                  finally { setExplorerConfirmDelete(null); }
+                                }}
+                                className="text-xs px-2 py-1 rounded font-medium disabled:opacity-50"
+                                style={{ background: "var(--color-error-subtle)", color: "var(--color-error)" }}
+                              >
+                                {deletePolicy.isPending ? "…" : "Ja"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setExplorerConfirmDelete(null)}
+                                className="text-xs px-2 py-1 rounded"
+                                style={{ background: "var(--color-surface-alt)", color: "var(--color-text-muted)" }}
+                              >
+                                Nee
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setModalState({ open: true, policy: pol })}
+                                className="p-1.5 rounded"
+                                style={{ color: "var(--color-text-muted)" }}
+                                title="Bewerk policy"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setExplorerConfirmDelete(pol.id)}
+                                className="p-1.5 rounded"
+                                style={{ color: "var(--color-text-muted)" }}
+                                title="Verwijder policy"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                       {/* Expanded: product chips */}
                       {isExpanded && (
