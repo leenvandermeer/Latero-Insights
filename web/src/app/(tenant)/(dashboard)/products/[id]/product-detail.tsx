@@ -7,12 +7,14 @@ import {
   Shield, GitBranch, Plus, ArrowRight, Loader2, CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useDataProduct, useUpdateDataProduct, useDeleteDataProduct,
   type DataProduct, type DataProductInput,
 } from "@/hooks/use-data-products";
 import { useEntities } from "@/hooks/use-entities";
+import { useQuality } from "@/hooks/use-quality";
+import type { DataQualityCheck } from "@/lib/adapters/types";
 import { useRefreshTrustScore, useTrustScore, type TrustFactor } from "@/hooks/use-trust-score";
 import { toast } from "sonner";
 import { useIncidents } from "@/hooks/use-incidents";
@@ -21,12 +23,13 @@ import { TrustScoreBadge } from "@/components/trust/trust-score-badge";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "incidents" | "lineage" | "evidence";
+type Tab = "overview" | "incidents" | "lineage" | "quality" | "evidence";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview",  label: "Overview" },
   { id: "incidents", label: "Issues" },
   { id: "lineage",   label: "Lineage" },
+  { id: "quality",   label: "Data Quality" },
   { id: "evidence",  label: "Evidence" },
 ];
 
@@ -201,9 +204,8 @@ function ProductMembersPanel({
             onClick={onManageMembers}
             className="rounded-lg px-3 py-1.5 text-xs font-medium"
             style={{
-              background: "var(--color-surface-alt)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
+              background: "var(--color-brand)",
+              color: "var(--color-text-on-dark)",
             }}
           >
             Manage members
@@ -302,6 +304,7 @@ function ManageMembersModal({
   product: DataProduct;
   onClose: () => void;
 }) {
+  const qc     = useQueryClient();
   const update = useUpdateDataProduct(product.data_product_id);
   const { data } = useEntities();
   const [query, setQuery] = useState("");
@@ -338,6 +341,7 @@ function ManageMembersModal({
     setError(null);
     try {
       await update.mutateAsync({ entity_ids: selected });
+      await qc.invalidateQueries({ queryKey: ["entities"] });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update members");
@@ -937,30 +941,546 @@ function IncidentsTab({ productId }: { productId: string }) {
 
 // ── Lineage tab ───────────────────────────────────────────────────────────────
 
-function LineageTab({ productId }: { productId: string }) {
-  return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
-      <ProductMembersPanel productId={productId} compact />
+const LAYER_SEQUENCE = ["landing", "raw", "bronze", "silver", "gold"] as const;
+type Layer = (typeof LAYER_SEQUENCE)[number];
 
+const LAYER_ABBR: Record<Layer, string> = {
+  landing: "L",
+  raw: "R",
+  bronze: "B",
+  silver: "S",
+  gold: "G",
+};
+
+function LayerFlowBar({ members }: { members: ProductMemberEntity[] }) {
+  const countsByLayer = useMemo(() => {
+    const counts: Partial<Record<Layer, number>> = {};
+    for (const entity of members) {
+      const highest = getEntityHighestLayer(entity) as Layer | null;
+      if (highest) counts[highest] = (counts[highest] ?? 0) + 1;
+    }
+    return counts;
+  }, [members]);
+
+  return (
+    <div
+      className="rounded-xl p-4"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <p
+        className="text-[11px] font-semibold uppercase tracking-[0.18em] mb-3"
+        style={{ color: "var(--color-text-muted)" }}
+      >
+        Pipeline layers
+      </p>
+      <div className="flex items-center gap-0">
+        {LAYER_SEQUENCE.map((layer, index) => {
+          const count = countsByLayer[layer] ?? 0;
+          const present = count > 0;
+          const style = present ? ENTITY_LAYER_STYLE[layer] : null;
+          return (
+            <React.Fragment key={layer}>
+              {index > 0 && (
+                <div
+                  className="flex-1 h-px min-w-[12px]"
+                  style={{
+                    background: present || (countsByLayer[LAYER_SEQUENCE[index - 1]] ?? 0) > 0
+                      ? "var(--color-border)"
+                      : "var(--color-border)",
+                    opacity: present || (countsByLayer[LAYER_SEQUENCE[index - 1]] ?? 0) > 0 ? 1 : 0.35,
+                  }}
+                />
+              )}
+              <div className="flex flex-col items-center gap-1 shrink-0">
+                <div
+                  className="h-3 w-3 rounded-full"
+                  title={present ? `${count} ${count === 1 ? "entity" : "entities"} in ${layer}` : `No entities in ${layer}`}
+                  style={{
+                    background: present ? style!.text : "var(--color-border)",
+                    opacity: present ? 1 : 0.35,
+                  }}
+                />
+                <span
+                  className="text-[10px] font-medium hidden sm:block capitalize"
+                  style={{ color: present ? "var(--color-text)" : "var(--color-text-muted)", opacity: present ? 1 : 0.5 }}
+                >
+                  {layer}
+                </span>
+                <span
+                  className="text-[10px] font-medium sm:hidden"
+                  style={{ color: present ? "var(--color-text)" : "var(--color-text-muted)", opacity: present ? 1 : 0.5 }}
+                >
+                  {LAYER_ABBR[layer]}
+                </span>
+                <span
+                  className="text-[10px]"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
+                  {present ? count : "—"}
+                </span>
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LayerGroupedEntities({
+  productId,
+  onGoToOverview,
+}: {
+  productId: string;
+  onGoToOverview: () => void;
+}) {
+  const { data, isLoading } = useEntities({ product_id: productId });
+
+  const { grouped, unclassified } = useMemo(() => {
+    const rows = (data?.data ?? []) as ProductMemberEntity[];
+    const byLayer: Partial<Record<Layer, ProductMemberEntity[]>> = {};
+    const unclassifiedEntities: ProductMemberEntity[] = [];
+
+    for (const entity of rows) {
+      const highestLayer = getEntityHighestLayer(entity);
+      if (highestLayer) {
+        byLayer[highestLayer as Layer] = [...(byLayer[highestLayer as Layer] ?? []), entity];
+      } else {
+        unclassifiedEntities.push(entity);
+      }
+    }
+
+    const orderedGroups: { layer: Layer; entities: ProductMemberEntity[] }[] = [];
+    for (let i = LAYER_SEQUENCE.length - 1; i >= 0; i--) {
+      const layer = LAYER_SEQUENCE[i];
+      if (byLayer[layer]?.length) {
+        orderedGroups.push({
+          layer,
+          entities: (byLayer[layer] ?? []).sort((a, b) =>
+            (a.display_name ?? a.entity_id).localeCompare(b.display_name ?? b.entity_id)
+          ),
+        });
+      }
+    }
+
+    return { grouped: orderedGroups, unclassified: unclassifiedEntities };
+  }, [data]);
+
+  const allMembers = useMemo(
+    () => (data?.data ?? []) as ProductMemberEntity[],
+    [data]
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={index}
+            className="rounded-xl p-4 animate-pulse"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          >
+            <div className="h-4 w-32 rounded mb-2" style={{ background: "var(--color-border)" }} />
+            <div className="h-3 w-48 rounded" style={{ background: "var(--color-border)" }} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (allMembers.length === 0) {
+    return (
       <div
-        className="rounded-xl p-5 flex flex-col gap-4"
+        className="rounded-xl p-8 flex flex-col items-center gap-3 text-center"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
-        <div className="flex items-center gap-2">
-          <GitBranch className="h-4 w-4" style={{ color: "var(--color-text-muted)" }} />
-          <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            Trace workflow
-          </h2>
+        <GitBranch className="h-5 w-5" style={{ color: "var(--color-text-muted)" }} />
+        <div>
+          <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+            No member entities
+          </p>
+          <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+            Add entities from the Overview tab to trace lineage.
+          </p>
         </div>
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Start from a member entity to inspect upstream sources or downstream consumers in Trace.
+        <button
+          type="button"
+          onClick={onGoToOverview}
+          className="mt-1 flex items-center gap-1 text-xs font-medium hover:underline"
+          style={{ color: "var(--color-brand)" }}
+        >
+          Go to Overview <ArrowRight className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <LayerFlowBar members={allMembers} />
+
+      {grouped.map(({ layer, entities }) => {
+        const layerStyle = ENTITY_LAYER_STYLE[layer];
+        return (
+          <div key={layer} className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span
+                className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                style={{ color: layerStyle.text }}
+              >
+                {layer}
+              </span>
+              <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                · {entities.length} {entities.length === 1 ? "entity" : "entities"}
+              </span>
+            </div>
+            {entities.map((entity) => {
+              const health = ENTITY_HEALTH_STYLE[entity.health_status ?? "UNKNOWN"] ?? ENTITY_HEALTH_STYLE.UNKNOWN;
+              return (
+                <div
+                  key={entity.entity_id}
+                  className="rounded-xl px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/entities/${encodeURIComponent(entity.entity_id)}`}
+                      className="text-sm font-medium hover:underline"
+                      style={{ color: "var(--color-text)" }}
+                    >
+                      {entity.display_name || entity.entity_id}
+                    </Link>
+                    <p
+                      className="mt-0.5 text-[11px] truncate"
+                      title={entity.entity_id}
+                      style={{ color: "var(--color-text-muted)" }}
+                    >
+                      {entity.entity_id}
+                    </p>
+                    <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                      <Badge bg={layerStyle.bg} text={layerStyle.text} label={layer} />
+                      <Badge bg={health.bg} text={health.text} label={(entity.health_status ?? "unknown").toLowerCase()} />
+                    </div>
+                  </div>
+                  <Link
+                    href={`/lineage?entity_fqn=${encodeURIComponent(entity.entity_id)}`}
+                    className="flex items-center gap-1 text-xs font-medium hover:underline shrink-0 min-h-[var(--touch-target-min)] sm:min-h-0"
+                    style={{ color: "var(--color-brand)" }}
+                  >
+                    Open trace <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+
+      {unclassified.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              Unclassified
+            </span>
+            <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+              · {unclassified.length} {unclassified.length === 1 ? "entity" : "entities"}
+            </span>
+          </div>
+          {unclassified.map((entity) => {
+            const health = ENTITY_HEALTH_STYLE[entity.health_status ?? "UNKNOWN"] ?? ENTITY_HEALTH_STYLE.UNKNOWN;
+            return (
+              <div
+                key={entity.entity_id}
+                className="rounded-xl px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={`/entities/${encodeURIComponent(entity.entity_id)}`}
+                    className="text-sm font-medium hover:underline"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    {entity.display_name || entity.entity_id}
+                  </Link>
+                  <p
+                    className="mt-0.5 text-[11px] truncate"
+                    title={entity.entity_id}
+                    style={{ color: "var(--color-text-muted)" }}
+                  >
+                    {entity.entity_id}
+                  </p>
+                  <div className="mt-2">
+                    <Badge bg={health.bg} text={health.text} label={(entity.health_status ?? "unknown").toLowerCase()} />
+                  </div>
+                </div>
+                <Link
+                  href={`/lineage?entity_fqn=${encodeURIComponent(entity.entity_id)}`}
+                  className="flex items-center gap-1 text-xs font-medium hover:underline shrink-0 min-h-[var(--touch-target-min)] sm:min-h-0"
+                  style={{ color: "var(--color-brand)" }}
+                >
+                  Open trace <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div
+        className="rounded-xl px-4 py-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+          Explore upstream sources and downstream consumers across all systems.
         </p>
         <Link
           href="/lineage"
-          className="flex items-center justify-center gap-1.5 text-xs px-4 py-2 rounded-lg font-medium"
+          className="flex items-center justify-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg shrink-0 min-h-[var(--touch-target-min)] sm:min-h-0"
           style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
         >
-          Open lineage workspace <ArrowRight className="h-3.5 w-3.5" />
+          Open Lineage Explorer <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function LineageTab({
+  productId,
+  onGoToOverview,
+}: {
+  productId: string;
+  onGoToOverview: () => void;
+}) {
+  return <LayerGroupedEntities productId={productId} onGoToOverview={onGoToOverview} />;
+}
+
+// ── Data Quality tab ──────────────────────────────────────────────────────────
+
+const DQ_STATUS_STYLE: Record<string, { bg: string; text: string }> = {
+  PASS:    { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
+  SUCCESS: { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
+  FAIL:    { bg: "var(--color-error-subtle)",   text: "var(--color-error)" },
+  FAILED:  { bg: "var(--color-error-subtle)",   text: "var(--color-error)" },
+  WARN:    { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
+  WARNING: { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
+  ERROR:   { bg: "var(--color-error-subtle)",   text: "var(--color-error)" },
+  UNKNOWN: { bg: "var(--color-surface-alt)",    text: "var(--color-text-muted)" },
+};
+
+const DQ_CATEGORY_STYLE: Record<string, { bg: string; text: string }> = {
+  schema:       { bg: "var(--color-brand-subtle)",   text: "var(--color-brand)" },
+  accuracy:     { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
+  completeness: { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
+  freshness:    { bg: "var(--color-brand-subtle)",   text: "var(--color-brand)" },
+  uniqueness:   { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
+  custom:       { bg: "var(--color-surface-alt)",    text: "var(--color-text-muted)" },
+};
+
+function DataQualityTab({ productId }: { productId: string }) {
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const thirtyDaysAgo = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  const { data: entitiesData } = useEntities({ product_id: productId });
+  const memberFqns = useMemo(
+    () => new Set(((entitiesData?.data ?? []) as ProductMemberEntity[]).map((e) => e.entity_id)),
+    [entitiesData]
+  );
+
+  const { data: qualityData, isLoading } = useQuality(thirtyDaysAgo, today);
+
+  const checks = useMemo(() => {
+    const all = (qualityData?.data ?? []) as DataQualityCheck[];
+    return all
+      .filter((c) => memberFqns.has(c.dataset_id))
+      .sort((a, b) => new Date(b.timestamp_utc).getTime() - new Date(a.timestamp_utc).getTime());
+  }, [qualityData, memberFqns]);
+
+  const filtered = useMemo(
+    () => statusFilter === "all" ? checks : checks.filter((c) => c.check_status === statusFilter),
+    [checks, statusFilter]
+  );
+
+  const stats = useMemo(() => {
+    const total  = checks.length;
+    const passed = checks.filter((c) => c.check_status === "PASS").length;
+    const failed = checks.filter((c) => c.check_status === "FAIL" || c.check_status === "ERROR").length;
+    const warned = checks.filter((c) => c.check_status === "WARN").length;
+    const passRate = total > 0 ? Math.round((passed / total) * 100) : null;
+    return { total, passed, failed, warned, passRate };
+  }, [checks]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-xl p-4 flex items-start gap-3 animate-pulse"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          >
+            <div className="h-5 w-14 rounded-full shrink-0" style={{ background: "var(--color-border)" }} />
+            <div className="flex-1 flex flex-col gap-2">
+              <div className="h-4 w-48 rounded" style={{ background: "var(--color-border)" }} />
+              <div className="h-3 w-32 rounded" style={{ background: "var(--color-border)" }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (checks.length === 0) {
+    return (
+      <div
+        className="rounded-xl p-8 flex flex-col items-center gap-3 text-center"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <CheckCircle2 className="h-5 w-5" style={{ color: "var(--color-text-muted)" }} />
+        <div>
+          <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+            No quality checks found
+          </p>
+          <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+            No checks recorded for this product's member entities in the last 30 days.
+          </p>
+        </div>
+        <Link
+          href="/quality"
+          className="flex items-center gap-1 text-xs font-medium hover:underline"
+          style={{ color: "var(--color-brand)" }}
+        >
+          Open Data Quality <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Stats row */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-muted)" }}>Pass rate</p>
+          <p className="mt-2 text-2xl font-semibold" style={{ color: stats.passRate !== null && stats.passRate >= 80 ? "var(--color-success)" : "var(--color-error)" }}>
+            {stats.passRate !== null ? `${stats.passRate}%` : "—"}
+          </p>
+          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>Last 30 days</p>
+        </div>
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-muted)" }}>Total</p>
+          <p className="mt-2 text-2xl font-semibold" style={{ color: "var(--color-text)" }}>{stats.total}</p>
+          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>Checks run</p>
+        </div>
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-muted)" }}>Failed</p>
+          <p className="mt-2 text-2xl font-semibold" style={{ color: stats.failed > 0 ? "var(--color-error)" : "var(--color-text)" }}>{stats.failed}</p>
+          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>Fail + error</p>
+        </div>
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--color-text-muted)" }}>Warnings</p>
+          <p className="mt-2 text-2xl font-semibold" style={{ color: stats.warned > 0 ? "var(--color-warning)" : "var(--color-text)" }}>{stats.warned}</p>
+          <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>Checks with warn</p>
+        </div>
+      </div>
+
+      {/* Status filter */}
+      <div className="flex flex-wrap gap-1.5">
+        {(["all", "PASS", "FAIL", "WARN", "ERROR"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setStatusFilter(s)}
+            className="rounded-full px-2.5 py-1 text-[11px] font-medium"
+            style={{
+              background: statusFilter === s ? "var(--color-brand)" : "var(--color-surface)",
+              color: statusFilter === s ? "var(--color-text-on-dark)" : "var(--color-text-muted)",
+              border: statusFilter === s ? "none" : "1px solid var(--color-border)",
+            }}
+          >
+            {s === "all" ? "All checks" : s}
+          </button>
+        ))}
+      </div>
+
+      {/* Check list */}
+      {filtered.length === 0 && (
+        <div
+          className="rounded-xl p-6 text-center"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No checks match this filter.</p>
+        </div>
+      )}
+
+      {filtered.map((check, index) => {
+        const statusStyle   = DQ_STATUS_STYLE[check.check_status] ?? DQ_STATUS_STYLE.UNKNOWN;
+        const categoryStyle = { bg: "var(--color-brand-subtle)", text: "var(--color-brand)" };
+        return (
+          <div
+            key={`${check.result_id ?? check.check_id}-${index}`}
+            className="rounded-xl px-4 py-3 flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          >
+            <span
+              className="px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 w-fit"
+              style={{ background: categoryStyle.bg, color: categoryStyle.text }}
+            >
+              {check.check_category ?? "quality"}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" style={{ color: "var(--color-text)" }}>
+                {check.check_name || check.check_id}
+              </p>
+              <p className="text-[11px] mt-0.5 truncate" title={check.dataset_id} style={{ color: "var(--color-text-muted)" }}>
+                {check.dataset_id}
+              </p>
+              {check.message && (
+                <p className="text-xs mt-1 line-clamp-1" style={{ color: "var(--color-text-muted)" }}>{check.message}</p>
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <span className="text-[11px] font-semibold" style={{ color: statusStyle.text }}>
+                {check.check_status}
+              </span>
+              <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                {new Date(check.timestamp_utc).toLocaleString("en-GB", {
+                  day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+                })}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="flex justify-end">
+        <Link
+          href="/quality"
+          className="flex items-center gap-1 text-xs font-medium hover:underline"
+          style={{ color: "var(--color-brand)" }}
+        >
+          Open full Data Quality view <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
     </div>
@@ -969,33 +1489,45 @@ function LineageTab({ productId }: { productId: string }) {
 
 // ── Evidence tab ──────────────────────────────────────────────────────────────
 
+interface ActivityRecord {
+  id: string;
+  source: "pipeline_run";
+  entity_fqn: string;
+  status: string;
+  occurred_at: string;
+  label: string | null;
+  detail: string | null;
+}
+
+const ACTIVITY_STATUS_STYLE: Record<string, { color: string }> = {
+  SUCCESS: { color: "var(--color-success)" },
+  FAILED:  { color: "var(--color-error)" },
+  WARNING: { color: "var(--color-warning)" },
+  RUNNING: { color: "var(--color-brand)" },
+};
+
 const EVENT_COLORS: Record<string, { bg: string; text: string }> = {
-  quality_run:    { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
-  lineage_update: { bg: "var(--color-brand-subtle)",   text: "var(--color-brand)" },
-  policy_check:   { bg: "var(--color-warning-subtle)", text: "var(--color-warning)" },
-  incident:       { bg: "var(--color-error-subtle)",   text: "var(--color-error)" },
+  quality_check:       { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
+  transformation:      { bg: "var(--color-brand-subtle)",   text: "var(--color-brand)" },
+  source_snapshot:     { bg: "var(--color-brand-subtle)",   text: "var(--color-brand)" },
+  approval:            { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
+  exception:           { bg: "var(--color-error-subtle)",   text: "var(--color-error)" },
+  incident_resolved:   { bg: "var(--color-success-subtle)", text: "var(--color-success)" },
 };
 
 function summarisePayload(eventType: string, payload: Record<string, unknown>): string {
   switch (eventType) {
-    case "quality_run": {
+    case "quality_check": {
       const check  = payload.check_name ?? payload.check_id ?? "check";
       const result = payload.result ?? payload.status ?? payload.verdict;
       return result ? `${String(check)}: ${String(result)}` : String(check);
     }
-    case "lineage_update": {
-      const from = payload.source ?? payload.from;
-      const to   = payload.target ?? payload.to;
-      if (from && to) return `${String(from)} → ${String(to)}`;
-      return payload.message ? String(payload.message) : "Lineage updated";
-    }
-    case "policy_check": {
-      const policy  = payload.policy_name ?? payload.policy_id ?? "policy";
-      const verdict = payload.verdict ?? payload.result;
-      return verdict ? `${String(policy)}: ${String(verdict)}` : String(policy);
-    }
-    case "incident":
-      return payload.title ? String(payload.title) : "Incident recorded";
+    case "approval":
+      return payload.approved_by ? `Approved by ${String(payload.approved_by)}` : "Approval recorded";
+    case "exception":
+      return payload.reason ? String(payload.reason) : "Exception recorded";
+    case "incident_resolved":
+      return payload.title ? `Resolved: ${String(payload.title)}` : "Incident resolved";
     default: {
       const entries = Object.entries(payload).slice(0, 3);
       return entries.length === 0 ? "—" : entries.map(([k, v]) => `${k}: ${String(v)}`).join(" · ");
@@ -1004,8 +1536,17 @@ function summarisePayload(eventType: string, payload: Record<string, unknown>): 
 }
 
 function EvidenceTab({ productId }: { productId: string }) {
-  const [eventFilter, setEventFilter] = useState<string>("all");
-  const { data, isLoading } = useQuery({
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ["product-activity", productId],
+    queryFn: () =>
+      fetch(`/api/products/${encodeURIComponent(productId)}/activity`)
+        .then((r) => r.json())
+        .then((b: { data: ActivityRecord[] }) => b.data ?? []),
+    staleTime: 30_000,
+    retry: 1,
+  });
+
+  const { data: ledgerData, isLoading: ledgerLoading } = useQuery({
     queryKey: ["evidence", productId],
     queryFn: () =>
       fetch(`/api/products/${encodeURIComponent(productId)}/evidence`)
@@ -1015,26 +1556,20 @@ function EvidenceTab({ productId }: { productId: string }) {
     retry: 1,
   });
 
-  const filteredData = useMemo(() => {
-    if (!data) return [];
-    if (eventFilter === "all") return data;
-    return data.filter((record) => record.event_type === eventFilter);
-  }, [data, eventFilter]);
+  const activity = useMemo(() => activityData ?? [], [activityData]);
+  const ledger   = useMemo(() => ledgerData   ?? [], [ledgerData]);
 
-  const eventTypes = useMemo(
-    () => Array.from(new Set((data ?? []).map((record) => record.event_type))),
-    [data]
-  );
+  const isLoading = activityLoading || ledgerLoading;
 
   if (isLoading) {
     return (
       <div className="flex flex-col gap-2">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="rounded-xl p-4 flex items-start gap-3 animate-pulse"
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
             <div className="h-5 w-20 rounded-full shrink-0" style={{ background: "var(--color-border)" }} />
             <div className="flex-1 flex flex-col gap-2">
-              <div className="h-4 w-full rounded" style={{ background: "var(--color-border)" }} />
+              <div className="h-4 w-48 rounded" style={{ background: "var(--color-border)" }} />
               <div className="h-3 w-32 rounded" style={{ background: "var(--color-border)" }} />
             </div>
           </div>
@@ -1043,85 +1578,112 @@ function EvidenceTab({ productId }: { productId: string }) {
     );
   }
 
-  if (!data || data.length === 0) {
-    return (
-      <div
-        className="rounded-xl p-8 text-center"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <Shield className="h-6 w-6 mx-auto mb-2" style={{ color: "var(--color-text-muted)" }} />
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No evidence records yet.</p>
-        <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-          Records appear automatically as pipeline runs and quality checks complete.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        <button
-          type="button"
-          onClick={() => setEventFilter("all")}
-          className="rounded-full px-2.5 py-1 text-[11px] font-medium"
-          style={{
-            background: eventFilter === "all" ? "var(--color-brand)" : "var(--color-surface)",
-            color: eventFilter === "all" ? "var(--color-text-on-dark)" : "var(--color-text-muted)",
-            border: eventFilter === "all" ? "none" : "1px solid var(--color-border)",
-          }}
-        >
-          All events
-        </button>
-        {eventTypes.map((eventType) => (
-          <button
-            key={eventType}
-            type="button"
-            onClick={() => setEventFilter(eventType)}
-            className="rounded-full px-2.5 py-1 text-[11px] font-medium"
-            style={{
-              background: eventFilter === eventType ? "var(--color-brand)" : "var(--color-surface)",
-              color: eventFilter === eventType ? "var(--color-text-on-dark)" : "var(--color-text-muted)",
-              border: eventFilter === eventType ? "none" : "1px solid var(--color-border)",
-            }}
+    <div className="flex flex-col gap-4">
+
+      {/* ── Activity feed ── */}
+      <div className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+          Pipeline runs — last 30 days
+        </h2>
+
+        {activity.length === 0 && (
+          <div
+            className="rounded-xl p-6 text-center"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
           >
-            {eventType.replace(/_/g, " ")}
-          </button>
-        ))}
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+              No activity recorded for this product's member entities in the last 30 days.
+            </p>
+          </div>
+        )}
+
+        {activity.map((rec) => {
+          const sourceStyle = { bg: "var(--color-brand-subtle)", text: "var(--color-brand)" };
+          const statusColor = ACTIVITY_STATUS_STYLE[rec.status]?.color ?? "var(--color-text-muted)";
+          const shortFqn = rec.entity_fqn.split(".").slice(-2).join(".");
+          return (
+            <div
+              key={rec.id}
+              className="rounded-xl px-4 py-3 flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+            >
+              <span
+                className="px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 w-fit"
+                style={{ background: sourceStyle.bg, color: sourceStyle.text }}
+              >
+                {rec.source === "pipeline_run" ? "run" : "quality"}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate" style={{ color: "var(--color-text)" }}>
+                  {rec.label || shortFqn}
+                </p>
+                <p className="text-[11px] truncate mt-0.5" title={rec.entity_fqn} style={{ color: "var(--color-text-muted)" }}>
+                  {rec.entity_fqn}
+                </p>
+                {rec.detail && (
+                  <p className="text-xs mt-1 line-clamp-1" style={{ color: "var(--color-text-muted)" }}>{rec.detail}</p>
+                )}
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className="text-[11px] font-semibold" style={{ color: statusColor }}>
+                  {rec.status}
+                </span>
+                <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                  {new Date(rec.occurred_at).toLocaleString("en-GB", {
+                    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {filteredData.map((rec) => {
-        const style   = EVENT_COLORS[rec.event_type] ?? { bg: "var(--color-surface-alt)", text: "var(--color-text-muted)" };
-        const summary = summarisePayload(rec.event_type, rec.payload);
-        return (
-          <div key={rec.id} className="rounded-xl p-4 flex items-start gap-3"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-            <span
-              className="px-2 py-0.5 rounded-full text-xs font-medium mt-0.5 shrink-0"
-              style={{ background: style.bg, color: style.text }}
-            >
-              {rec.event_type.replace(/_/g, " ")}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm truncate" style={{ color: "var(--color-text)" }}>{summary}</p>
-              <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-                {new Date(rec.recorded_at).toLocaleString("en-GB", {
-                  day: "2-digit", month: "short", year: "numeric",
-                  hour: "2-digit", minute: "2-digit",
-                })}
-                {rec.recorded_by && ` · ${rec.recorded_by}`}
-              </p>
-            </div>
-          </div>
-        );
-      })}
-      {filteredData.length === 0 && (
+      {/* ── Formal evidence ledger ── */}
+      {ledger.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Formal evidence records
+          </h2>
+          {ledger.map((rec) => {
+            const style   = EVENT_COLORS[rec.event_type] ?? { bg: "var(--color-surface-alt)", text: "var(--color-text-muted)" };
+            const summary = summarisePayload(rec.event_type, rec.payload);
+            return (
+              <div key={rec.id} className="rounded-xl p-4 flex items-start gap-3"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold mt-0.5 shrink-0"
+                  style={{ background: style.bg, color: style.text }}
+                >
+                  {rec.event_type.replace(/_/g, " ")}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm truncate" style={{ color: "var(--color-text)" }}>{summary}</p>
+                  <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+                    {new Date(rec.recorded_at).toLocaleString("en-GB", {
+                      day: "2-digit", month: "short", year: "numeric",
+                      hour: "2-digit", minute: "2-digit",
+                    })}
+                    {rec.recorded_by && ` · ${rec.recorded_by}`}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {ledger.length === 0 && (
         <div
-          className="rounded-xl p-6 text-center"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          className="rounded-xl px-4 py-3 flex items-start gap-3"
+          style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)" }}
         >
-          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-            No evidence records match this filter.
+          <Shield className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "var(--color-text-muted)" }} />
+          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+            No formal evidence records yet. Push them via{" "}
+            <code className="font-mono">POST /api/products/{"{id}"}/evidence</code>{" "}
+            to build an auditable trail.
           </p>
         </div>
       )}
@@ -1138,7 +1700,7 @@ export function ProductDetail({ productId }: { productId: string }) {
 
   const tab = useMemo<Tab>(() => {
     const v = searchParams.get("tab");
-    return (v === "overview" || v === "incidents" || v === "lineage" || v === "evidence") ? v : "overview";
+    return (v === "overview" || v === "incidents" || v === "lineage" || v === "quality" || v === "evidence") ? v : "overview";
   }, [searchParams]);
 
   const { data: productResponse, isLoading, error } = useDataProduct(productId);
@@ -1315,7 +1877,8 @@ export function ProductDetail({ productId }: { productId: string }) {
           />
         )}
         {tab === "incidents" && <IncidentsTab productId={productId} />}
-        {tab === "lineage"   && <LineageTab productId={productId} />}
+        {tab === "lineage"   && <LineageTab productId={productId} onGoToOverview={() => setTab("overview")} />}
+        {tab === "quality"   && <DataQualityTab productId={productId} />}
         {tab === "evidence"  && <EvidenceTab productId={productId} />}
       </div>
 

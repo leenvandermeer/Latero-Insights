@@ -5,29 +5,7 @@ import { useRouter } from "next/navigation";
 import { Boxes, Search } from "lucide-react";
 import { useEntities } from "@/hooks/use-entities";
 
-// ── Status badge ─────────────────────────────────────────────────────────────
-
-const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
-  SUCCESS: { bg: "var(--color-success-subtle)",  text: "var(--color-success)" },
-  FAILED:  { bg: "var(--color-error-subtle)",    text: "var(--color-error)" },
-  WARNING: { bg: "var(--color-warning-subtle)",  text: "var(--color-warning)" },
-  UNKNOWN: { bg: "var(--color-surface-raised)",  text: "var(--color-text-muted)" },
-  RUNNING: { bg: "var(--color-brand-subtle)",    text: "var(--color-brand)" },
-};
-
-function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_STYLE[status] ?? STATUS_STYLE.UNKNOWN;
-  return (
-    <span
-      className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase"
-      style={{ background: s.bg, color: s.text }}
-    >
-      {status}
-    </span>
-  );
-}
-
-// ── Layer pill ────────────────────────────────────────────────────────────────
+// ── Layer badge ───────────────────────────────────────────────────────────────
 
 const LAYER_COLORS: Record<string, { bg: string; text: string }> = {
   landing: { bg: "var(--color-surface-raised)",  text: "var(--color-text-muted)" },
@@ -37,24 +15,27 @@ const LAYER_COLORS: Record<string, { bg: string; text: string }> = {
   gold:    { bg: "var(--color-warning-subtle)",   text: "var(--color-warning)" },
 };
 
-function LayerPill({ layer, status }: { layer: string; status: string }) {
-  const c = LAYER_COLORS[layer] ?? { bg: "var(--color-surface)", text: "var(--color-text-muted)" };
-  const failed = status === "FAILED";
-  const unknown = status === "UNKNOWN";
+function LayerBadge({ layer }: { layer: string }) {
+  const c = LAYER_COLORS[layer] ?? { bg: "var(--color-surface-raised)", text: "var(--color-text-muted)" };
   return (
     <span
-      className="text-[10px] font-mono px-2 py-0.5 rounded capitalize"
-      style={{
-        background: failed ? "var(--color-error-subtle)" : unknown ? "var(--color-surface-raised)" : c.bg,
-        color: failed ? "var(--color-error)" : unknown ? "var(--color-text-muted)" : c.text,
-        border: unknown ? "1px solid var(--color-border)" : "none",
-        opacity: unknown ? 0.7 : 1,
-      }}
+      className="text-[10px] font-mono px-2 py-0.5 rounded capitalize flex-shrink-0"
+      style={{ background: c.bg, color: c.text }}
     >
       {layer}
     </span>
   );
 }
+
+// ── Status style ──────────────────────────────────────────────────────────────
+
+const STATUS_COLOR: Record<string, string> = {
+  SUCCESS: "var(--color-success)",
+  FAILED:  "var(--color-error)",
+  WARNING: "var(--color-warning)",
+  RUNNING: "var(--color-brand)",
+  UNKNOWN: "var(--color-text-muted)",
+};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -75,67 +56,98 @@ interface Entity {
   layer_statuses: LayerStatus[];
 }
 
-// ── Row ───────────────────────────────────────────────────────────────────────
+// ── Card row ──────────────────────────────────────────────────────────────────
 
-function EntityRow({ entity, onOpenTrace }: { entity: Entity; onOpenTrace: (entityId: string) => void }) {
-  const updatedAgo = (() => {
-    if (!entity.latest_run_at) return null;
-    const diff = Date.now() - new Date(entity.latest_run_at).getTime();
-    const d = Math.floor(diff / 86400000);
-    if (d === 0) return "today";
-    if (d === 1) return "yesterday";
-    return `${d}d ago`;
-  })();
+const LAYER_SEQUENCE = ["landing", "raw", "bronze", "silver", "gold"] as const;
+
+function getHighestLayer(statuses: LayerStatus[]): string | null {
+  let best: string | null = null;
+  let bestIdx = -1;
+  for (const ls of statuses) {
+    const idx = LAYER_SEQUENCE.indexOf(ls.layer as typeof LAYER_SEQUENCE[number]);
+    if (idx > bestIdx) { bestIdx = idx; best = ls.layer; }
+  }
+  return best;
+}
+
+function EntityCard({ entity, onOpenTrace }: { entity: Entity; onOpenTrace: (entityId: string) => void }) {
+  const highestLayer = getHighestLayer(entity.layer_statuses);
+  const statusColor = STATUS_COLOR[entity.health_status] ?? "var(--color-text-muted)";
+
+  const runAt = entity.latest_run_at
+    ? new Date(entity.latest_run_at).toLocaleString("nl-NL", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      })
+    : null;
 
   return (
-    <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-      <td className="py-2.5 pr-4">
-        <div>
-          <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-            {entity.display_name || entity.entity_id}
+    <div
+      className="flex items-start gap-3 rounded-xl px-4 py-3"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
+      {/* Layer badge */}
+      <div className="pt-0.5">
+        {highestLayer ? (
+          <LayerBadge layer={highestLayer} />
+        ) : (
+          <span
+            className="text-[10px] font-mono px-2 py-0.5 rounded"
+            style={{ background: "var(--color-surface-raised)", color: "var(--color-text-muted)" }}
+          >
+            —
           </span>
-          <span className="block font-mono text-[10px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            {entity.entity_id}
+        )}
+      </div>
+
+      {/* Name + id */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate" style={{ color: "var(--color-text)" }}>
+          {entity.display_name || entity.entity_id}
+        </p>
+        <p className="mt-0.5 font-mono text-[10px] truncate" style={{ color: "var(--color-text-muted)" }}>
+          {entity.entity_id}
+        </p>
+        {entity.layer_statuses.length > 1 && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {entity.layer_statuses.map((ls) => (
+              <LayerBadge key={ls.layer} layer={ls.layer} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Status + time + action */}
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <span className="text-xs font-semibold" style={{ color: statusColor }}>
+          {entity.health_status}
+        </span>
+        {runAt && (
+          <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
+            {runAt}
           </span>
-        </div>
-      </td>
-      <td className="py-2.5 pr-4">
-        <StatusBadge status={entity.health_status} />
-      </td>
-      <td className="py-2.5 pr-4">
-        <div className="flex flex-wrap gap-1">
-          {entity.layer_statuses.map((ls) => (
-            <LayerPill key={ls.layer} layer={ls.layer} status={ls.latest_status} />
-          ))}
-        </div>
-      </td>
-      <td className="py-2.5 text-xs" style={{ color: "var(--color-text-muted)" }}>
-        {updatedAgo ?? "—"}
-      </td>
-      <td className="py-2.5 text-right">
+        )}
         <button
           type="button"
           onClick={() => onOpenTrace(entity.entity_id)}
-          className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-brand)" }}
+          className="mt-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold"
+          style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-brand)" }}
         >
           Open Trace
         </button>
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
 
-// ── Tab ───────────────────────────────────────────────────────────────────────
-
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const LAYERS = ["silver", "gold"] as const;
+const LAYERS = ["landing", "raw", "bronze", "silver", "gold"] as const;
 const STATUSES = ["SUCCESS", "FAILED", "WARNING", "RUNNING"] as const;
 
 const STATUS_LABEL: Record<string, string> = {
   SUCCESS: "Success",
-  FAILED: "Failed",
+  FAILED:  "Failed",
   WARNING: "Warning",
   RUNNING: "Running",
 };
@@ -166,19 +178,11 @@ export function EntityTab({
   });
   const entities = (data?.data ?? []) as Entity[];
 
-  function FilterPill({
-    active,
-    label,
-    onClick,
-  }: {
-    active: boolean;
-    label: string;
-    onClick: () => void;
-  }) {
+  function FilterPill({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
     return (
       <button
         onClick={onClick}
-        className="px-2.5 py-1 rounded text-xs font-medium"
+        className="px-2.5 py-1 rounded text-xs font-medium capitalize"
         style={{
           background: active ? "var(--color-brand)" : "var(--color-surface)",
           color: active ? "white" : "var(--color-text-muted)",
@@ -195,7 +199,6 @@ export function EntityTab({
       {/* Filters */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
           <div
             className="flex items-center gap-2 rounded-lg px-3 py-2"
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", maxWidth: 280 }}
@@ -211,30 +214,18 @@ export function EntityTab({
             />
           </div>
 
-          {/* Layer filter */}
           <div className="flex items-center gap-1 flex-wrap">
-            <FilterPill active={layer === ""} label="All" onClick={() => onChangeLayer("")} />
+            <FilterPill active={layer === ""} label="All layers" onClick={() => onChangeLayer("")} />
             {LAYERS.map((l) => (
-              <FilterPill
-                key={l}
-                active={layer === l}
-                label={l}
-                onClick={() => onChangeLayer(layer === l ? "" : l)}
-              />
+              <FilterPill key={l} active={layer === l} label={l} onClick={() => onChangeLayer(layer === l ? "" : l)} />
             ))}
           </div>
         </div>
 
-        {/* Status filter */}
         <div className="flex items-center gap-1 flex-wrap">
-          <FilterPill active={status === ""} label="All" onClick={() => onChangeStatus("")} />
+          <FilterPill active={status === ""} label="All statuses" onClick={() => onChangeStatus("")} />
           {STATUSES.map((s) => (
-            <FilterPill
-              key={s}
-              active={status === s}
-              label={STATUS_LABEL[s] ?? s}
-              onClick={() => onChangeStatus(status === s ? "" : s)}
-            />
+            <FilterPill key={s} active={status === s} label={STATUS_LABEL[s] ?? s} onClick={() => onChangeStatus(status === s ? "" : s)} />
           ))}
         </div>
       </div>
@@ -242,17 +233,13 @@ export function EntityTab({
       {isLoading && (
         <div className="flex flex-col gap-2">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="rounded-lg h-12 animate-pulse"
-              style={{ background: "var(--color-surface)" }}
-            />
+            <div key={i} className="rounded-xl h-16 animate-pulse" style={{ background: "var(--color-surface)" }} />
           ))}
         </div>
       )}
 
       {isError && (
-        <p className="text-sm py-8 text-center" style={{ color: "#ef4444" }}>
+        <p className="text-sm py-8 text-center" style={{ color: "var(--color-error)" }}>
           Failed to load entities.
         </p>
       )}
@@ -267,31 +254,14 @@ export function EntityTab({
       )}
 
       {!isLoading && !isError && entities.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
-          <table className="w-full text-left" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["Entity", "Status", "Layers", "Last run", ""].map((h) => (
-                  <th
-                    key={h}
-                    className="pb-2 text-xs font-semibold pr-4"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {entities.map((e) => (
-                <EntityRow
-                  key={e.entity_id}
-                  entity={e}
-                  onOpenTrace={(entityId) => router.push(`/lineage?entity_fqn=${encodeURIComponent(entityId)}`)}
-                />
-              ))}
-            </tbody>
-          </table>
+        <div className="flex flex-col gap-2">
+          {entities.map((e) => (
+            <EntityCard
+              key={e.entity_id}
+              entity={e}
+              onOpenTrace={(entityId) => router.push(`/lineage?entity_fqn=${encodeURIComponent(entityId)}`)}
+            />
+          ))}
         </div>
       )}
     </div>

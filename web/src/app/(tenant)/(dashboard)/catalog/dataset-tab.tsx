@@ -16,10 +16,10 @@ const LAYER_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 function LayerBadge({ layer }: { layer: string }) {
-  const c = LAYER_COLORS[layer] ?? { bg: "var(--color-surface)", text: "var(--color-text-muted)" };
+  const c = LAYER_COLORS[layer] ?? { bg: "var(--color-surface-raised)", text: "var(--color-text-muted)" };
   return (
     <span
-      className="text-[10px] font-mono px-2 py-0.5 rounded capitalize"
+      className="text-[10px] font-mono px-2 py-0.5 rounded capitalize flex-shrink-0"
       style={{ background: c.bg, color: c.text }}
     >
       {layer}
@@ -27,7 +27,7 @@ function LayerBadge({ layer }: { layer: string }) {
   );
 }
 
-// ── Status dot ────────────────────────────────────────────────────────────────
+// ── Status color ──────────────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, string> = {
   SUCCESS: "var(--color-success)",
@@ -35,22 +35,6 @@ const STATUS_COLOR: Record<string, string> = {
   WARNING: "var(--color-warning)",
   RUNNING: "var(--color-brand)",
 };
-
-function StatusDot({ status }: { status: string | null }) {
-  const color = STATUS_COLOR[status ?? ""] ?? "var(--color-text-muted)";
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-xs"
-      style={{ color: "var(--color-text-muted)" }}
-    >
-      <span
-        className="inline-block h-2 w-2 rounded-full"
-        style={{ background: status ? color : "var(--color-border)" }}
-      />
-      {status ?? "—"}
-    </span>
-  );
-}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -65,68 +49,84 @@ interface Dataset {
   latest_run_at: string | null;
 }
 
-// ── Row ───────────────────────────────────────────────────────────────────────
+// ── Card row ──────────────────────────────────────────────────────────────────
 
-function DatasetRow({
+function DatasetCard({
   dataset,
   onOpenTrace,
 }: {
   dataset: Dataset;
   onOpenTrace?: (entityId: string) => void;
 }) {
-  const updatedAgo = (() => {
-    if (!dataset.latest_run_at) return null;
-    const diff = Date.now() - new Date(dataset.latest_run_at).getTime();
-    const d = Math.floor(diff / 86400000);
-    if (d === 0) return "today";
-    if (d === 1) return "yesterday";
-    return `${d}d ago`;
-  })();
+  const statusColor = STATUS_COLOR[dataset.latest_run_status ?? ""] ?? "var(--color-text-muted)";
+
+  const runAt = dataset.latest_run_at
+    ? new Date(dataset.latest_run_at).toLocaleString("nl-NL", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      })
+    : null;
 
   return (
-    <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-      <td className="py-2.5 pr-4">
-        <div>
-          <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-            {dataset.object_name}
-          </span>
-          {dataset.namespace && (
-            <span className="block font-mono text-[10px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-              {dataset.namespace}
-            </span>
-          )}
-        </div>
-      </td>
-      <td className="py-2.5 pr-4">
+    <div
+      className="flex items-start gap-3 rounded-xl px-4 py-3"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
+      {/* Layer badge */}
+      <div className="pt-0.5">
         <LayerBadge layer={dataset.layer} />
-      </td>
-      <td className="py-2.5 pr-4">
-        <StatusDot status={dataset.latest_run_status} />
-      </td>
-      <td className="py-2.5 pr-4 text-xs font-mono" style={{ color: "var(--color-text-muted)" }}>
-        {dataset.entity_id ?? "—"}
-      </td>
-      <td className="py-2.5 text-xs" style={{ color: "var(--color-text-muted)" }}>
-        {updatedAgo ?? "—"}
-      </td>
-      <td className="py-2.5 text-right">
-        <button
-          type="button"
-          disabled={!dataset.entity_id || !onOpenTrace}
-          onClick={() => dataset.entity_id && onOpenTrace?.(dataset.entity_id)}
-          className="rounded-lg px-2.5 py-1 text-[11px] font-semibold disabled:opacity-40"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-brand)" }}
+      </div>
+
+      {/* Name + namespace */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate" style={{ color: "var(--color-text)" }}>
+          {dataset.object_name}
+        </p>
+        {dataset.namespace && (
+          <p className="mt-0.5 font-mono text-[10px] truncate" style={{ color: "var(--color-text-muted)" }}>
+            {dataset.namespace}
+          </p>
+        )}
+        {dataset.entity_id && (
+          <p className="mt-0.5 font-mono text-[10px] truncate" style={{ color: "var(--color-text-muted)" }}>
+            {dataset.entity_id}
+          </p>
+        )}
+      </div>
+
+      {/* Status + time + action */}
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <span
+          className="text-xs font-semibold"
+          style={{ color: dataset.latest_run_status ? statusColor : "var(--color-text-muted)" }}
         >
-          Open Trace
-        </button>
-      </td>
-    </tr>
+          {dataset.latest_run_status ?? "—"}
+        </span>
+        {runAt && (
+          <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
+            {runAt}
+          </span>
+        )}
+        {dataset.entity_id && onOpenTrace && (
+          <button
+            type="button"
+            onClick={() => dataset.entity_id && onOpenTrace(dataset.entity_id)}
+            className="mt-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold"
+            style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-brand)" }}
+          >
+            Open Trace
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
-// ── Tab ───────────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-const LAYERS = ["landing", "raw", "bronze"] as const;
+const LAYERS = ["landing", "raw", "bronze", "silver", "gold"] as const;
+
+// ── Tab ───────────────────────────────────────────────────────────────────────
 
 export function DatasetTab({
   q,
@@ -163,7 +163,7 @@ export function DatasetTab({
           />
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           <button
             onClick={() => onChangeLayer("")}
             className="px-2.5 py-1 rounded text-xs font-medium"
@@ -173,7 +173,7 @@ export function DatasetTab({
               border: layer === "" ? "none" : "1px solid var(--color-border)",
             }}
           >
-            All
+            All layers
           </button>
           {LAYERS.map((l) => (
             <button
@@ -195,17 +195,13 @@ export function DatasetTab({
       {isLoading && (
         <div className="flex flex-col gap-2">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="rounded-lg h-12 animate-pulse"
-              style={{ background: "var(--color-surface)" }}
-            />
+            <div key={i} className="rounded-xl h-16 animate-pulse" style={{ background: "var(--color-surface)" }} />
           ))}
         </div>
       )}
 
       {isError && (
-        <p className="text-sm py-8 text-center" style={{ color: "#ef4444" }}>
+        <p className="text-sm py-8 text-center" style={{ color: "var(--color-error)" }}>
           Failed to load datasets.
         </p>
       )}
@@ -220,31 +216,14 @@ export function DatasetTab({
       )}
 
       {!isLoading && !isError && datasets.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
-          <table className="w-full text-left" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["Dataset", "Layer", "Status", "Entity", "Last run", ""].map((h) => (
-                  <th
-                    key={h}
-                    className="pb-2 text-xs font-semibold pr-4"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {datasets.map((d) => (
-                <DatasetRow
-                  key={`${d.dataset_id}-${d.layer}`}
-                  dataset={d}
-                  onOpenTrace={(entityId) => router.push(`/lineage?entity_fqn=${encodeURIComponent(entityId)}`)}
-                />
-              ))}
-            </tbody>
-          </table>
+        <div className="flex flex-col gap-2">
+          {datasets.map((d) => (
+            <DatasetCard
+              key={`${d.dataset_id}-${d.layer}`}
+              dataset={d}
+              onOpenTrace={(entityId) => router.push(`/lineage?entity_fqn=${encodeURIComponent(entityId)}`)}
+            />
+          ))}
         </div>
       )}
     </div>

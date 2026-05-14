@@ -296,7 +296,7 @@ function ProductCard({ product }: { product: Product }) {
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 type SortKey = "name_asc" | "name_desc" | "updated";
-type ReadinessFilter = "all" | "ready" | "needs_attention" | "missing_owner" | "missing_sla";
+type ReadinessFilter = "all" | "ready" | "needs_attention" | "no_members";
 
 function SummaryCard({
   label,
@@ -360,8 +360,7 @@ export function ProductRegistry() {
       list = list.filter((product) => {
         if (readiness === "ready") return getReadinessState(product) === "ready";
         if (readiness === "needs_attention") return getReadinessState(product) === "needs_attention";
-        if (readiness === "missing_owner") return !product.owner;
-        if (readiness === "missing_sla") return !product.sla_tier;
+        if (readiness === "no_members") return (product.entity_count ?? 0) === 0;
         return true;
       });
     }
@@ -403,10 +402,10 @@ export function ProductRegistry() {
   }, [products, refreshing, qc]);
 
   const metrics = useMemo(() => {
-    const ready = products.filter((product) => getReadinessState(product) === "ready").length;
-    const missingOwner = products.filter((product) => !product.owner).length;
-    const missingSla = products.filter((product) => !product.sla_tier).length;
-    return { ready, missingOwner, missingSla };
+    const ready         = products.filter((p) => getReadinessState(p) === "ready").length;
+    const needsAttention = products.filter((p) => getReadinessState(p) === "needs_attention").length;
+    const noMembers     = products.filter((p) => (p.entity_count ?? 0) === 0).length;
+    return { ready, needsAttention, noMembers };
   }, [products]);
 
   useEffect(() => {
@@ -503,9 +502,9 @@ export function ProductRegistry() {
 
       <div className="grid gap-4 mb-6 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard label="Products" value={products.length} hint="Registered in this tenant" icon={Layers3} />
-        <SummaryCard label="Ready" value={metrics.ready} hint="Owner, SLA, domain, members, classification and steward present" icon={CircleCheckBig} />
-        <SummaryCard label="Missing owner" value={metrics.missingOwner} hint="Needs clear accountability" icon={UserRound} />
-        <SummaryCard label="Missing SLA" value={metrics.missingSla} hint="No declared service tier" icon={ShieldAlert} />
+        <SummaryCard label="Ready" value={metrics.ready} hint="All governance fields complete" icon={CircleCheckBig} />
+        <SummaryCard label="Needs attention" value={metrics.needsAttention} hint="One or more governance fields missing" icon={ShieldAlert} />
+        <SummaryCard label="No members" value={metrics.noMembers} hint="Products without linked entities" icon={UserRound} />
       </div>
 
       {/* Filters */}
@@ -558,8 +557,7 @@ export function ProductRegistry() {
             <option value="all">All readiness states</option>
             <option value="ready">Ready</option>
             <option value="needs_attention">Needs attention</option>
-            <option value="missing_owner">Missing owner</option>
-            <option value="missing_sla">Missing SLA</option>
+            <option value="no_members">No members</option>
           </select>
           <ChevronDown className="h-3.5 w-3.5 pointer-events-none shrink-0" style={{ color: "var(--color-text-muted)" }} />
         </div>
