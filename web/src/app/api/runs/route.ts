@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
   const to   = rawTo   && /^\d{4}-\d{2}-\d{2}$/.test(rawTo)   ? rawTo   : defaultTo;
 
   const status = params.get("status");
+  const step = params.get("step");
   const product_id = params.get("product_id");
   const entity = params.get("entity");
   const cursor = params.get("cursor"); // ISO timestamp for cursor-based pagination
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest) {
 
   let filters = "";
   if (status) { filters += ` AND r.status = $${idx++}`; values.push(status.toUpperCase()); }
+  if (step) { filters += ` AND j.job_name ILIKE $${idx++}`; values.push(`%${step}%`); }
   if (entity) { filters += ` AND j.dataset_id = $${idx++}`; values.push(entity); }
   if (product_id) { filters += ` AND j.dataset_id = $${idx++}`; values.push(product_id); }
   if (cursor) { filters += ` AND r.started_at < $${idx++}`; values.push(cursor); }

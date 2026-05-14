@@ -2,7 +2,7 @@ import type { DataQualityCheck, LineageAttribute, LineageEntity, LineageHop, Pip
 import { getPgPool } from "@/lib/insights-saas-db";
 import { currentClause } from "@/lib/temporal";
 
-type DateRange = { from: string; to: string; installationId?: string | null; runId?: string | null; entityFqn?: string | null };
+type DateRange = { from: string; to: string; installationId?: string | null; runId?: string | null; entityFqn?: string | null; asOf?: string | null };
 type PipelineRunRow = PipelineRun & { duration_ms: number | string | null };
 
 function normalizeDate(date: string): string {
@@ -121,15 +121,29 @@ async function getDataQualityChecksFromMetaStore(range: DateRange): Promise<Data
 }
 
 async function getLineageHopsFromMetaStore(range: DateRange): Promise<LineageHop[]> {
-  const from = normalizeDate(range.from);
-  const to = normalizeDate(range.to);
   const pool = getPgPool();
 
-  const values: Array<string> = [from, to];
+  const values: Array<string> = [];
   let installationFilter = "";
   if (range.installationId) {
     values.push(range.installationId);
     installationFilter = ` AND e.installation_id = $${values.length}`;
+  }
+
+  let temporalFilter: string;
+  if (range.asOf) {
+    // Point-in-time query: return edges active at the given timestamp (LADR-080).
+    values.push(range.asOf);
+    const p = values.length;
+    temporalFilter = ` AND e.valid_from <= $${p}::timestamptz AND (e.valid_to IS NULL OR e.valid_to > $${p}::timestamptz)`;
+  } else {
+    // Default: only currently active edges; optionally filter by date window.
+    const from = normalizeDate(range.from);
+    const to = normalizeDate(range.to);
+    values.push(from, to);
+    const pFrom = values.length - 1;
+    const pTo = values.length;
+    temporalFilter = ` AND e.valid_to IS NULL AND (e.last_observed_at AT TIME ZONE 'UTC')::date BETWEEN $${pFrom}::date AND $${pTo}::date`;
   }
 
   const result = await pool.query(
@@ -163,7 +177,7 @@ async function getLineageHopsFromMetaStore(range: DateRange): Promise<LineageHop
         ON tgt.installation_id = e.installation_id
        AND tgt.dataset_id      = e.target_dataset_id
       LEFT JOIN meta.runs lr ON lr.run_id = e.last_observed_run
-      WHERE (e.last_observed_at AT TIME ZONE 'UTC')::date BETWEEN $1::date AND $2::date${installationFilter}
+      WHERE 1=1${installationFilter}${temporalFilter}
       ORDER BY e.last_observed_at DESC
     `,
     values,

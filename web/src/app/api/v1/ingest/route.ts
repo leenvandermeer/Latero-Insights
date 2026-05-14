@@ -41,10 +41,16 @@ async function ingestPipelineRun(event: AdapterEvent, pool: ReturnType<typeof ge
   const startedAt  = event.started_at  ? new Date(String(event.started_at))  : finishedAt;
   const durationMs = Math.max(0, finishedAt.getTime() - startedAt.getTime());
 
+  const toNullableBigint = (v: unknown): number | null => {
+    if (v === undefined || v === null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
+  };
+
   await writeMetaPipelineRun(pool, {
     installationId,
     datasetId,
-    jobName:     optionalString(event.job_name),
+    jobName:      optionalString(event.job_name),
     sourceSystem: optionalString(event.source_system),
     layer:        optionalString(event.source_layer),
     targetLayer:  optionalString(event.target_layer),
@@ -53,6 +59,10 @@ async function ingestPipelineRun(event: AdapterEvent, pool: ReturnType<typeof ge
     environment,
     timestampUtc: finishedAt.toISOString(),
     durationMs,
+    rowsInserted: toNullableBigint(event.rows_inserted),
+    rowsUpdated:  toNullableBigint(event.rows_updated),
+    rowsDeleted:  toNullableBigint(event.rows_deleted),
+    rowsTotal:    toNullableBigint(event.rows_total),
   });
 }
 

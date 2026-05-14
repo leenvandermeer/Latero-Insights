@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import {
   AlertTriangle, CheckCircle2, Clock, Plus, X, Search,
-  ChevronRight, FileText, ListChecks, Paperclip, User,
-  Calendar, Timer, Tag, ExternalLink,
+  ChevronRight, ListChecks, Paperclip, User,
+  Calendar, Timer, Tag, ExternalLink, Pencil, Check,
 } from "lucide-react";
 import {
   useIncidents,
@@ -207,6 +207,8 @@ function IncidentSlideOver({ incidentId, onClose }: { incidentId: number; onClos
   const [evidenceNote, setEvidenceNote] = useState("");
   const [addingStep, setAddingStep] = useState(false);
   const [addingEvidence, setAddingEvidence] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<{ title: string; severity: string; assignee: string }>({ title: "", severity: "medium", assignee: "" });
 
   const stepInputRef = useRef<HTMLInputElement>(null);
 
@@ -221,6 +223,24 @@ function IncidentSlideOver({ incidentId, onClose }: { incidentId: number; onClos
     if (!detail) return;
     const next = detail.status === "open" ? "in_progress" : "resolved";
     await updateMutation.mutateAsync({ id: detail.id, status: next });
+  };
+
+  const startEdit = () => {
+    if (!detail) return;
+    setEditForm({ title: detail.title, severity: detail.severity, assignee: detail.assignee ?? "" });
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!detail || !editForm.title.trim()) return;
+    await updateMutation.mutateAsync({
+      id: detail.id,
+      title: editForm.title.trim(),
+      severity: editForm.severity as Incident["severity"],
+      assignee: editForm.assignee.trim() || undefined,
+    });
+    setEditing(false);
   };
 
   const handleAddStep = async (e: React.FormEvent) => {
@@ -285,6 +305,59 @@ function IncidentSlideOver({ incidentId, onClose }: { incidentId: number; onClos
           <div className="flex-1 min-w-0">
             {isLoading ? (
               <div className="h-5 w-48 rounded animate-pulse" style={{ background: "var(--color-border)" }} />
+            ) : editing ? (
+              <form onSubmit={handleSaveEdit} className="flex flex-col gap-2">
+                <input
+                  required
+                  autoFocus
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                  className="w-full rounded-lg px-3 py-1.5 text-sm outline-none"
+                  style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                  placeholder="Incident title"
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={editForm.severity}
+                    onChange={(e) => setEditForm((f) => ({ ...f, severity: e.target.value }))}
+                    className="flex-1 rounded-lg px-2 py-1.5 text-xs outline-none"
+                    style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={editForm.assignee}
+                    onChange={(e) => setEditForm((f) => ({ ...f, assignee: e.target.value }))}
+                    className="flex-1 rounded-lg px-2 py-1.5 text-xs outline-none"
+                    style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                    placeholder="Assignee (optional)"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={updateMutation.isPending}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50"
+                    style={{ background: "var(--color-brand)", color: "#fff" }}
+                  >
+                    <Check className="h-3 w-3" />
+                    {updateMutation.isPending ? "Saving…" : "Save"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(false)}
+                    className="px-3 py-1.5 rounded-lg text-xs"
+                    style={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             ) : (
               <>
                 <h2 className="text-sm font-semibold leading-snug mb-2" style={{ color: "var(--color-text)" }}>
@@ -307,9 +380,21 @@ function IncidentSlideOver({ incidentId, onClose }: { incidentId: number; onClos
               </>
             )}
           </div>
-          <button onClick={onClose} className="flex-shrink-0 p-1 rounded-lg" style={{ color: "var(--color-text-muted)" }}>
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {detail && !editing && (
+              <button
+                onClick={startEdit}
+                className="p-1.5 rounded-lg"
+                style={{ color: "var(--color-text-muted)" }}
+                title="Edit incident"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button onClick={onClose} className="p-1 rounded-lg" style={{ color: "var(--color-text-muted)" }}>
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Meta grid */}

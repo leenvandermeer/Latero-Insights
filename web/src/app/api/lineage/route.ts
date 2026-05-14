@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const from = params.get("from");
   const to = params.get("to");
+  const asOfRaw = params.get("as_of");
   let installationId = params.get("installation_id");
 
   try {
@@ -31,10 +32,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing or invalid 'from' and 'to' date parameters (YYYY-MM-DD)" }, { status: 400 });
   }
 
+  // as_of: optional ISO timestamp or YYYY-MM-DD date for point-in-time lineage (LADR-080).
+  let asOf: string | null = null;
+  if (asOfRaw) {
+    const parsed = new Date(asOfRaw);
+    if (isNaN(parsed.getTime())) {
+      return NextResponse.json({ error: "Invalid 'as_of' parameter — expected ISO 8601 timestamp or YYYY-MM-DD date" }, { status: 400 });
+    }
+    asOf = parsed.toISOString();
+  }
+
   const cacheParams = {
     from,
     to,
     installation_id: installationId ?? "unknown",
+    ...(asOf ? { as_of: asOf } : {}),
   };
   triggerAutoSyncIfDue("/api/lineage", installationId);
 
@@ -55,7 +67,7 @@ export async function GET(request: NextRequest) {
 
   // Live mode: read from Insights SaaS store and keep a fresh snapshot for fallback.
   try {
-    const hops = await getLineageHopsFromSaaS({ from, to, installationId });
+    const hops = await getLineageHopsFromSaaS({ from, to, installationId, asOf });
     writeToCache("lineage", cacheParams, hops);
     const response = NextResponse.json({ data: hops, source: "insights-saas" });
     response.headers.set("X-RateLimit-Remaining", String(remaining));

@@ -32,21 +32,37 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const installationIds = Array.isArray(body.installation_ids)
-      ? body.installation_ids.map((value) => String(value).trim()).filter(Boolean)
-      : null;
+    // Accept `installations: [{installation_id, role}]` (preferred) or legacy `installation_ids: string[]`
+    type InstallationEntry = { installation_id: string; role: "member" | "admin" };
+    let installations: InstallationEntry[] | null = null;
+    if (Array.isArray(body.installations)) {
+      installations = body.installations
+        .map((entry: unknown) => {
+          if (typeof entry !== "object" || entry === null) return null;
+          const e = entry as Record<string, unknown>;
+          const id = String(e.installation_id ?? "").trim();
+          if (!id) return null;
+          return { installation_id: id, role: e.role === "admin" ? "admin" : "member" } satisfies InstallationEntry;
+        })
+        .filter((e): e is InstallationEntry => e !== null);
+    } else if (Array.isArray(body.installation_ids)) {
+      installations = body.installation_ids
+        .map((value: unknown) => String(value).trim())
+        .filter(Boolean)
+        .map((id: string) => ({ installation_id: id, role: "member" as const }));
+    }
     const isAdmin = typeof body.is_admin === "boolean" ? body.is_admin : null;
 
-    if (!installationIds && isAdmin === null) {
+    if (!installations && isAdmin === null) {
       return NextResponse.json(
-        { error: "Provide installation_ids and/or is_admin" },
+        { error: "Provide installations and/or is_admin" },
         { status: 400 },
       );
     }
 
-    if (installationIds && installationIds.length === 0) {
+    if (installations !== null && installations.length === 0) {
       return NextResponse.json(
-        { error: "installation_ids must include at least one installation" },
+        { error: "installations must include at least one entry" },
         { status: 400 },
       );
     }
@@ -63,15 +79,15 @@ export async function PATCH(
 
     await pool.query("BEGIN");
     try {
-      if (installationIds) {
+      if (installations) {
         await pool.query(`DELETE FROM insights_user_installations WHERE user_id = $1`, [user_id]);
 
-        for (const installationId of installationIds) {
+        for (const { installation_id, role } of installations) {
           await pool.query(
             `INSERT INTO insights_user_installations (user_id, installation_id, role)
-             VALUES ($1, $2, 'member')
+             VALUES ($1, $2, $3)
              ON CONFLICT (user_id, installation_id) DO UPDATE SET role = EXCLUDED.role`,
-            [user_id, installationId],
+            [user_id, installation_id, role],
           );
         }
       }
@@ -112,7 +128,7 @@ export async function PATCH(
       "user",
       user_id,
       {
-        installation_ids: installationIds ?? undefined,
+        installations: installations ?? undefined,
         is_admin: isAdmin ?? undefined,
       },
       ip,

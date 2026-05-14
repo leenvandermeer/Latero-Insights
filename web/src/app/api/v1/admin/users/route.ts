@@ -91,14 +91,27 @@ export async function POST(request: NextRequest) {
     const password = generatePassword ? generateTemporaryPassword() : requestedPassword;
     const setAdmin = body.is_admin === true;
 
-    const installationIdsFromArray = Array.isArray(body.installation_ids)
-      ? body.installation_ids.map((value) => String(value).trim()).filter(Boolean)
-      : [];
-    const installationId = String(body.installation_id ?? "").trim();
-    const mergedInstallationIds = Array.from(new Set([
-      ...installationIdsFromArray,
-      ...(installationId ? [installationId] : []),
-    ]));
+    // Accept `installations: [{installation_id, role}]` (preferred) or legacy `installation_ids`/`installation_id`
+    type InstallationEntry = { installation_id: string; role?: string };
+    let mergedInstallations: InstallationEntry[];
+    if (Array.isArray(body.installations)) {
+      const parsed: InstallationEntry[] = [];
+      for (const entry of body.installations as unknown[]) {
+        if (typeof entry !== "object" || entry === null) continue;
+        const e = entry as Record<string, unknown>;
+        const id = String(e.installation_id ?? "").trim();
+        if (!id) continue;
+        parsed.push({ installation_id: id, role: e.role === "admin" ? "admin" : "member" });
+      }
+      mergedInstallations = parsed;
+    } else {
+      const installationIdsFromArray = Array.isArray(body.installation_ids)
+        ? body.installation_ids.map((value: unknown) => String(value).trim()).filter(Boolean)
+        : [];
+      const installationId = String(body.installation_id ?? "").trim();
+      const merged = Array.from(new Set([...installationIdsFromArray, ...(installationId ? [installationId] : [])]));
+      mergedInstallations = merged.map((id: string) => ({ installation_id: id, role: "member" }));
+    }
 
     if (!email) {
       return NextResponse.json({ error: "email is required" }, { status: 400 });
@@ -108,12 +121,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "password must be at least 8 characters" }, { status: 400 });
     }
 
-    if (mergedInstallationIds.length === 0) {
-      return NextResponse.json({ error: "installation_ids must include at least one installation" }, { status: 400 });
+    if (mergedInstallations.length === 0) {
+      return NextResponse.json({ error: "installations must include at least one entry" }, { status: 400 });
     }
 
     await ensureAuthSchema();
-    await createOrUpdateUserWithInstallations(email, password, mergedInstallationIds);
+    await createOrUpdateUserWithInstallations(email, password, mergedInstallations);
 
     const pool = getPgPool();
     const userResult = await pool.query(
@@ -156,7 +169,7 @@ export async function POST(request: NextRequest) {
       userId,
       {
         email,
-        installation_ids: mergedInstallationIds,
+        installations: mergedInstallations,
         is_admin: setAdmin,
       },
       ip,

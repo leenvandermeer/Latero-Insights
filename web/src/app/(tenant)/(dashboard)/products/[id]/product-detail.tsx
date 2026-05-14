@@ -1604,7 +1604,7 @@ function EvidenceTab({ productId }: { productId: string }) {
           const shortFqn = rec.entity_fqn.split(".").slice(-2).join(".");
           return (
             <div
-              key={rec.id}
+              key={`${rec.id}-${rec.entity_fqn}`}
               className="rounded-xl px-4 py-3 flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3"
               style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
             >

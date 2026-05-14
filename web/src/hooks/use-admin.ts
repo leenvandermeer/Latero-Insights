@@ -138,7 +138,7 @@ export function useCreateAdminUser() {
       email: string;
       password?: string;
       generate_password?: boolean;
-      installation_ids: string[];
+      installations: { installation_id: string; role: "member" | "admin" }[];
       is_admin?: boolean;
     }) => {
       const res = await adminRequest("/api/v1/admin/users", {
@@ -160,7 +160,7 @@ export function useUpdateAdminUser() {
   return useMutation({
     mutationFn: async (data: {
       userId: string;
-      installation_ids?: string[];
+      installations?: { installation_id: string; role: "member" | "admin" }[];
       is_admin?: boolean;
     }) => {
       const { userId, ...payload } = data;

@@ -391,6 +391,42 @@ Requirements:
 7. Mobile behavior MUST be validated as part of UX acceptance for any shell,
    header, navigation, or dashboard-control redesign.
 
+### LINS-028 — CDC row counts via API ingest (LADR-080) ✓ IMPLEMENTED
+
+Pipeline run events ingested via `/api/v1/ingest` (event type `pipeline_run`) and
+`/api/v1/pipeline-runs` MUST support optional CDC row-count fields.
+
+Requirements:
+1. The following fields MUST be accepted on pipeline run events: `rows_inserted`,
+   `rows_updated`, `rows_deleted`, `rows_total` (all optional, non-negative integers).
+2. Absent fields MUST be stored as `NULL`, not zero. `NULL` means "not reported by
+   source", which is distinct from "zero rows changed".
+3. Negative or non-finite values MUST be silently ignored (stored as `NULL`).
+4. A subsequent ingest of the same run without CDC fields MUST NOT overwrite
+   previously recorded CDC counts with `NULL`.
+5. The Databricks sync route and the API push route MUST store CDC counts in the
+   same columns of `meta.runs` so the dashboard layer is identical regardless
+   of integration mode.
+
+### LINS-029 — Temporal lineage (time-travel) via API (LADR-080) ✓ IMPLEMENTED
+
+The lineage API MUST support point-in-time queries so operators can retrieve the
+lineage graph as it existed at any moment in the past.
+
+Requirements:
+1. `GET /api/lineage` MUST accept an optional `?as_of=<ISO 8601 timestamp>` parameter.
+2. When `as_of` is provided, the response MUST return edges that were active at
+   that timestamp: `valid_from <= as_of AND (valid_to IS NULL OR valid_to > as_of)`.
+3. When `as_of` is absent, only currently active edges (`valid_to IS NULL`) MUST
+   be returned, filtered by the existing `from`/`to` date range.
+4. An invalid `as_of` value MUST be rejected with HTTP 400.
+5. `meta.lineage_edges` MUST store `valid_from` (NOT NULL, defaulting to `now()`)
+   and `valid_to` (nullable) on every row to support temporal filtering.
+6. When lineage drift is detected (an upstream input disappears from a run), the
+   corresponding active lineage edges MUST be closed with `valid_to = now()`.
+7. The Lineage Explorer UI reads via `/api/lineage` and inherits time-travel
+   support without additional UI changes required for the initial implementation.
+
 ## Implemented (was Deferred Backlog)
 
 ### B-001 — Full Session Auth ✓ IMPLEMENTED

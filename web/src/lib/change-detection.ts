@@ -368,6 +368,31 @@ export async function detectLineageDrift(
     removed.length === 1 ? "significant" :
     "informational";
 
+  // LADR-080: Sluit actieve lineage edges voor verwijderde inputs (SCD2 valid_to).
+  // Haal output datasets van de huidige run op zodat we de juiste edges sluiten.
+  if (removed.length > 0) {
+    const outputsRes = await pool.query(
+      `SELECT dataset_id, layer FROM meta.run_io
+       WHERE run_id = $1 AND installation_id = $2 AND role = 'OUTPUT'`,
+      [currentRunId, installationId],
+    );
+    const outputs = outputsRes.rows as Array<{ dataset_id: string; layer: string }>;
+    for (const removedInput of removed) {
+      for (const output of outputs) {
+        await pool.query(
+          `UPDATE meta.lineage_edges
+           SET valid_to = now()
+           WHERE installation_id  = $1
+             AND source_dataset_id = $2
+             AND target_dataset_id = $3
+             AND target_layer      = $4
+             AND valid_to IS NULL`,
+          [installationId, removedInput, output.dataset_id, output.layer],
+        );
+      }
+    }
+  }
+
   await writeChangeEvent(pool, {
     installationId,
     change_type: "lineage_drift",

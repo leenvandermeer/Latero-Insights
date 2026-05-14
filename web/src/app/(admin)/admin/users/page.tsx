@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Copy, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from "lucide-react";
+import { Copy, KeyRound, Pencil, Plus, Shield, ShieldCheck, Trash2, UserPlus, Users } from "lucide-react";
 import {
   useAdminInstallations,
   useAdminUsers,
@@ -13,6 +13,233 @@ import {
 } from "@/hooks/use-admin";
 import type { AdminPasswordResetResult, AdminUser, AdminUserProvisionResult } from "@/types/admin";
 import { AdminPageHeader, AdminSectionTitle, AdminStatCard, AdminSurface } from "@/components/admin/admin-ui";
+
+type InstallationEntry = { installation_id: string; role: "member" | "admin" };
+
+function TenantAccessList({
+  installations,
+  entries,
+  labelMap,
+  filtered,
+  query,
+  onQueryChange,
+  onToggle,
+  onRoleChange,
+  error,
+}: {
+  installations: { installation_id: string; label: string | null; environment: string }[];
+  entries: InstallationEntry[];
+  labelMap: Record<string, string>;
+  filtered: typeof installations;
+  query: string;
+  onQueryChange: (v: string) => void;
+  onToggle: (id: string) => void;
+  onRoleChange: (id: string, role: "member" | "admin") => void;
+  error: boolean;
+}) {
+  const checkedIds = new Set(entries.map((e) => e.installation_id));
+  return (
+    <div className="rounded-2xl border p-3" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
+      <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>Tenant access</p>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        placeholder="Search tenants"
+        className="mt-2 w-full rounded-xl px-3 py-2 text-sm"
+        style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
+      />
+      {installations.length > 0 ? (
+        <div className="mt-2 max-h-52 space-y-2 overflow-y-auto">
+          {filtered.map((inst) => {
+            const checked = checkedIds.has(inst.installation_id);
+            const entry = entries.find((e) => e.installation_id === inst.installation_id);
+            return (
+              <div
+                key={inst.installation_id}
+                className="rounded-xl px-3 py-2 text-sm"
+                style={{ border: `1px solid ${checked ? "var(--color-brand)" : "var(--color-border)"}`, background: "var(--color-card)" }}
+              >
+                <label className="flex cursor-pointer items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium" style={{ color: "var(--color-text)" }}>
+                      {inst.label ?? inst.installation_id}
+                    </p>
+                    <p className="truncate text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                      {inst.environment} · {inst.installation_id}
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => onToggle(inst.installation_id)}
+                    className="shrink-0"
+                  />
+                </label>
+                {checked && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>Role:</span>
+                    <select
+                      value={entry?.role ?? "member"}
+                      onChange={(e) => onRoleChange(inst.installation_id, e.target.value as "member" | "admin")}
+                      className="rounded-lg px-2 py-1 text-xs font-medium"
+                      style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="rounded-xl border px-3 py-3 text-sm" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}>
+              No tenants match this search.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-2 rounded-xl border px-3 py-3 text-sm" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}>
+          No tenants available for assignment.
+        </div>
+      )}
+      {error && (
+        <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+          Tenant catalog could not be loaded. Showing known assignments only.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PlatformAdminToggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div
+      className="rounded-2xl border p-3"
+      style={{
+        borderColor: checked ? "var(--color-warning)" : "var(--color-border)",
+        background: checked ? "var(--color-warning-bg)" : "var(--color-surface)",
+      }}
+    >
+      <label className="flex cursor-pointer items-center gap-2">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <Shield className="h-4 w-4" style={{ color: checked ? "var(--color-warning-text)" : "var(--color-text-muted)" }} />
+        <span className="text-sm font-medium" style={{ color: checked ? "var(--color-warning-text)" : "var(--color-text)" }}>
+          Platform administrator
+        </span>
+      </label>
+      {checked && (
+        <p className="mt-2 text-xs" style={{ color: "var(--color-warning-text)" }}>
+          Platform administrators have full access to all tenants and this admin console. Only grant this to operators who need it.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function UserRow({
+  user,
+  labelMap,
+  onEdit,
+  onResetPassword,
+  onReset2FA,
+  onDeactivate,
+  resetPasswordPending,
+  reset2FAPending,
+  deactivatePending,
+}: {
+  user: AdminUser;
+  labelMap: Record<string, string>;
+  onEdit: (u: AdminUser) => void;
+  onResetPassword: (u: AdminUser) => void;
+  onReset2FA: (u: AdminUser) => void;
+  onDeactivate: (u: AdminUser) => void;
+  resetPasswordPending: boolean;
+  reset2FAPending: boolean;
+  deactivatePending: boolean;
+}) {
+  return (
+    <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+      <td className="px-6 py-3" style={{ color: "var(--color-text)" }}>{user.email}</td>
+      <td className="px-6 py-3">
+        <div className="flex flex-wrap gap-1.5">
+          {user.installations.map((m) => (
+            <span
+              key={`${user.user_id}-${m.installation_id}`}
+              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs"
+              style={{ background: "var(--color-surface)", color: "var(--color-text-muted)" }}
+              title={m.installation_id}
+            >
+              {labelMap[m.installation_id] ?? m.installation_id}
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                style={
+                  m.role === "admin"
+                    ? { background: "var(--color-warning-bg)", color: "var(--color-warning-text)" }
+                    : { background: "var(--color-surface)", color: "var(--color-text-subtle)" }
+                }
+              >
+                {m.role}
+              </span>
+            </span>
+          ))}
+        </div>
+      </td>
+      <td className="px-6 py-3">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => onEdit(user)}
+            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium"
+            style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Edit access
+          </button>
+          <button
+            onClick={() => onResetPassword(user)}
+            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium"
+            style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+            disabled={resetPasswordPending}
+          >
+            <KeyRound className="h-3.5 w-3.5" />
+            Reset password
+          </button>
+          {user.two_factor_enabled && (
+            <button
+              onClick={() => onReset2FA(user)}
+              className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
+              style={{ borderColor: "var(--color-warning)", color: "var(--color-warning-text, #92400e)" }}
+              disabled={reset2FAPending}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Reset 2FA
+            </button>
+          )}
+          <button
+            onClick={() => onDeactivate(user)}
+            className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
+            style={{ borderColor: "var(--color-error)", color: "var(--color-error)" }}
+            disabled={deactivatePending}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Remove
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 export default function AdminUsersPage() {
   const { data: usersData, isLoading } = useAdminUsers();
@@ -33,44 +260,37 @@ export default function AdminUsersPage() {
   const [deactivationMessage, setDeactivationMessage] = useState<string | null>(null);
   const [createTenantQuery, setCreateTenantQuery] = useState("");
   const [editTenantQuery, setEditTenantQuery] = useState("");
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     generatePassword: true,
     isAdmin: false,
-    installationIds: [] as string[],
+    installations: [] as InstallationEntry[],
   });
   const [editFormData, setEditFormData] = useState({
     isAdmin: false,
-    installationIds: [] as string[],
+    installations: [] as InstallationEntry[],
   });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const installationId = params.get("installation_id")?.trim();
-    if (!installationId) {
-      return;
-    }
-
-    setFormData((previous) => {
-      if (previous.installationIds.includes(installationId)) {
-        return previous;
-      }
-
-      return {
-        ...previous,
-        installationIds: [...previous.installationIds, installationId],
-      };
+    if (!installationId) return;
+    setFormData((prev) => {
+      if (prev.installations.some((e) => e.installation_id === installationId)) return prev;
+      return { ...prev, installations: [...prev.installations, { installation_id: installationId, role: "member" }] };
     });
   }, []);
 
   const allUsers = usersData?.users ?? [];
-  const adminUsers = allUsers.filter((user) => user.is_admin);
+  const platformAdmins = allUsers.filter((u) => u.is_admin);
+  const regularUsers = allUsers.filter((u) => !u.is_admin);
+
   const installations = useMemo(() => {
     if ((installationsData?.installations?.length ?? 0) > 0) {
       return installationsData?.installations ?? [];
     }
-
     const seen = new Set<string>();
     const fallback = [] as Array<{
       installation_id: string;
@@ -83,12 +303,9 @@ export default function AdminUsersPage() {
       error_rate_pct: number;
       user_count: number;
     }>;
-
     for (const user of allUsers) {
       for (const membership of user.installations) {
-        if (seen.has(membership.installation_id)) {
-          continue;
-        }
+        if (seen.has(membership.installation_id)) continue;
         seen.add(membership.installation_id);
         fallback.push({
           installation_id: membership.installation_id,
@@ -103,75 +320,65 @@ export default function AdminUsersPage() {
         });
       }
     }
-
     return fallback;
   }, [allUsers, installationsData?.installations]);
 
   const installationLabelMap = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const inst of installations) {
-      map[inst.installation_id] = inst.label ?? inst.installation_id;
-    }
+    for (const inst of installations) map[inst.installation_id] = inst.label ?? inst.installation_id;
     return map;
   }, [installations]);
 
-  const selectedInstallationSet = useMemo(
-    () => new Set(formData.installationIds),
-    [formData.installationIds],
-  );
   const filteredCreateInstallations = useMemo(() => {
-    const query = createTenantQuery.trim().toLowerCase();
-    if (!query) return installations;
-    return installations.filter((installation) => {
-      const haystack = [
-        installation.label ?? "",
-        installation.installation_id,
-        installation.environment,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
+    const q = createTenantQuery.trim().toLowerCase();
+    if (!q) return installations;
+    return installations.filter((i) =>
+      [i.label ?? "", i.installation_id, i.environment].join(" ").toLowerCase().includes(q),
+    );
   }, [createTenantQuery, installations]);
+
   const filteredEditInstallations = useMemo(() => {
-    const query = editTenantQuery.trim().toLowerCase();
-    if (!query) return installations;
-    return installations.filter((installation) => {
-      const haystack = [
-        installation.label ?? "",
-        installation.installation_id,
-        installation.environment,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
+    const q = editTenantQuery.trim().toLowerCase();
+    if (!q) return installations;
+    return installations.filter((i) =>
+      [i.label ?? "", i.installation_id, i.environment].join(" ").toLowerCase().includes(q),
+    );
   }, [editTenantQuery, installations]);
 
-  const toggleInstallation = (installationId: string) => {
-    setFormData((previous) => {
-      if (previous.installationIds.includes(installationId)) {
-        return {
-          ...previous,
-          installationIds: previous.installationIds.filter((id) => id !== installationId),
-        };
+  const toggleInstallation = (id: string) => {
+    setFormData((prev) => {
+      if (prev.installations.some((e) => e.installation_id === id)) {
+        return { ...prev, installations: prev.installations.filter((e) => e.installation_id !== id) };
       }
-
-      return {
-        ...previous,
-        installationIds: [...previous.installationIds, installationId],
-      };
+      return { ...prev, installations: [...prev.installations, { installation_id: id, role: "member" }] };
     });
   };
 
-  const resetForm = () => {
-    setFormData({
-      email: "",
-      password: "",
-      generatePassword: true,
-      isAdmin: false,
-      installationIds: [],
+  const setInstallationRole = (id: string, role: "member" | "admin") => {
+    setFormData((prev) => ({
+      ...prev,
+      installations: prev.installations.map((e) => e.installation_id === id ? { ...e, role } : e),
+    }));
+  };
+
+  const toggleEditInstallation = (id: string) => {
+    setEditFormData((prev) => {
+      if (prev.installations.some((e) => e.installation_id === id)) {
+        return { ...prev, installations: prev.installations.filter((e) => e.installation_id !== id) };
+      }
+      return { ...prev, installations: [...prev.installations, { installation_id: id, role: "member" }] };
     });
+  };
+
+  const setEditInstallationRole = (id: string, role: "member" | "admin") => {
+    setEditFormData((prev) => ({
+      ...prev,
+      installations: prev.installations.map((e) => e.installation_id === id ? { ...e, role } : e),
+    }));
+  };
+
+  const resetForm = () => {
+    setFormData({ email: "", password: "", generatePassword: true, isAdmin: false, installations: [] });
     setCreateTenantQuery("");
   };
 
@@ -179,65 +386,41 @@ export default function AdminUsersPage() {
     setEditingUser(user);
     setEditFormData({
       isAdmin: user.is_admin,
-      installationIds: user.installations.map((installation) => installation.installation_id),
+      installations: user.installations.map((m) => ({
+        installation_id: m.installation_id,
+        role: m.role === "admin" ? "admin" : "member",
+      })),
     });
     setEditTenantQuery("");
     setShowEditModal(true);
   };
 
-  const toggleEditInstallation = (installationId: string) => {
-    setEditFormData((previous) => {
-      if (previous.installationIds.includes(installationId)) {
-        return {
-          ...previous,
-          installationIds: previous.installationIds.filter((id) => id !== installationId),
-        };
-      }
-
-      return {
-        ...previous,
-        installationIds: [...previous.installationIds, installationId],
-      };
-    });
-  };
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    const payload = {
+    const result = await createUserMutation.mutateAsync({
       email: formData.email.trim(),
       password: formData.generatePassword ? undefined : formData.password,
       generate_password: formData.generatePassword,
-      installation_ids: formData.installationIds,
+      installations: formData.installations,
       is_admin: formData.isAdmin,
-    };
-
-    const result = await createUserMutation.mutateAsync(payload);
+    });
     setGeneratedCredentials(result);
     setShowCreateModal(false);
     resetForm();
   };
 
   const handleCopy = async (value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      // Browser clipboard may be blocked by policy; ignore silently.
-    }
+    try { await navigator.clipboard.writeText(value); } catch { /* ignored */ }
   };
 
   const handleUpdateUser = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!editingUser) {
-      return;
-    }
-
+    if (!editingUser) return;
     await updateUserMutation.mutateAsync({
       userId: editingUser.user_id,
-      installation_ids: editFormData.installationIds,
+      installations: editFormData.installations,
       is_admin: editFormData.isAdmin,
     });
-
     setShowEditModal(false);
     setEditingUser(null);
   };
@@ -245,10 +428,6 @@ export default function AdminUsersPage() {
   const handleResetPassword = async (user: AdminUser) => {
     const result = await resetPasswordMutation.mutateAsync({ userId: user.user_id });
     setResetResult(result);
-  };
-
-  const handleDeactivateUser = (user: AdminUser) => {
-    setDeactivateTarget(user);
   };
 
   const confirmDeactivate = async () => {
@@ -263,6 +442,16 @@ export default function AdminUsersPage() {
     await reset2FAMutation.mutateAsync({ userId: reset2FATarget.user_id });
     setReset2FATarget(null);
   };
+
+  const tableHeader = (
+    <thead>
+      <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+        <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>Email</th>
+        <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>Tenant access</th>
+        <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>Actions</th>
+      </tr>
+    </thead>
+  );
 
   return (
     <div className="space-y-6">
@@ -283,35 +472,32 @@ export default function AdminUsersPage() {
 
       <div className="grid gap-3 md:grid-cols-3">
         <AdminStatCard label="Provisioned users" value={allUsers.length} meta="Accounts currently managed in the platform" />
-        <AdminStatCard label="Platform admins" value={adminUsers.length} meta="Users with operator privileges" />
+        <AdminStatCard label="Platform admins" value={platformAdmins.length} meta="Users with operator privileges" />
         <AdminStatCard label="Installations" value={installations.length} meta="Tenants available for access assignment" />
       </div>
 
       {generatedCredentials && (
-        <div className="rounded-3xl border p-5" style={{borderColor: 'var(--color-success)', backgroundColor: 'var(--color-success-bg)'}}>
+        <div className="rounded-3xl border p-5" style={{ borderColor: "var(--color-success)", backgroundColor: "var(--color-success-bg)" }}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold" style={{color: 'var(--color-success-text)'}}>User provisioned</p>
-              <p className="text-sm" style={{color: 'var(--color-success-text)', opacity: 0.9}}>
+              <p className="text-sm font-semibold" style={{ color: "var(--color-success-text)" }}>User provisioned</p>
+              <p className="text-sm" style={{ color: "var(--color-success-text)", opacity: 0.9 }}>
                 {generatedCredentials.user.email} is now assigned to {generatedCredentials.user.installations.length} installation(s).
               </p>
             </div>
             <button
               onClick={() => setGeneratedCredentials(null)}
               className="rounded-full border px-3 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
-              style={{borderColor: 'var(--color-success-text)', color: 'var(--color-success-text)'}}
+              style={{ borderColor: "var(--color-success-text)", color: "var(--color-success-text)" }}
             >
               Dismiss
             </button>
           </div>
-
           {generatedCredentials.password_generated && generatedCredentials.temporary_password && (
-            <div className="mt-4 rounded-2xl border p-3" style={{borderColor: 'var(--color-success)', background: 'var(--color-card)'}}>
+            <div className="mt-4 rounded-2xl border p-3" style={{ borderColor: "var(--color-success)", background: "var(--color-card)" }}>
               <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>Temporary password (one-time share)</p>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <p className="truncate font-mono text-sm" style={{ color: "var(--color-text)" }}>
-                  {generatedCredentials.temporary_password}
-                </p>
+                <p className="truncate font-mono text-sm" style={{ color: "var(--color-text)" }}>{generatedCredentials.temporary_password}</p>
                 <button
                   onClick={() => handleCopy(generatedCredentials.temporary_password ?? "")}
                   className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-medium"
@@ -327,23 +513,22 @@ export default function AdminUsersPage() {
       )}
 
       {resetResult && (
-        <div className="rounded-3xl border p-5" style={{borderColor: 'var(--color-warning)', backgroundColor: 'var(--color-warning-bg)'}}>
+        <div className="rounded-3xl border p-5" style={{ borderColor: "var(--color-warning)", backgroundColor: "var(--color-warning-bg)" }}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold" style={{color: 'var(--color-warning-text)'}}>Password reset completed</p>
-              <p className="text-sm" style={{color: 'var(--color-warning-text)', opacity: 0.9}}>{resetResult.email} received a new temporary credential.</p>
+              <p className="text-sm font-semibold" style={{ color: "var(--color-warning-text)" }}>Password reset completed</p>
+              <p className="text-sm" style={{ color: "var(--color-warning-text)", opacity: 0.9 }}>{resetResult.email} received a new temporary credential.</p>
             </div>
             <button
               onClick={() => setResetResult(null)}
               className="rounded-full border px-3 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
-              style={{borderColor: 'var(--color-warning-text)', color: 'var(--color-warning-text)'}}
+              style={{ borderColor: "var(--color-warning-text)", color: "var(--color-warning-text)" }}
             >
               Dismiss
             </button>
           </div>
           {resetResult.temporary_password && (
-            <div className="mt-4 rounded-2xl border p-3" style={{borderColor: 'var(--color-warning)', background: 'var(--color-card)'}}>
-
+            <div className="mt-4 rounded-2xl border p-3" style={{ borderColor: "var(--color-warning)", background: "var(--color-card)" }}>
               <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>Temporary password</p>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <p className="truncate font-mono text-sm" style={{ color: "var(--color-text)" }}>{resetResult.temporary_password}</p>
@@ -376,7 +561,7 @@ export default function AdminUsersPage() {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(event) => setFormData((previous) => ({ ...previous, email: event.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                   className="mt-1 w-full rounded-xl px-3 py-2"
                   style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
                   required
@@ -388,18 +573,17 @@ export default function AdminUsersPage() {
                   <input
                     type="checkbox"
                     checked={formData.generatePassword}
-                    onChange={(event) => setFormData((previous) => ({ ...previous, generatePassword: event.target.checked }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, generatePassword: e.target.checked }))}
                   />
                   Generate temporary password automatically
                 </label>
-
                 {!formData.generatePassword && (
                   <div className="mt-2">
                     <label className="block text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>Password</label>
                     <input
                       type="password"
                       value={formData.password}
-                      onChange={(event) => setFormData((previous) => ({ ...previous, password: event.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                       className="mt-1 w-full rounded-xl px-3 py-2"
                       style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
                       minLength={8}
@@ -409,88 +593,35 @@ export default function AdminUsersPage() {
                 )}
               </div>
 
-              <div className="rounded-2xl border p-3" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-                <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>Tenant access</p>
-                <input
-                  type="text"
-                  value={createTenantQuery}
-                  onChange={(event) => setCreateTenantQuery(event.target.value)}
-                  placeholder="Search tenants"
-                  className="mt-2 w-full rounded-xl px-3 py-2 text-sm"
-                  style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
-                />
-                {installations.length > 0 ? (
-                  <div className="mt-2 max-h-44 space-y-2 overflow-y-auto">
-                    {filteredCreateInstallations.map((installation) => (
-                      <label
-                        key={installation.installation_id}
-                        className="flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm"
-                        style={{ border: "1px solid var(--color-border)", background: "var(--color-card)" }}
-                      >
-                        <div>
-                          <p className="font-medium" style={{ color: "var(--color-text)" }}>
-                            {installation.label ?? installation.installation_id}
-                          </p>
-                          <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                            {installation.environment} · {installation.installation_id}
-                          </p>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={selectedInstallationSet.has(installation.installation_id)}
-                          onChange={() => toggleInstallation(installation.installation_id)}
-                        />
-                      </label>
-                    ))}
-                    {filteredCreateInstallations.length === 0 ? (
-                      <div
-                        className="rounded-xl border px-3 py-3 text-sm"
-                        style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
-                      >
-                        No tenants match this search.
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div
-                    className="mt-2 rounded-xl border px-3 py-3 text-sm"
-                    style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
-                  >
-                    No tenants available for assignment.
-                  </div>
-                )}
-                {installationsError ? (
-                  <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                    Tenant catalog could not be loaded. Showing known assignments only.
-                  </p>
-                ) : null}
-              </div>
+              <TenantAccessList
+                installations={installations}
+                entries={formData.installations}
+                labelMap={installationLabelMap}
+                filtered={filteredCreateInstallations}
+                query={createTenantQuery}
+                onQueryChange={setCreateTenantQuery}
+                onToggle={toggleInstallation}
+                onRoleChange={setInstallationRole}
+                error={!!installationsError}
+              />
 
-              <label className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                <input
-                  type="checkbox"
-                  checked={formData.isAdmin}
-                  onChange={(event) => setFormData((previous) => ({ ...previous, isAdmin: event.target.checked }))}
-                />
-                <ShieldCheck className="h-4 w-4" />
-                Grant admin access
-              </label>
+              <PlatformAdminToggle
+                checked={formData.isAdmin}
+                onChange={(v) => setFormData((prev) => ({ ...prev, isAdmin: v }))}
+              />
 
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
                   className="flex-1 rounded-full py-2.5 text-sm font-semibold disabled:opacity-50"
                   style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
-                  disabled={createUserMutation.isPending || installations.length === 0 || formData.installationIds.length === 0}
+                  disabled={createUserMutation.isPending || formData.installations.length === 0}
                 >
                   {createUserMutation.isPending ? "Provisioning..." : "Provision user"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    resetForm();
-                  }}
+                  onClick={() => { setShowCreateModal(false); resetForm(); }}
                   className="flex-1 rounded-full py-2.5 text-sm font-semibold"
                   style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
                 >
@@ -502,6 +633,7 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      {/* Edit Modal */}
       {showEditModal && editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-xl rounded-[28px] p-5" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-card)" }}>
@@ -509,89 +641,38 @@ export default function AdminUsersPage() {
               <Pencil className="h-5 w-5" />
               Edit access
             </h2>
-            <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              {editingUser.email}
-            </p>
+            <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>{editingUser.email}</p>
 
             <form onSubmit={handleUpdateUser} className="mt-4 space-y-3">
-              <div className="rounded-2xl border p-3" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-                <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>Tenant access</p>
-                <input
-                  type="text"
-                  value={editTenantQuery}
-                  onChange={(event) => setEditTenantQuery(event.target.value)}
-                  placeholder="Search tenants"
-                  className="mt-2 w-full rounded-xl px-3 py-2 text-sm"
-                  style={{ border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text)" }}
-                />
-                {installations.length > 0 ? (
-                  <div className="mt-2 max-h-44 space-y-2 overflow-y-auto">
-                    {filteredEditInstallations.map((installation) => (
-                      <label
-                        key={`edit-${installation.installation_id}`}
-                        className="flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm"
-                        style={{ border: "1px solid var(--color-border)", background: "var(--color-card)" }}
-                      >
-                        <div>
-                          <p className="font-medium" style={{ color: "var(--color-text)" }}>{installation.label ?? installation.installation_id}</p>
-                          <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>{installation.environment} · {installation.installation_id}</p>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={editFormData.installationIds.includes(installation.installation_id)}
-                          onChange={() => toggleEditInstallation(installation.installation_id)}
-                        />
-                      </label>
-                    ))}
-                    {filteredEditInstallations.length === 0 ? (
-                      <div
-                        className="rounded-xl border px-3 py-3 text-sm"
-                        style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
-                      >
-                        No tenants match this search.
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div
-                    className="mt-2 rounded-xl border px-3 py-3 text-sm"
-                    style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
-                  >
-                    No tenants available for assignment.
-                  </div>
-                )}
-                {installationsError ? (
-                  <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                    Tenant catalog could not be loaded. Showing known assignments only.
-                  </p>
-                ) : null}
-              </div>
+              <TenantAccessList
+                installations={installations}
+                entries={editFormData.installations}
+                labelMap={installationLabelMap}
+                filtered={filteredEditInstallations}
+                query={editTenantQuery}
+                onQueryChange={setEditTenantQuery}
+                onToggle={toggleEditInstallation}
+                onRoleChange={setEditInstallationRole}
+                error={!!installationsError}
+              />
 
-              <label className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                <input
-                  type="checkbox"
-                  checked={editFormData.isAdmin}
-                  onChange={(event) => setEditFormData((previous) => ({ ...previous, isAdmin: event.target.checked }))}
-                />
-                <ShieldCheck className="h-4 w-4" />
-                Grant admin access
-              </label>
+              <PlatformAdminToggle
+                checked={editFormData.isAdmin}
+                onChange={(v) => setEditFormData((prev) => ({ ...prev, isAdmin: v }))}
+              />
 
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
                   className="flex-1 rounded-full py-2.5 text-sm font-semibold disabled:opacity-50"
                   style={{ background: "var(--color-brand)", color: "var(--color-text-on-dark)" }}
-                  disabled={updateUserMutation.isPending || installations.length === 0 || editFormData.installationIds.length === 0}
+                  disabled={updateUserMutation.isPending || editFormData.installations.length === 0}
                 >
                   {updateUserMutation.isPending ? "Saving..." : "Save changes"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditingUser(null);
-                  }}
+                  onClick={() => { setShowEditModal(false); setEditingUser(null); }}
                   className="flex-1 rounded-full py-2.5 text-sm font-semibold"
                   style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
                 >
@@ -604,31 +685,27 @@ export default function AdminUsersPage() {
       )}
 
       {createUserMutation.error && (
-        <div className="rounded-lg border p-4 text-sm" style={{borderColor: 'var(--color-error)', backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)'}}>
+        <div className="rounded-lg border p-4 text-sm" style={{ borderColor: "var(--color-error)", backgroundColor: "var(--color-error-bg)", color: "var(--color-error-text)" }}>
           {(createUserMutation.error as Error).message}
         </div>
       )}
-
       {updateUserMutation.error && (
-        <div className="rounded-lg border p-4 text-sm" style={{borderColor: 'var(--color-error)', backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)'}}>
+        <div className="rounded-lg border p-4 text-sm" style={{ borderColor: "var(--color-error)", backgroundColor: "var(--color-error-bg)", color: "var(--color-error-text)" }}>
           {(updateUserMutation.error as Error).message}
         </div>
       )}
-
       {resetPasswordMutation.error && (
-        <div className="rounded-lg border p-4 text-sm" style={{borderColor: 'var(--color-error)', backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)'}}>
+        <div className="rounded-lg border p-4 text-sm" style={{ borderColor: "var(--color-error)", backgroundColor: "var(--color-error-bg)", color: "var(--color-error-text)" }}>
           {(resetPasswordMutation.error as Error).message}
         </div>
       )}
-
       {deactivateUserMutation.error && (
-        <div className="rounded-lg border p-4 text-sm" style={{borderColor: 'var(--color-error)', backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)'}}>
+        <div className="rounded-lg border p-4 text-sm" style={{ borderColor: "var(--color-error)", backgroundColor: "var(--color-error-bg)", color: "var(--color-error-text)" }}>
           {(deactivateUserMutation.error as Error).message}
         </div>
       )}
-
       {deactivationMessage && (
-        <div className="rounded-lg border p-4 text-sm" style={{borderColor: 'var(--color-success)', backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success-text)'}}>
+        <div className="rounded-lg border p-4 text-sm" style={{ borderColor: "var(--color-success)", backgroundColor: "var(--color-success-bg)", color: "var(--color-success-text)" }}>
           {deactivationMessage}
         </div>
       )}
@@ -669,10 +746,9 @@ export default function AdminUsersPage() {
           <div className="w-full max-w-sm rounded-[28px] p-5" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-card)" }}>
             <h3 className="mb-1 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Reset 2FA?</h3>
             <p className="mb-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-              This will remove the 2FA configuration for <span className="font-semibold">{reset2FATarget.email}</span>.
-              They will need to set up 2FA again on next login.
+              This will remove the 2FA configuration for <span className="font-semibold">{reset2FATarget.email}</span>. They will need to set up 2FA again on next login.
             </p>
-            <p className="mb-5 text-xs" style={{ color: "var(--color-text-subtle, var(--color-text-muted))" }}>Use this when a user has lost access to their authenticator app.</p>
+            <p className="mb-5 text-xs" style={{ color: "var(--color-text-subtle)" }}>Use this when a user has lost access to their authenticator app.</p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setReset2FATarget(null)}
@@ -694,100 +770,75 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      <AdminSurface className="p-5 md:p-6">
-        <AdminSectionTitle title="Users" />
-        {isLoading ? (
-          <div className="p-6 text-center" style={{ color: "var(--color-text-muted)" }}>Loading...</div>
-        ) : usersData?.users && usersData.users.length > 0 ? (
+      {/* Platform Administrators */}
+      {platformAdmins.length > 0 && (
+        <AdminSurface className="p-5 md:p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Shield className="h-4 w-4" style={{ color: "var(--color-warning-text)" }} />
+            <AdminSectionTitle title="Platform administrators" />
+          </div>
+          <p className="mb-4 text-xs" style={{ color: "var(--color-text-muted)" }}>
+            These users have operator-level access to all tenants and this admin console.
+          </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                  <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>Email</th>
-                  <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>Role</th>
-                  <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>Tenant Access</th>
-                  <th className="px-6 py-3 text-left font-semibold" style={{ color: "var(--color-text)" }}>Actions</th>
-                </tr>
-              </thead>
+              {tableHeader}
               <tbody>
-                {usersData.users.map((user) => (
-                  <tr
+                {platformAdmins.map((user) => (
+                  <UserRow
                     key={user.user_id}
-                    style={{ borderBottom: "1px solid var(--color-border)" }}
-                  >
-                    <td className="px-6 py-3" style={{ color: "var(--color-text)" }}>{user.email}</td>
-                    <td className="px-6 py-3">
-                      <span
-                        className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
-                        style={user.is_admin ? {backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning-text)'} : { background: "var(--color-surface)", color: "var(--color-text-muted)" }}
-                      >
-                        {user.is_admin ? "Admin" : "Member"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <div className="flex flex-wrap gap-1.5">
-                        {user.installations.map((membership) => (
-                          <span
-                            key={`${user.user_id}-${membership.installation_id}`}
-                            className="rounded px-2 py-1 text-xs"
-                            style={{ background: "var(--color-surface)", color: "var(--color-text-muted)" }}
-                            title={membership.installation_id}
-                          >
-                            {installationLabelMap[membership.installation_id] ?? membership.installation_id}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => openEditModal(user)}
-                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium"
-                          style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit access
-                        </button>
-                        <button
-                          onClick={() => handleResetPassword(user)}
-                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium"
-                          style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-                          disabled={resetPasswordMutation.isPending}
-                        >
-                          <KeyRound className="h-3.5 w-3.5" />
-                          Reset password
-                        </button>
-                        {user.two_factor_enabled && (
-                          <button
-                            onClick={() => setReset2FATarget(user)}
-                            className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
-                            style={{ borderColor: "var(--color-warning)", color: "var(--color-warning-text, #92400e)" }}
-                            disabled={reset2FAMutation.isPending}
-                          >
-                            <ShieldCheck className="h-3.5 w-3.5" />
-                            Reset 2FA
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDeactivateUser(user)}
-                          className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
-                          style={{borderColor: 'var(--color-error)', color: 'var(--color-error)'}}
-                          disabled={deactivateUserMutation.isPending}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Remove user
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    user={user}
+                    labelMap={installationLabelMap}
+                    onEdit={openEditModal}
+                    onResetPassword={handleResetPassword}
+                    onReset2FA={setReset2FATarget}
+                    onDeactivate={setDeactivateTarget}
+                    resetPasswordPending={resetPasswordMutation.isPending}
+                    reset2FAPending={reset2FAMutation.isPending}
+                    deactivatePending={deactivateUserMutation.isPending}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
-        ) : (
+        </AdminSurface>
+      )}
+
+      {/* All users */}
+      <AdminSurface className="p-5 md:p-6">
+        <AdminSectionTitle title="Users" />
+        {isLoading ? (
+          <div className="p-6 text-center" style={{ color: "var(--color-text-muted)" }}>Loading...</div>
+        ) : regularUsers.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              {tableHeader}
+              <tbody>
+                {regularUsers.map((user) => (
+                  <UserRow
+                    key={user.user_id}
+                    user={user}
+                    labelMap={installationLabelMap}
+                    onEdit={openEditModal}
+                    onResetPassword={handleResetPassword}
+                    onReset2FA={setReset2FATarget}
+                    onDeactivate={setDeactivateTarget}
+                    resetPasswordPending={resetPasswordMutation.isPending}
+                    reset2FAPending={reset2FAMutation.isPending}
+                    deactivatePending={deactivateUserMutation.isPending}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : !isLoading && allUsers.length === 0 ? (
           <div className="p-12 text-center">
             <Users className="mx-auto h-12 w-12" style={{ color: "var(--color-text-subtle)" }} />
             <p className="mt-3" style={{ color: "var(--color-text-muted)" }}>No users found</p>
+          </div>
+        ) : (
+          <div className="p-6 text-center text-sm" style={{ color: "var(--color-text-muted)" }}>
+            All users have platform admin privileges. See the section above.
           </div>
         )}
       </AdminSurface>

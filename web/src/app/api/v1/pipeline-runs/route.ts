@@ -52,6 +52,12 @@ export async function POST(request: NextRequest) {
       ? Math.max(0, Math.round(executionSecondsRaw * 1000))
       : null;
 
+    const toNullableBigint = (v: unknown): number | null => {
+      if (v === undefined || v === null) return null;
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
+    };
+
     const pool = getPgPool();
     await writeMetaPipelineRun(pool, {
       installationId,
@@ -62,6 +68,10 @@ export async function POST(request: NextRequest) {
       environment,
       timestampUtc,
       durationMs,
+      rowsInserted: toNullableBigint(body.rows_inserted),
+      rowsUpdated:  toNullableBigint(body.rows_updated),
+      rowsDeleted:  toNullableBigint(body.rows_deleted),
+      rowsTotal:    toNullableBigint(body.rows_total),
     });
 
     await pool.query(

@@ -380,6 +380,10 @@ CREATE TABLE IF NOT EXISTS meta.runs (
   started_at      TIMESTAMPTZ NOT NULL,
   ended_at        TIMESTAMPTZ,
   duration_ms     BIGINT,
+  rows_inserted   BIGINT,
+  rows_updated    BIGINT,
+  rows_deleted    BIGINT,
+  rows_total      BIGINT,
   run_date        DATE GENERATED ALWAYS AS ((started_at AT TIME ZONE 'UTC')::date) STORED,
   run_facets      JSONB,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -478,15 +482,23 @@ CREATE TABLE IF NOT EXISTS meta.lineage_edges (
   first_observed_at     TIMESTAMPTZ NOT NULL,
   last_observed_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   observation_count     INTEGER NOT NULL DEFAULT 1,
-  PRIMARY KEY (edge_id),
-  CONSTRAINT meta_lineage_edges_unique_hop
-    UNIQUE (installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer)
+  valid_from            TIMESTAMPTZ NOT NULL DEFAULT now(),
+  valid_to              TIMESTAMPTZ,
+  PRIMARY KEY (edge_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_meta_lineage_edges_source
   ON meta.lineage_edges (installation_id, source_dataset_id);
 CREATE INDEX IF NOT EXISTS idx_meta_lineage_edges_target
   ON meta.lineage_edges (installation_id, target_dataset_id);
+-- SCD2: maximaal één open versie per hop; point-in-time query via valid_from/valid_to
+CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_lineage_edges_active_hop
+  ON meta.lineage_edges (installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer)
+  WHERE valid_to IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_lineage_edges_version
+  ON meta.lineage_edges (installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer, valid_from);
+CREATE INDEX IF NOT EXISTS idx_meta_lineage_edges_temporal
+  ON meta.lineage_edges (installation_id, valid_from, valid_to);
 
 -- -----------------------------------------------------------------------------
 -- meta.lineage_columns

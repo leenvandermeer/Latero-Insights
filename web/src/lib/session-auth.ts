@@ -314,12 +314,19 @@ export async function switchActiveInstallation(
 export async function createOrUpdateUserWithInstallations(
   email: string,
   password: string,
-  installationIds: string[],
+  installations: string[] | Array<{ installation_id: string; role?: string }>,
 ): Promise<void> {
   const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail || !password || installationIds.length === 0) {
+  if (!normalizedEmail || !password || installations.length === 0) {
     throw new Error("email, password and at least one installation are required");
   }
+
+  // Normalise: accept both string[] (legacy) and { installation_id, role }[]
+  const normalised = installations.map((entry) =>
+    typeof entry === "string"
+      ? { installation_id: entry, role: "member" }
+      : { installation_id: entry.installation_id, role: entry.role ?? "member" },
+  );
 
   const pool = getPgPool();
   await pool.query("BEGIN");
@@ -341,12 +348,13 @@ export async function createOrUpdateUserWithInstallations(
 
     await pool.query(`DELETE FROM insights_user_installations WHERE user_id = $1`, [userId]);
 
-    for (const installationId of installationIds) {
+    for (const { installation_id, role } of normalised) {
+      const safeRole = role === "admin" ? "admin" : "member";
       await pool.query(
-        `INSERT INTO insights_user_installations (user_id, installation_id)
-         VALUES ($1, $2)
-         ON CONFLICT (user_id, installation_id) DO NOTHING`,
-        [userId, installationId],
+        `INSERT INTO insights_user_installations (user_id, installation_id, role)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, installation_id) DO UPDATE SET role = EXCLUDED.role`,
+        [userId, installation_id, safeRole],
       );
     }
 

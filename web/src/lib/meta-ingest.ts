@@ -56,6 +56,11 @@ export interface MetaPipelineRunParams {
   environment: string;
   timestampUtc: string;
   durationMs: number | null;
+  // LADR-080: CDC row counts (optioneel — null betekent niet gerapporteerd)
+  rowsInserted?: number | null;
+  rowsUpdated?: number | null;
+  rowsDeleted?: number | null;
+  rowsTotal?: number | null;
 }
 
 export async function writeMetaPipelineRun(
@@ -156,9 +161,13 @@ export async function writeMetaPipelineRun(
     const updateResult = await client.query(
       `
         UPDATE meta.runs
-        SET status      = $1,
-            ended_at    = $2,
-            duration_ms = $3
+        SET status        = $1,
+            ended_at      = $2,
+            duration_ms   = $3,
+            rows_inserted = COALESCE($7, rows_inserted),
+            rows_updated  = COALESCE($8, rows_updated),
+            rows_deleted  = COALESCE($9, rows_deleted),
+            rows_total    = COALESCE($10, rows_total)
         WHERE installation_id = $4
           AND external_run_id = $5
           AND run_date        = $6
@@ -171,6 +180,10 @@ export async function writeMetaPipelineRun(
         params.installationId,
         params.runId,
         runDate,
+        params.rowsInserted ?? null,
+        params.rowsUpdated  ?? null,
+        params.rowsDeleted  ?? null,
+        params.rowsTotal    ?? null,
       ],
     );
 
@@ -182,8 +195,9 @@ export async function writeMetaPipelineRun(
         `
           INSERT INTO meta.runs (
             job_id, installation_id, external_run_id,
-            status, environment, started_at, ended_at, duration_ms
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            status, environment, started_at, ended_at, duration_ms,
+            rows_inserted, rows_updated, rows_deleted, rows_total
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
           ON CONFLICT DO NOTHING
           RETURNING run_id
         `,
@@ -196,6 +210,10 @@ export async function writeMetaPipelineRun(
           params.timestampUtc,
           endedAt,
           params.durationMs,
+          params.rowsInserted ?? null,
+          params.rowsUpdated  ?? null,
+          params.rowsDeleted  ?? null,
+          params.rowsTotal    ?? null,
         ],
       );
       runUuid = insertResult.rows[0].run_id as string;
@@ -470,36 +488,66 @@ export async function writeMetaLineage(
       ],
     );
 
-    // 3. Upsert lineage edge — LADR-064: source_kind / target_kind op basis van layer
+    // 3. SCD2 lineage edge — LADR-080: valid_from/valid_to voor tijdreizen
+    // UPDATE-then-INSERT patroon: bijwerk de actieve edge, of maak een nieuwe versie aan.
     const sourceKind = ["silver", "gold"].includes(sourceLayer) ? "entity" : "dataset";
     const targetKind = ["silver", "gold"].includes(targetLayer) ? "entity" : "dataset";
-    await client.query(
+
+    const edgeUpdateResult = await client.query(
       `
-        INSERT INTO meta.lineage_edges (
-          installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer,
-          first_observed_run, last_observed_run,
-          first_observed_at, last_observed_at, observation_count,
-          source_kind, target_kind
-        ) VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $7, 1, $8, $9)
-        ON CONFLICT (installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer) DO UPDATE
-          SET last_observed_run  = EXCLUDED.last_observed_run,
-              last_observed_at   = EXCLUDED.last_observed_at,
-              observation_count  = meta.lineage_edges.observation_count + 1,
-              source_kind        = EXCLUDED.source_kind,
-              target_kind        = EXCLUDED.target_kind
+        UPDATE meta.lineage_edges
+        SET last_observed_run  = COALESCE($1, last_observed_run),
+            last_observed_at   = $2,
+            observation_count  = observation_count + 1,
+            source_kind        = $3,
+            target_kind        = $4
+        WHERE installation_id  = $5
+          AND source_dataset_id = $6
+          AND source_layer      = $7
+          AND target_dataset_id = $8
+          AND target_layer      = $9
+          AND valid_to IS NULL
+        RETURNING edge_id
       `,
       [
+        metaRunId,
+        params.timestampUtc,
+        sourceKind,
+        targetKind,
         params.installationId,
         params.sourceEntity,
         sourceLayer,
         params.targetEntity,
         targetLayer,
-        metaRunId,
-        params.timestampUtc,
-        sourceKind,
-        targetKind,
       ],
     );
+
+    if ((edgeUpdateResult.rowCount ?? 0) === 0) {
+      // Geen actieve edge → nieuwe versie invoegen
+      await client.query(
+        `
+          INSERT INTO meta.lineage_edges (
+            installation_id, source_dataset_id, source_layer, target_dataset_id, target_layer,
+            first_observed_run, last_observed_run,
+            first_observed_at, last_observed_at, observation_count,
+            source_kind, target_kind,
+            valid_from
+          ) VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $7, 1, $8, $9, $7)
+          ON CONFLICT DO NOTHING
+        `,
+        [
+          params.installationId,
+          params.sourceEntity,
+          sourceLayer,
+          params.targetEntity,
+          targetLayer,
+          metaRunId,
+          params.timestampUtc,
+          sourceKind,
+          targetKind,
+        ],
+      );
+    }
 
     // 3a. LADR-064: Vul meta.entities voor alle silver/gold targets (entity-nodes)
     if (targetKind === "entity") {
