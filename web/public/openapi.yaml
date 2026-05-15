@@ -19,6 +19,9 @@ info:
 
     ## Authentication
 
+    All API traffic must be sent over **HTTPS**. Requests over plain HTTP are
+    rejected. Never send tokens over an unencrypted connection.
+
     ### Ingest endpoints (`/api/v1/`)
 
     Pass your installation token in the `Authorization` header:
@@ -31,12 +34,20 @@ info:
     match the `installation_id` in the payload is rejected with `401`.
 
     Your installation token is available in **Settings → API** in the Latero Control UI.
+    Tokens can be rotated at any time via the same page; the previous token is
+    invalidated immediately upon rotation.
+
+    **Token hygiene:**
+    - Store tokens in environment variables or a secrets manager — never in source code or config files.
+    - Rotate tokens immediately if you suspect compromise.
+    - Use one token per environment (dev/staging/prod).
 
     ### Query endpoints (`/api/`)
 
-    Authenticated via session cookie. Log in via the Latero Control UI to obtain
-    a session. Direct API access with a Bearer token is not currently supported on
-    these endpoints.
+    Authenticated via session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`). Log in
+    via the Latero Control UI to obtain a session. Direct API access with a Bearer
+    token is not currently supported on these endpoints. If you need programmatic
+    query access, contact support.
 
     ## Rate limiting
 
