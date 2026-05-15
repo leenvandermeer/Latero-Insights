@@ -17,6 +17,7 @@ import {
   Plus,
   Star,
   ChevronRight,
+  Code2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInstallation } from "@/contexts/installation-context";
@@ -221,6 +222,19 @@ export function Sidebar() {
               >
                 <Plus className="h-4 w-4" />
               </button>
+              <div className="my-1 w-8" style={{ borderTop: "1px solid var(--color-sidebar-border)" }} />
+              <a
+                href="/api-docs.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center rounded-lg px-2 py-2.5 transition-colors"
+                style={{ color: "var(--color-sidebar-muted)" }}
+                title="API Reference"
+                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; }}
+              >
+                <Code2 className="h-4 w-4 shrink-0" />
+              </a>
             </div>
           ) : (
             <>
@@ -320,6 +334,21 @@ export function Sidebar() {
                     All dashboards
                   </Link>
                 </div>
+              </div>
+
+              <div className="px-3 pt-2 pb-1" style={{ borderTop: "1px solid var(--color-sidebar-border)" }}>
+                <a
+                  href="/api-docs.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
+                  style={{ color: "var(--color-sidebar-muted)" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-sidebar-hover)"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-foreground)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-sidebar-muted)"; }}
+                >
+                  <Code2 className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Developers</span>
+                </a>
               </div>
             </>
           )}

@@ -56,6 +56,11 @@ export interface MetaPipelineRunParams {
   environment: string;
   timestampUtc: string;
   durationMs: number | null;
+  attemptNumber?: number | null;
+  queueDurationMs?: number | null;
+  setupDurationMs?: number | null;
+  trigger?: string | null;
+  runPageUrl?: string | null;
   // LADR-080: CDC row counts (optioneel — null betekent niet gerapporteerd)
   rowsInserted?: number | null;
   rowsUpdated?: number | null;
@@ -161,13 +166,18 @@ export async function writeMetaPipelineRun(
     const updateResult = await client.query(
       `
         UPDATE meta.runs
-        SET status        = $1,
-            ended_at      = $2,
-            duration_ms   = $3,
-            rows_inserted = COALESCE($7, rows_inserted),
-            rows_updated  = COALESCE($8, rows_updated),
-            rows_deleted  = COALESCE($9, rows_deleted),
-            rows_total    = COALESCE($10, rows_total)
+        SET status            = $1,
+            ended_at          = $2,
+            duration_ms       = $3,
+            attempt_number    = COALESCE($7,  attempt_number),
+            queue_duration_ms = COALESCE($8,  queue_duration_ms),
+            setup_duration_ms = COALESCE($9,  setup_duration_ms),
+            trigger           = COALESCE($10, trigger),
+            run_page_url      = COALESCE($11, run_page_url),
+            rows_inserted     = COALESCE($12, rows_inserted),
+            rows_updated      = COALESCE($13, rows_updated),
+            rows_deleted      = COALESCE($14, rows_deleted),
+            rows_total        = COALESCE($15, rows_total)
         WHERE installation_id = $4
           AND external_run_id = $5
           AND run_date        = $6
@@ -180,10 +190,15 @@ export async function writeMetaPipelineRun(
         params.installationId,
         params.runId,
         runDate,
-        params.rowsInserted ?? null,
-        params.rowsUpdated  ?? null,
-        params.rowsDeleted  ?? null,
-        params.rowsTotal    ?? null,
+        params.attemptNumber    ?? null,
+        params.queueDurationMs  ?? null,
+        params.setupDurationMs  ?? null,
+        params.trigger          ?? null,
+        params.runPageUrl       ?? null,
+        params.rowsInserted     ?? null,
+        params.rowsUpdated      ?? null,
+        params.rowsDeleted      ?? null,
+        params.rowsTotal        ?? null,
       ],
     );
 
@@ -196,8 +211,9 @@ export async function writeMetaPipelineRun(
           INSERT INTO meta.runs (
             job_id, installation_id, external_run_id,
             status, environment, started_at, ended_at, duration_ms,
+            attempt_number, queue_duration_ms, setup_duration_ms, trigger, run_page_url,
             rows_inserted, rows_updated, rows_deleted, rows_total
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
           ON CONFLICT DO NOTHING
           RETURNING run_id
         `,
@@ -210,10 +226,15 @@ export async function writeMetaPipelineRun(
           params.timestampUtc,
           endedAt,
           params.durationMs,
-          params.rowsInserted ?? null,
-          params.rowsUpdated  ?? null,
-          params.rowsDeleted  ?? null,
-          params.rowsTotal    ?? null,
+          params.attemptNumber    ?? null,
+          params.queueDurationMs  ?? null,
+          params.setupDurationMs  ?? null,
+          params.trigger          ?? null,
+          params.runPageUrl       ?? null,
+          params.rowsInserted     ?? null,
+          params.rowsUpdated      ?? null,
+          params.rowsDeleted      ?? null,
+          params.rowsTotal        ?? null,
         ],
       );
       runUuid = insertResult.rows[0].run_id as string;

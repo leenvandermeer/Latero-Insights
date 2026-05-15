@@ -57,6 +57,11 @@ export async function GET(request: NextRequest) {
          r.started_at,
          r.ended_at,
          r.duration_ms,
+         r.attempt_number,
+         r.queue_duration_ms,
+         r.setup_duration_ms,
+         r.trigger,
+         r.run_page_url,
          r.parent_run_id,
          (SELECT COUNT(*) FROM meta.run_io io WHERE io.run_id = r.run_id) AS io_count,
          (SELECT COUNT(*) FROM meta.quality_results qr

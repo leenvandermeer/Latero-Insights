@@ -13,6 +13,17 @@ const csp = [
   "frame-ancestors 'none'",
 ].join("; ");
 
+// Relaxed CSP for the static API docs page (loads Redoc from CDN)
+const docsCsp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
 const nextConfig: NextConfig = {
   output: "standalone",
   async redirects() {
@@ -40,6 +51,13 @@ const nextConfig: NextConfig = {
           },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
           { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+        ],
+      },
+      {
+        // Must come after (.*) so it wins the CSP override
+        source: "/api-docs.html",
+        headers: [
+          { key: "Content-Security-Policy", value: docsCsp },
         ],
       },
     ];

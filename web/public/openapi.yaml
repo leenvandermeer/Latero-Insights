@@ -1,0 +1,1049 @@
+openapi: 3.1.0
+
+info:
+  title: Latero Control API
+  version: 1.0.0
+  summary: API for ingesting pipeline observability events and querying run history.
+  description: |
+    Latero Control exposes two categories of endpoints:
+
+    **Ingest** (`/api/v1/`) — Push pipeline run events, data quality check results,
+    lineage hops, and data product registrations from your pipeline adapters.
+    Authenticated via a per-installation Bearer token.
+
+    **Query** (`/api/`) — Read pipeline run history and run detail.
+    These endpoints are currently authenticated via session cookie and are intended
+    for use by the Latero Control UI. Programmatic access requires a session token
+    obtained through the Latero Control login flow. If you need API-key access to
+    query endpoints, contact support.
+
+    ## Authentication
+
+    ### Ingest endpoints (`/api/v1/`)
+
+    Pass your installation token in the `Authorization` header:
+
+    ```
+    Authorization: Bearer <installation-token>
+    ```
+
+    Tokens are scoped to a single `installation_id`. A request whose token does not
+    match the `installation_id` in the payload is rejected with `401`.
+
+    Your installation token is available in **Settings → API** in the Latero Control UI.
+
+    ### Query endpoints (`/api/`)
+
+    Authenticated via session cookie. Log in via the Latero Control UI to obtain
+    a session. Direct API access with a Bearer token is not currently supported on
+    these endpoints.
+
+    ## Rate limiting
+
+    All endpoints are rate-limited per source IP at approximately 120 requests
+    per minute. When the limit is exceeded the response is `429 Too Many Requests`
+    with a `Retry-After` header. The `X-RateLimit-Remaining` header on successful
+    responses shows the remaining budget in the current window.
+
+    Note: the rate limit is enforced per application instance. In horizontally
+    scaled deployments the effective limit per IP may be higher than documented.
+
+    ## Audit logging
+
+    All ingest requests are logged to an internal audit table, including the full
+    request payload and a fingerprint of the token used. Audit records are retained
+    according to your subscription's data retention policy. Do not include
+    personally identifiable information in identifier fields (`dataset_id`,
+    `run_id`, `job_name`, etc.).
+
+    ## Schema versioning
+
+    Ingest events carry a `schema_version` field. The current supported version is
+    `1.x`. A single event with `schema_version` major ≥ 2 in a batch aborts the
+    **entire request** with `422`. Validate schema versions before sending.
+
+  contact:
+    name: Latero Support
+    email: support@latero.io
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://{tenant}.latero.io
+    description: Production — use the subdomain from your Latero Control welcome email
+    variables:
+      tenant:
+        description: Your Latero tenant subdomain
+        default: app
+  - url: https://sandbox.latero.io
+    description: Sandbox — for integration testing; data is isolated and periodically reset
+
+tags:
+  - name: Ingest
+    description: Push observability events from pipeline adapters (Bearer token required)
+  - name: Runs
+    description: Query pipeline run history (session authentication)
+
+paths:
+
+  # ---------------------------------------------------------------------------
+  # POST /api/v1/ingest
+  # ---------------------------------------------------------------------------
+  /api/v1/ingest:
+    post:
+      operationId: ingestEvents
+      tags: [Ingest]
+      summary: Batch-ingest pipeline observability events
+      description: |
+        Accepts an array of events in a single request. Each event is dispatched
+        by `event_type`. Supported types: `pipeline_run`, `data_quality_check`,
+        `lineage`, `data_product`.
+
+        A single non-array object is also accepted and treated as a batch of one.
+
+        **Batch behaviour:** Events are processed sequentially. A rejected event
+        (validation error, unknown type) does not abort processing of subsequent
+        events — the response lists the outcome per event. Exception: a
+        `schema_version` major ≥ 2 in **any** event aborts the entire request
+        with `422` before processing begins.
+
+        All events in a single request must share the same `installation_id`.
+
+        **Recommended for:** adapters emitting multiple event types in one call,
+        or batching multiple runs. For a single pipeline run event, the simpler
+        `POST /api/v1/pipeline-runs` endpoint is available.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: array
+                  minItems: 0
+                  items:
+                    oneOf:
+                      - $ref: '#/components/schemas/PipelineRunEvent'
+                      - $ref: '#/components/schemas/DqCheckEvent'
+                      - $ref: '#/components/schemas/LineageEvent'
+                      - $ref: '#/components/schemas/DataProductEvent'
+                    discriminator:
+                      propertyName: event_type
+                - $ref: '#/components/schemas/PipelineRunEvent'
+            examples:
+              pipeline_run:
+                summary: Single pipeline run event (Databricks)
+                value:
+                  - event_type: pipeline_run
+                    schema_version: "1.2"
+                    installation_id: inst_abc123
+                    dataset_id: gemeente_arbeid
+                    run_id: 550e8400-e29b-41d4-a716-446655440000
+                    status: SUCCESS
+                    environment: prod
+                    started_at: "2026-05-15T06:00:00Z"
+                    finished_at: "2026-05-15T06:04:32Z"
+                    source_layer: bronze
+                    target_layer: silver
+                    job_name: latero_silver_gemeente_arbeid
+                    attempt_number: 0
+                    queue_duration_ms: 12000
+                    setup_duration_ms: 48000
+                    trigger: PERIODIC
+                    run_page_url: "https://adb-123.azuredatabricks.net/#job/456/run/789"
+              dq_check:
+                summary: Data quality check event
+                value:
+                  - event_type: data_quality_check
+                    schema_version: "1.2"
+                    installation_id: inst_abc123
+                    dataset_id: gemeente_arbeid
+                    run_id: 550e8400-e29b-41d4-a716-446655440000
+                    check_id: silver_gemeente_arbeid_completeness
+                    check_name: Completeness check — gemeente_arbeid
+                    status: passed
+                    severity: high
+                    check_category: completeness
+                    environment: prod
+              lineage:
+                summary: Dataset lineage event
+                value:
+                  - event_type: lineage
+                    schema_version: "1.2"
+                    installation_id: inst_abc123
+                    run_id: 550e8400-e29b-41d4-a716-446655440000
+                    environment: prod
+                    source_ref: bronze.cbsarbeid_raw
+                    target_ref: silver.gemeente_arbeid
+                    source_entity: cbsarbeid_raw
+                    target_entity: gemeente_arbeid
+                    source_layer: bronze
+                    target_layer: silver
+                    lineage_scope: dataset
+                    relation_type: derived_from
+                    hop_kind: data_flow
+              partial_rejection:
+                summary: Response with one accepted and one rejected event
+                value:
+                  accepted: 1
+                  rejected: 1
+                  results:
+                    - index: 0
+                      event_type: pipeline_run
+                      status: accepted
+                    - index: 1
+                      event_type: unknown_type
+                      status: rejected
+                      error: "Unknown event_type 'unknown_type'"
+      responses:
+        '201':
+          description: |
+            Batch processed. Check `rejected` count — a `201` does not mean all events
+            were accepted. Inspect `results` for per-event outcomes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '200':
+          description: Empty batch received (no events to process)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/SchemaVersionError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ---------------------------------------------------------------------------
+  # POST /api/v1/pipeline-runs
+  # ---------------------------------------------------------------------------
+  /api/v1/pipeline-runs:
+    post:
+      operationId: ingestPipelineRun
+      tags: [Ingest]
+      summary: Ingest a single pipeline run event
+      description: |
+        **Start here** if you are sending a single pipeline run event.
+
+        Simplified endpoint for pushing one `pipeline_run` without wrapping it in
+        an array. Duration is derived from `execution_seconds`.
+
+        **Field limitations compared to `POST /api/v1/ingest`:**
+
+        | Field | Available here |
+        |-------|---------------|
+        | `execution_seconds` | ✓ (converted to `duration_ms`) |
+        | `rows_inserted/updated/deleted/total` | ✓ |
+        | `source_system` | ✓ |
+        | `attempt_number` | ✗ use `/api/v1/ingest` |
+        | `queue_duration_ms` | ✗ use `/api/v1/ingest` |
+        | `setup_duration_ms` | ✗ use `/api/v1/ingest` |
+        | `trigger` | ✗ use `/api/v1/ingest` |
+        | `run_page_url` | ✗ use `/api/v1/ingest` |
+        | `source_layer` / `target_layer` | ✗ use `/api/v1/ingest` |
+        | `job_name` | ✗ use `/api/v1/ingest` |
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PipelineRunV1Request'
+            examples:
+              basic:
+                summary: Minimal run event
+                value:
+                  installation_id: inst_abc123
+                  dataset_id: gemeente_arbeid
+                  run_id: 550e8400-e29b-41d4-a716-446655440000
+                  status: SUCCESS
+                  environment: prod
+                  execution_seconds: 272
+      responses:
+        '201':
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: boolean
+                    example: true
+                  event_type:
+                    type: string
+                    example: pipeline_run
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ---------------------------------------------------------------------------
+  # GET /api/runs
+  # ---------------------------------------------------------------------------
+  /api/runs:
+    get:
+      operationId: listRuns
+      tags: [Runs]
+      summary: List pipeline runs
+      description: |
+        Returns a paginated list of pipeline runs for the authenticated
+        installation, ordered by `started_at` descending.
+
+        **Authentication:** session cookie (UI only). Bearer token not supported.
+
+        **Default window:** last 30 days. Narrow with `from`/`to`.
+
+        **Pagination:** cursor-based. Pass the `next_cursor` value from the
+        previous response as `cursor` in the next request. Treat `next_cursor`
+        as an opaque token — do not construct or parse it.
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: from
+          in: query
+          description: Start date (inclusive), `YYYY-MM-DD` UTC
+          schema:
+            type: string
+            format: date
+            example: "2026-05-01"
+        - name: to
+          in: query
+          description: End date (inclusive), `YYYY-MM-DD` UTC
+          schema:
+            type: string
+            format: date
+            example: "2026-05-15"
+        - name: status
+          in: query
+          description: Filter by run status (case-insensitive — `failed` and `FAILED` are equivalent)
+          schema:
+            $ref: '#/components/schemas/RunStatus'
+        - name: step
+          in: query
+          description: Filter by job name (partial match, case-insensitive)
+          schema:
+            type: string
+            maxLength: 256
+            example: latero_silver
+        - name: entity
+          in: query
+          description: Filter by dataset ID (exact match)
+          schema:
+            type: string
+            maxLength: 256
+        - name: product_id
+          in: query
+          description: Filter by data product ID (exact match on `dataset_id`; equivalent to `entity`)
+          schema:
+            type: string
+            maxLength: 256
+        - name: cursor
+          in: query
+          description: Opaque pagination cursor. Pass the `next_cursor` value from the previous response. Do not construct this value.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of results (1–500, default 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        '200':
+          description: List of runs
+          headers:
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RunSummary'
+                  source:
+                    type: string
+                    description: Internal backend label. Not intended for programmatic use.
+                    example: insights-saas
+                  next_cursor:
+                    type: string
+                    nullable: true
+                    description: Opaque cursor for the next page. Null when no more results. Pass as `cursor` parameter.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ---------------------------------------------------------------------------
+  # GET /api/runs/{run_id}
+  # ---------------------------------------------------------------------------
+  /api/runs/{run_id}:
+    get:
+      operationId: getRunDetail
+      tags: [Runs]
+      summary: Get run detail
+      description: |
+        Returns the full detail of a single pipeline run, including involved
+        datasets, DQ check results, observed lineage edges, and child runs.
+
+        **Authentication:** session cookie (UI only). Bearer token not supported.
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          description: Internal UUID of the run (the `run_id` field from the list response)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Run detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RunDetail'
+                  source:
+                    type: string
+                    description: Internal backend label. Not intended for programmatic use.
+                    example: insights-saas
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Run not found or not accessible by this installation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# =============================================================================
+# Components
+# =============================================================================
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Installation-scoped token. Find yours in **Settings → API** in Latero Control.
+        Must match the `installation_id` in the request body.
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: latero_session
+      description: Session cookie issued after logging in to the Latero Control UI.
+
+  headers:
+    RateLimitRemaining:
+      description: Remaining requests in the current rate-limit window
+      schema:
+        type: integer
+
+  # ---------------------------------------------------------------------------
+  # Shared schemas
+  # ---------------------------------------------------------------------------
+  schemas:
+
+    RunStatus:
+      type: string
+      enum: [SUCCESS, FAILED, WARNING, RUNNING]
+      description: Canonical run outcome (uppercase)
+
+    MedallionLayer:
+      type: string
+      enum: [landing, raw, bronze, silver, gold]
+      description: Medallion architecture layer
+
+    TriggerType:
+      type: string
+      enum: [PERIODIC, MANUAL, ONE_TIME, RETRY, FILE_ARRIVAL, TABLE]
+      description: What caused the run to start
+
+    # ---- Ingest event schemas -----------------------------------------------
+
+    BaseEvent:
+      type: object
+      required: [event_type, installation_id]
+      properties:
+        event_type:
+          type: string
+        schema_version:
+          type: string
+          description: |
+            Adapter schema version. The major version must be 1 (e.g. `"1.0"`, `"1.2"`).
+            A major version ≥ 2 aborts the entire batch with 422.
+          example: "1.2"
+        installation_id:
+          type: string
+          maxLength: 256
+          description: Your installation identifier, issued by Latero.
+          example: inst_abc123
+
+    PipelineRunEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseEvent'
+        - type: object
+          required: [dataset_id, run_id, status, environment]
+          properties:
+            event_type:
+              type: string
+              enum: [pipeline_run]
+            dataset_id:
+              type: string
+              maxLength: 256
+              description: |
+                Bare entity name of the target dataset. Do not include a layer prefix
+                (use `gemeente_arbeid`, not `silver_gemeente_arbeid`).
+              example: gemeente_arbeid
+            run_id:
+              type: string
+              maxLength: 256
+              description: |
+                Idempotency key for this run. Re-submitting the same `run_id` on the
+                same UTC date (derived from `started_at`, or the server clock if omitted)
+                updates the existing record rather than creating a duplicate.
+              example: 550e8400-e29b-41d4-a716-446655440000
+            status:
+              $ref: '#/components/schemas/RunStatus'
+            environment:
+              type: string
+              maxLength: 64
+              example: prod
+            started_at:
+              type: string
+              format: date-time
+              description: |
+                Job start time in UTC. Latero derives `duration_ms` from
+                `finished_at − started_at`. When sourced from Databricks, use the
+                job run's `start_time` for accuracy (includes queue and setup phases).
+            finished_at:
+              type: string
+              format: date-time
+            source_layer:
+              $ref: '#/components/schemas/MedallionLayer'
+            target_layer:
+              $ref: '#/components/schemas/MedallionLayer'
+            source_system:
+              type: string
+              maxLength: 256
+              example: cbsenergie
+            job_name:
+              type: string
+              maxLength: 512
+              description: Native job name from the orchestrator (e.g. Databricks job name).
+              example: latero_silver_gemeente_arbeid
+            attempt_number:
+              type: integer
+              minimum: 0
+              description: |
+                Retry attempt index. `0` = first attempt, `1` = first retry, etc.
+                Databricks uses 0-based indexing natively. If your orchestrator uses
+                1-based indexing, subtract 1 before submitting.
+              example: 0
+            queue_duration_ms:
+              type: integer
+              minimum: 0
+              description: Time the run spent queued before cluster start, in milliseconds.
+              example: 12000
+            setup_duration_ms:
+              type: integer
+              minimum: 0
+              description: Cluster or environment setup duration before execution started, in milliseconds.
+              example: 48000
+            trigger:
+              $ref: '#/components/schemas/TriggerType'
+            run_page_url:
+              type: string
+              format: uri
+              maxLength: 2048
+              pattern: '^https://'
+              description: |
+                Deep link to the run in the orchestrator UI. Must use `https://`.
+                Stored and displayed as-is — verify the URL before submitting.
+              example: https://adb-123.azuredatabricks.net/#job/456/run/789
+            rows_inserted:
+              type: integer
+              minimum: 0
+              description: Number of rows inserted in this run.
+            rows_updated:
+              type: integer
+              minimum: 0
+              description: Number of rows updated in this run.
+            rows_deleted:
+              type: integer
+              minimum: 0
+              description: Number of rows deleted in this run.
+            rows_total:
+              type: integer
+              minimum: 0
+              description: Total rows in the target dataset after the run completed (snapshot count, not a sum of changes).
+            parent_run_id:
+              type: string
+              maxLength: 256
+              description: run_id of the parent orchestration run (for hierarchical pipelines).
+
+    DqCheckEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseEvent'
+        - type: object
+          required: [dataset_id, run_id, check_id, status, severity, environment]
+          properties:
+            event_type:
+              type: string
+              enum: [data_quality_check]
+            dataset_id:
+              type: string
+              maxLength: 256
+            run_id:
+              type: string
+              maxLength: 256
+            check_id:
+              type: string
+              maxLength: 256
+              description: |
+                Stable identifier for this check, unique within the dataset. Must be
+                consistent across runs so Latero can track check history over time.
+              example: silver_gemeente_arbeid_completeness
+            check_name:
+              type: string
+              maxLength: 512
+            status:
+              type: string
+              description: |
+                Check outcome. Accepted values (case-insensitive): `passed`/`success`,
+                `failed`/`error`, `warning`. Normalised to `passed`/`failed`/`warning`
+                on storage.
+              enum: [passed, failed, warning]
+            severity:
+              type: string
+              enum: [high, medium, low]
+            check_category:
+              type: string
+              enum: [schema, accuracy, completeness, freshness, uniqueness, custom]
+            policy_version:
+              type: string
+              maxLength: 64
+            environment:
+              type: string
+              maxLength: 64
+
+    LineageEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseEvent'
+        - type: object
+          required: [run_id, environment, source_ref, target_ref]
+          properties:
+            event_type:
+              type: string
+              enum: [lineage]
+            run_id:
+              type: string
+              maxLength: 256
+            environment:
+              type: string
+              maxLength: 64
+            source_ref:
+              type: string
+              maxLength: 512
+              example: bronze.cbsarbeid_raw
+            target_ref:
+              type: string
+              maxLength: 512
+              example: silver.gemeente_arbeid
+            source_entity:
+              type: string
+              maxLength: 256
+            target_entity:
+              type: string
+              maxLength: 256
+            source_layer:
+              $ref: '#/components/schemas/MedallionLayer'
+            target_layer:
+              $ref: '#/components/schemas/MedallionLayer'
+            source_type:
+              type: string
+              enum: [table, file, stream, api]
+            target_type:
+              type: string
+              enum: [table, file, stream, api]
+            lineage_scope:
+              type: string
+              enum: [dataset, file, attribute]
+              default: dataset
+            relation_type:
+              type: string
+              maxLength: 64
+              example: derived_from
+            hop_kind:
+              type: string
+              enum: [data_flow, context]
+              default: data_flow
+            source_attribute:
+              type: string
+              maxLength: 256
+            target_attribute:
+              type: string
+              maxLength: 256
+
+    DataProductEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseEvent'
+        - type: object
+          required: [data_product_id, display_name]
+          properties:
+            event_type:
+              type: string
+              enum: [data_product]
+            data_product_id:
+              type: string
+              maxLength: 256
+              description: Stable external identifier for the data product. Latero assigns its own internal UUID.
+            display_name:
+              type: string
+              maxLength: 512
+            description:
+              type: string
+              maxLength: 2048
+            owner:
+              type: string
+              maxLength: 256
+            data_steward:
+              type: string
+              maxLength: 256
+            domain:
+              type: string
+              maxLength: 256
+            classification:
+              type: string
+              maxLength: 128
+            retention_days:
+              type: integer
+              minimum: 0
+            sla_tier:
+              type: string
+              maxLength: 64
+            contract_ver:
+              type: string
+              maxLength: 64
+            tags:
+              type: object
+              description: Key/value labels. Values must be strings.
+              maxProperties: 50
+              additionalProperties:
+                type: string
+                maxLength: 256
+
+    PipelineRunV1Request:
+      type: object
+      required: [installation_id, dataset_id, run_id, status, environment]
+      properties:
+        installation_id:
+          type: string
+          maxLength: 256
+        dataset_id:
+          type: string
+          maxLength: 256
+        run_id:
+          type: string
+          maxLength: 256
+        status:
+          $ref: '#/components/schemas/RunStatus'
+        environment:
+          type: string
+          maxLength: 64
+        timestamp_utc:
+          type: string
+          format: date-time
+          description: Defaults to the server's current UTC time if omitted.
+        execution_seconds:
+          type: number
+          minimum: 0
+          description: Total execution duration in seconds. Stored as `duration_ms`.
+        source_system:
+          type: string
+          maxLength: 256
+        rows_inserted:
+          type: integer
+          minimum: 0
+          description: Number of rows inserted.
+        rows_updated:
+          type: integer
+          minimum: 0
+          description: Number of rows updated.
+        rows_deleted:
+          type: integer
+          minimum: 0
+          description: Number of rows deleted.
+        rows_total:
+          type: integer
+          minimum: 0
+          description: Total rows in the target dataset after the run.
+
+    # ---- Query response schemas ---------------------------------------------
+
+    RunSummary:
+      type: object
+      properties:
+        run_id:
+          type: string
+          format: uuid
+          description: Internal Latero UUID for this run. Use this in `GET /api/runs/{run_id}`.
+        external_run_id:
+          type: string
+          description: The `run_id` submitted by the adapter.
+        job_name:
+          type: string
+        dataset_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/RunStatus'
+        environment:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_ms:
+          type: integer
+          nullable: true
+        attempt_number:
+          type: integer
+          nullable: true
+          description: "0 = first attempt, 1+ = retry. Null if not reported by the adapter."
+        queue_duration_ms:
+          type: integer
+          nullable: true
+          description: Queue time in ms. Null if not reported.
+        setup_duration_ms:
+          type: integer
+          nullable: true
+          description: Setup time in ms. Null if not reported.
+        trigger:
+          allOf:
+            - $ref: '#/components/schemas/TriggerType'
+          nullable: true
+          description: What triggered the run. Null if not reported.
+        run_page_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Deep link to the run in the orchestrator UI.
+        parent_run_id:
+          type: string
+          format: uuid
+          nullable: true
+        io_count:
+          type: integer
+          description: Total number of datasets involved (inputs + outputs)
+        dq_count:
+          type: integer
+          description: Number of DQ check results attached to this run
+
+    RunDetail:
+      allOf:
+        - $ref: '#/components/schemas/RunSummary'
+        - type: object
+          properties:
+            run_facets:
+              type: object
+              nullable: true
+              description: Extended metadata from the adapter (e.g. additional context fields).
+            io_datasets:
+              type: array
+              items:
+                type: object
+                properties:
+                  dataset_id:
+                    type: string
+                  entity_fqn:
+                    type: string
+                  layer:
+                    type: string
+                  role:
+                    type: string
+                    enum: [INPUT, OUTPUT]
+            dq_checks:
+              type: array
+              items:
+                type: object
+                properties:
+                  check_id:
+                    type: string
+                  check_name:
+                    type: string
+                  check_category:
+                    type: string
+                  severity:
+                    type: string
+                  status:
+                    type: string
+                  check_result:
+                    type: object
+                    nullable: true
+                    description: Structured check result payload from the adapter, if provided.
+                  executed_at:
+                    type: string
+                    format: date-time
+            lineage_edges:
+              type: array
+              items:
+                type: object
+                properties:
+                  source_dataset_id:
+                    type: string
+                  target_dataset_id:
+                    type: string
+                  source_fqn:
+                    type: string
+                  target_fqn:
+                    type: string
+                  observation_count:
+                    type: integer
+            child_runs:
+              type: array
+              items:
+                $ref: '#/components/schemas/RunSummary'
+
+    IngestResponse:
+      type: object
+      properties:
+        accepted:
+          type: integer
+          description: Number of events successfully processed
+          example: 2
+        rejected:
+          type: integer
+          description: Number of events that failed processing
+          example: 1
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+                description: Zero-based position of this event in the request array
+              event_type:
+                type: string
+              status:
+                type: string
+                enum: [accepted, rejected]
+              error:
+                type: string
+                description: Human-readable error message. Present only when `status` is `rejected`.
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Human-readable error description.
+        code:
+          type: string
+          description: |
+            Machine-readable error code for programmatic handling. Present on selected
+            error types. Example values: `missing_field`, `token_mismatch`,
+            `schema_version_unsupported`.
+
+  # ---------------------------------------------------------------------------
+  # Shared responses
+  # ---------------------------------------------------------------------------
+  responses:
+
+    BadRequest:
+      description: Invalid request body or missing required field
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "installation_id is required"
+            code: missing_field
+
+    Unauthorized:
+      description: Missing or invalid Bearer token, or token/installation_id mismatch
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Unauthorized installation/token"
+            code: token_mismatch
+
+    SchemaVersionError:
+      description: |
+        A `schema_version` with major version ≥ 2 was found. The entire batch is
+        rejected — no events are processed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Unsupported schema_version. Only major version 1 is supported."
+            code: schema_version_unsupported
+
+    RateLimited:
+      description: Rate limit exceeded — back off and retry after the indicated interval
+      headers:
+        Retry-After:
+          description: Approximate seconds until the rate-limit window resets
+          schema:
+            type: integer
+            example: 60
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Too many requests"
+
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Internal server error"

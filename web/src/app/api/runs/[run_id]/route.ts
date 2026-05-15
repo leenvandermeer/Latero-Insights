@@ -35,6 +35,8 @@ export async function GET(
                      THEN ROUND(EXTRACT(EPOCH FROM (r.ended_at - r.started_at)) * 1000)
                      ELSE NULL END
               ) AS duration_ms,
+              r.attempt_number, r.queue_duration_ms, r.setup_duration_ms,
+              r.trigger, r.run_page_url,
               r.parent_run_id, r.run_facets
        FROM meta.runs r
        JOIN meta.jobs j USING (job_id)

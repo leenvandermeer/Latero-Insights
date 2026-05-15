@@ -55,42 +55,45 @@ export async function GET(request: NextRequest) {
   const pool = getPgPool();
   try {
     const result = await pool.query(
-      `SELECT
-         ce.id,
-         ce.change_type,
-         ce.severity,
-         ce.entity_type,
-         ce.entity_id,
-         COALESCE(
-           dp.display_name,
-           d.object_name,
-           ent.entity_name,
-           j.job_name
-         ) AS entity_name,
-         ce.diff,
-         ce.risk_assessment,
-         ce.detected_at
-       FROM meta.change_events ce
-       LEFT JOIN meta.data_products dp
-         ON ce.entity_type = 'product'
-        AND dp.installation_id = ce.installation_id
-        AND dp.data_product_id::text = ce.entity_id
-       LEFT JOIN meta.datasets d
-         ON ce.entity_type = 'dataset'
-        AND d.installation_id = ce.installation_id
-        AND d.dataset_id = ce.entity_id
-        AND d.valid_to IS NULL
-       LEFT JOIN meta.entities ent
-         ON ce.entity_type = 'entity'
-        AND ent.installation_id = ce.installation_id
-        AND ent.entity_id = ce.entity_id
-       LEFT JOIN meta.runs r
-         ON r.installation_id = ce.installation_id
-        AND r.run_id::text = ce.entity_id
-       LEFT JOIN meta.jobs j
-         ON j.job_id = r.job_id
-       WHERE ce.installation_id = $1${where}
-       ORDER BY ce.detected_at DESC
+      `SELECT * FROM (
+         SELECT DISTINCT ON (ce.id)
+           ce.id,
+           ce.change_type,
+           ce.severity,
+           ce.entity_type,
+           ce.entity_id,
+           COALESCE(
+             dp.display_name,
+             d.object_name,
+             ent.entity_name,
+             j.job_name
+           ) AS entity_name,
+           ce.diff,
+           ce.risk_assessment,
+           ce.detected_at
+         FROM meta.change_events ce
+         LEFT JOIN meta.data_products dp
+           ON ce.entity_type = 'product'
+          AND dp.installation_id = ce.installation_id
+          AND dp.data_product_id::text = ce.entity_id
+         LEFT JOIN meta.datasets d
+           ON ce.entity_type = 'dataset'
+          AND d.installation_id = ce.installation_id
+          AND d.dataset_id = ce.entity_id
+          AND d.valid_to IS NULL
+         LEFT JOIN meta.entities ent
+           ON ce.entity_type = 'entity'
+          AND ent.installation_id = ce.installation_id
+          AND ent.entity_id = ce.entity_id
+         LEFT JOIN meta.runs r
+           ON r.installation_id = ce.installation_id
+          AND r.run_id::text = ce.entity_id
+         LEFT JOIN meta.jobs j
+           ON j.job_id = r.job_id
+         WHERE ce.installation_id = $1${where}
+         ORDER BY ce.id
+       ) sub
+       ORDER BY detected_at DESC
        LIMIT $${idx}`,
       values
     );

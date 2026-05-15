@@ -11,6 +11,9 @@ import {
   Clock,
   Database,
   ShieldCheck,
+  ExternalLink,
+  RefreshCw,
+  Timer,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -75,7 +78,17 @@ export function RunDetail({ runId }: { runId: string }) {
     );
   }
 
-  const status   = String(run.status ?? "UNKNOWN");
+  const status        = String(run.status ?? "UNKNOWN");
+  const attemptNumber = run.attempt_number != null ? Number(run.attempt_number) : null;
+  const isRetry       = attemptNumber != null && attemptNumber > 0;
+  const trigger       = run.trigger ? String(run.trigger) : null;
+  const runPageUrl    = run.run_page_url ? String(run.run_page_url) : null;
+  const durationMs    = run.duration_ms    != null ? Number(run.duration_ms)    : null;
+  const queueMs       = run.queue_duration_ms != null ? Number(run.queue_duration_ms) : null;
+  const setupMs       = run.setup_duration_ms != null ? Number(run.setup_duration_ms) : null;
+  const execMs        = durationMs != null && queueMs != null && setupMs != null
+    ? Math.max(0, durationMs - queueMs - setupMs) : durationMs;
+  const hasBreakdown  = queueMs != null && setupMs != null && durationMs != null && durationMs > 0;
   const io       = (run.io_datasets  as Array<Record<string, unknown>>) ?? [];
   const dqChecks = (run.dq_checks    as Array<Record<string, unknown>>) ?? [];
   const children = (run.child_runs   as Array<Record<string, unknown>>) ?? [];
@@ -100,6 +113,23 @@ export function RunDetail({ runId }: { runId: string }) {
             <span className={statusBadge(status)}>
               {statusIcon(status)} {status}
             </span>
+            {isRetry && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-orange-100 text-orange-700">
+                <RefreshCw className="h-3 w-3" /> Retry #{attemptNumber}
+              </span>
+            )}
+            {trigger && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-[var(--color-surface-subtle)]" style={{ color: "var(--color-text-muted)" }}>
+                {trigger}
+              </span>
+            )}
+            {runPageUrl && (
+              <a href={runPageUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs hover:underline"
+                style={{ color: "var(--color-brand)" }}>
+                <ExternalLink className="h-3 w-3" /> Databricks
+              </a>
+            )}
           </div>
           <p className="text-sm mt-1 font-mono" style={{ color: "var(--color-text-muted)" }}>{runId}</p>
         </div>
@@ -119,6 +149,40 @@ export function RunDetail({ runId }: { runId: string }) {
           </div>
         ))}
       </div>
+
+      {/* Timing breakdown */}
+      {hasBreakdown && (
+        <Section icon={<Timer className="h-4 w-4" />} title="Timing breakdown">
+          <div className="px-5 py-4 flex flex-col gap-3">
+            <div className="flex gap-0 h-4 rounded overflow-hidden w-full">
+              {queueMs! > 0 && (
+                <div
+                  title={`Queue: ${formatDuration(queueMs)}`}
+                  className="h-full"
+                  style={{ width: `${(queueMs! / durationMs!) * 100}%`, background: "var(--color-surface-alt, #e2e8f0)" }}
+                />
+              )}
+              {setupMs! > 0 && (
+                <div
+                  title={`Setup: ${formatDuration(setupMs)}`}
+                  className="h-full"
+                  style={{ width: `${(setupMs! / durationMs!) * 100}%`, background: "var(--color-warning, #f59e0b)" }}
+                />
+              )}
+              <div
+                title={`Execution: ${formatDuration(execMs)}`}
+                className="h-full flex-1"
+                style={{ background: "var(--color-brand)" }}
+              />
+            </div>
+            <div className="flex flex-wrap gap-4 text-xs">
+              <LegendItem color="var(--color-surface-alt, #e2e8f0)" label="Queue" value={formatDuration(queueMs)} textColor="var(--color-text-muted)" />
+              <LegendItem color="var(--color-warning, #f59e0b)" label="Setup" value={formatDuration(setupMs)} textColor="var(--color-text-muted)" />
+              <LegendItem color="var(--color-brand)" label="Execution" value={formatDuration(execMs)} textColor="var(--color-text)" />
+            </div>
+          </div>
+        </Section>
+      )}
 
       {/* I/O datasets */}
       {io.length > 0 && (
@@ -226,6 +290,16 @@ export function RunDetail({ runId }: { runId: string }) {
           </table>
         </Section>
       )}
+    </div>
+  );
+}
+
+function LegendItem({ color, label, value, textColor }: { color: string; label: string; value: string; textColor: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="inline-block h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ background: color }} />
+      <span style={{ color: "var(--color-text-muted)" }}>{label}</span>
+      <span className="font-medium" style={{ color: textColor }}>{value}</span>
     </div>
   );
 }
