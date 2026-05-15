@@ -236,7 +236,6 @@ BEGIN
     lc.transformation_subtype, lc.source_layer, lc.target_layer,
     lc.valid_from + time_offset, lc.valid_to
   FROM meta.lineage_columns lc
-  JOIN _edge_id_map em ON lc.column_edge_id = em.old_id
   WHERE lc.installation_id = '${SRC}';
   RAISE NOTICE 'Gekopieerd: lineage_columns';
 
