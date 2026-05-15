@@ -101,6 +101,12 @@ for sql_file in $(ls -v "${SQL_DIR}"/*.sql); do
     exit 1
   fi
 done
+
+# Cleanup oude audit-records (90 dagen retentie)
+DELETED=$(docker exec "${PG_CONTAINER}" \
+  psql -U "${PG_USER}" -d "${PG_DB}" -tAq \
+  -c "SELECT cleanup_ingest_audit(90);" 2>/dev/null || echo "0")
+log "   Audit cleanup: ${DELETED:-0} records verwijderd (>90 dagen oud)"
 echo ""
 
 # ── Stap 4: Containers herstarten ─────────────────────────────────────────

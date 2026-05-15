@@ -52,9 +52,8 @@ info:
 
     All ingest requests are logged to an internal audit table, including the full
     request payload and a fingerprint of the token used. Audit records are retained
-    according to your subscription's data retention policy. Do not include
-    personally identifiable information in identifier fields (`dataset_id`,
-    `run_id`, `job_name`, etc.).
+    for 90 days and then automatically purged. Do not include personally identifiable
+    information in identifier fields (`dataset_id`, `run_id`, `job_name`, etc.).
 
     ## Schema versioning
 
