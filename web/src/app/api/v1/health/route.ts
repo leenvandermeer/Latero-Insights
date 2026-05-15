@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dbHealthCheck, getSaaSReadStoreCounts } from "@/lib/insights-saas-db";
+import { dbHealthCheck, getSaaSReadStoreCounts, getBearerToken, getPgPool } from "@/lib/insights-saas-db";
 import { getAutoSyncState } from "@/lib/databricks-auto-sync";
 
 function parsePostgresTarget(postgresUrl: string | undefined): {
@@ -40,7 +40,24 @@ function parsePostgresTarget(postgresUrl: string | undefined): {
   }
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+  const token = getBearerToken(request);
+  if (!token) {
+    return NextResponse.json({ error: "Missing Bearer token" }, { status: 401 });
+  }
+
+  // Verify token belongs to any active installation (bcrypt check)
+  const pool = getPgPool();
+  const authRes = await pool.query(
+    `SELECT 1 FROM insights_installations
+     WHERE active = true AND crypt($1, token_hash) = token_hash
+     LIMIT 1`,
+    [token]
+  );
+  if (authRes.rowCount === 0) {
+    return NextResponse.json({ error: "Invalid or inactive token" }, { status: 401 });
+  }
+
   const target = parsePostgresTarget(process.env.POSTGRES_URL);
   const autoSyncState = getAutoSyncState();
   const autoSync = {
