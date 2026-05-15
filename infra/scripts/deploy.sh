@@ -17,6 +17,8 @@
 # =============================================================================
 set -euo pipefail
 
+log() { echo "$*"; }
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ENV_FILE="${REPO_DIR}/infra/.env.prod"
 COMPOSE_BASE="${REPO_DIR}/infra/docker/docker-compose.prod.yml"
