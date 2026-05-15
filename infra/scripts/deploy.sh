@@ -106,7 +106,7 @@ done
 DELETED=$(docker exec "${PG_CONTAINER}" \
   psql -U "${PG_USER}" -d "${PG_DB}" -tAq \
   -c "SELECT cleanup_ingest_audit(90);" 2>/dev/null || echo "0")
-log "   Audit cleanup: ${DELETED:-0} records verwijderd (>90 dagen oud)"
+echo "   Audit cleanup: ${DELETED:-0} records verwijderd (>90 dagen oud)"
 echo ""
 
 # ── Stap 4: Containers herstarten ─────────────────────────────────────────
