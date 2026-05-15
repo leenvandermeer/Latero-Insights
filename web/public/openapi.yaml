@@ -309,6 +309,83 @@ paths:
           $ref: '#/components/responses/InternalError'
 
   # ---------------------------------------------------------------------------
+  # POST /api/v1/dq-checks
+  # ---------------------------------------------------------------------------
+  /api/v1/dq-checks:
+    post:
+      operationId: ingestDqCheck
+      tags: [Ingest]
+      summary: Report a single data quality check result
+      description: |
+        **Use this endpoint** to report a data quality check result — standalone
+        or linked to a pipeline run.
+
+        Unlike `POST /api/v1/ingest`, this endpoint:
+        - Accepts a single flat JSON object (no array wrapping)
+        - Does **not** require `run_id` — use this when a DQ check runs
+          independently of a Latero-tracked pipeline (e.g. Great Expectations,
+          dbt tests, custom scripts)
+        - Has its own rate-limit bucket separate from the batch ingest endpoint
+
+        If `run_id` is provided it is stored as a reference but the check is
+        **not** required to match an existing run.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DqCheckRequest'
+            examples:
+              standalone:
+                summary: Standalone check (no run)
+                value:
+                  installation_id: inst_abc123
+                  dataset_id: gemeente_arbeid
+                  check_id: gemeente_arbeid_completeness
+                  check_name: Completeness check — gemeente_arbeid
+                  status: failed
+                  severity: high
+                  check_category: completeness
+                  environment: prod
+                  message: "3 of 412 rows have null waarde_2024"
+              linked_to_run:
+                summary: Check linked to a pipeline run
+                value:
+                  installation_id: inst_abc123
+                  dataset_id: gemeente_arbeid
+                  run_id: 550e8400-e29b-41d4-a716-446655440000
+                  check_id: gemeente_arbeid_completeness
+                  check_name: Completeness check — gemeente_arbeid
+                  status: passed
+                  severity: high
+                  check_category: completeness
+                  environment: prod
+      responses:
+        '201':
+          description: Check result accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: boolean
+                    example: true
+                  event_type:
+                    type: string
+                    example: data_quality_check
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ---------------------------------------------------------------------------
   # GET /api/runs
   # ---------------------------------------------------------------------------
   /api/runs:
@@ -627,6 +704,60 @@ components:
               type: string
               maxLength: 256
               description: run_id of the parent orchestration run (for hierarchical pipelines).
+
+    DqCheckRequest:
+      type: object
+      required: [installation_id, dataset_id, check_id, status, severity, environment]
+      properties:
+        installation_id:
+          type: string
+          maxLength: 256
+          description: Your installation identifier, issued by Latero.
+        dataset_id:
+          type: string
+          maxLength: 256
+        run_id:
+          type: string
+          maxLength: 256
+          description: Optional. Links the check to a pipeline run. Not required when running checks independently.
+        check_id:
+          type: string
+          maxLength: 256
+          description: |
+            Stable identifier for this check, unique within the dataset. Must be
+            consistent across runs so Latero can track check history over time.
+          example: gemeente_arbeid_completeness
+        check_name:
+          type: string
+          maxLength: 512
+          description: Human-readable name. Defaults to `check_id` if omitted.
+        status:
+          type: string
+          description: |
+            Check outcome. Accepted values (case-insensitive): `passed`/`success`,
+            `failed`/`error`, `warning`. Normalised to `passed`/`failed`/`warning` on storage.
+          enum: [passed, failed, warning, success, error]
+        severity:
+          type: string
+          enum: [high, medium, low]
+        check_category:
+          type: string
+          enum: [schema, accuracy, completeness, freshness, uniqueness, custom]
+        environment:
+          type: string
+          maxLength: 64
+          example: prod
+        message:
+          type: string
+          maxLength: 1024
+          description: Optional human-readable explanation of the check result.
+        policy_version:
+          type: string
+          maxLength: 64
+        timestamp_utc:
+          type: string
+          format: date-time
+          description: When the check was executed. Defaults to server receive time if omitted.
 
     DqCheckEvent:
       allOf:
