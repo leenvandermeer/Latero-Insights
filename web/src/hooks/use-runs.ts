@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchRuns, fetchRunDetail } from "@/lib/api";
+import { fetchRuns, fetchTypedRunDetail } from "@/lib/api";
 import { useInstallation } from "@/contexts/installation-context";
 
 export interface RunsFilter {
@@ -38,7 +38,7 @@ export function useRuns(filter: RunsFilter = {}) {
 export function useRunDetail(runId: string | null) {
   return useQuery({
     queryKey: ["run-detail", runId],
-    queryFn: () => fetchRunDetail(runId!),
+    queryFn: () => fetchTypedRunDetail(runId!),
     enabled: !!runId,
     staleTime: 30_000,
     retry: 1,

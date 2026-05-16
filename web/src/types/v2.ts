@@ -66,12 +66,20 @@ export interface RunDetail {
   job_name: string;
   dataset_id?: string | null;
   entity_fqn?: string | null;
-  step: string;
+  step?: string | null;
+  task_key?: string | null;
   status: "SUCCESS" | "FAILED" | "WARNING" | "UNKNOWN";
   environment?: string | null;
   started_at: string;
   ended_at?: string | null;
   duration_ms?: number | null;
+  attempt_number?: number | null;
+  queue_duration_ms?: number | null;
+  setup_duration_ms?: number | null;
+  trigger?: string | null;
+  run_page_url?: string | null;
+  dbx_job_run_id?: string | null;
+  dbx_task_run_id?: string | null;
   parent_run_id?: string | null;
   run_facets?: Record<string, unknown> | null;
   // Relations
@@ -79,6 +87,30 @@ export interface RunDetail {
   dq_checks?: RunDQCheck[];
   lineage_edges?: RunLineageEdge[];
   child_runs?: RunDetail[];
+}
+
+export interface RunSummary {
+  run_id: string;
+  external_run_id: string;
+  job_name: string;
+  dataset_id?: string | null;
+  step?: string | null;
+  task_key?: string | null;
+  status: "SUCCESS" | "FAILED" | "WARNING" | "RUNNING" | "UNKNOWN";
+  environment?: string | null;
+  started_at: string;
+  ended_at?: string | null;
+  duration_ms?: number | null;
+  attempt_number?: number | null;
+  queue_duration_ms?: number | null;
+  setup_duration_ms?: number | null;
+  trigger?: string | null;
+  run_page_url?: string | null;
+  dbx_job_run_id?: string | null;
+  dbx_task_run_id?: string | null;
+  parent_run_id?: string | null;
+  dq_count?: number;
+  io_count?: number;
 }
 
 export interface RunIODataset {

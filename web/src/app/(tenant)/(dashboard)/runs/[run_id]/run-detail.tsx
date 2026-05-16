@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import type { RunDetail as RunDetailType } from "@/types/v2";
 
 function formatDuration(raw: unknown): string {
   if (raw == null) return "—";
@@ -50,7 +51,7 @@ const statusBadge = (s: string) => cn(
 
 export function RunDetail({ runId }: { runId: string }) {
   const { data, error, isLoading, isError } = useRunDetail(runId);
-  const run = data?.data as Record<string, unknown> | undefined;
+  const run = data?.data as RunDetailType | undefined;
   const apiError = error instanceof ApiClientError ? error : null;
 
   if (isLoading) {
@@ -89,9 +90,11 @@ export function RunDetail({ runId }: { runId: string }) {
   const execMs        = durationMs != null && queueMs != null && setupMs != null
     ? Math.max(0, durationMs - queueMs - setupMs) : durationMs;
   const hasBreakdown  = queueMs != null && setupMs != null && durationMs != null && durationMs > 0;
-  const io       = (run.io_datasets  as Array<Record<string, unknown>>) ?? [];
-  const dqChecks = (run.dq_checks    as Array<Record<string, unknown>>) ?? [];
-  const children = (run.child_runs   as Array<Record<string, unknown>>) ?? [];
+  const io       = run.io_datasets ?? [];
+  const dqChecks = run.dq_checks ?? [];
+  const children = run.child_runs ?? [];
+  const taskLabel = run.task_key || run.step || run.job_name || runId;
+  const logicalStep = run.step && run.task_key && run.step !== run.task_key ? run.step : null;
 
   return (
     <div className="page-content flex flex-col gap-6 overflow-x-hidden">
@@ -108,7 +111,7 @@ export function RunDetail({ runId }: { runId: string }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-lg font-medium leading-tight truncate" style={{ color: "var(--color-text)" }}>
-              {String(run.step ?? run.job_name ?? runId)}
+              {taskLabel}
             </h1>
             <span className={statusBadge(status)}>
               {statusIcon(status)} {status}
@@ -131,6 +134,11 @@ export function RunDetail({ runId }: { runId: string }) {
               </a>
             )}
           </div>
+          {logicalStep && (
+            <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+              Logical step: <span className="font-mono">{logicalStep}</span>
+            </p>
+          )}
           <p className="text-sm mt-1 font-mono" style={{ color: "var(--color-text-muted)" }}>{runId}</p>
         </div>
       </div>
@@ -139,9 +147,13 @@ export function RunDetail({ runId }: { runId: string }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Job",         value: String(run.job_name ?? run.dataset_id ?? "—") },
-          { label: "Environment", value: String(run.environment ?? "—") },
+          { label: "Task",        value: String(run.task_key ?? run.step ?? "—") },
           { label: "Started",     value: run.started_at ? new Date(String(run.started_at)).toLocaleString() : "—" },
+          { label: "Finished",    value: run.ended_at ? new Date(String(run.ended_at)).toLocaleString() : "—" },
           { label: "Duration",    value: formatDuration(run.duration_ms) },
+          { label: "Environment", value: String(run.environment ?? "—") },
+          { label: "Run ID",      value: String(run.external_run_id ?? "—") },
+          { label: "Retry",       value: attemptNumber != null ? String(attemptNumber) : "—" },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-lg border px-4 py-3" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
             <p className="text-xs mb-1" style={{ color: "var(--color-text-muted)" }}>{label}</p>
@@ -149,6 +161,19 @@ export function RunDetail({ runId }: { runId: string }) {
           </div>
         ))}
       </div>
+
+      <Section icon={<Activity className="h-4 w-4" />} title="Execution context">
+        <div className="grid grid-cols-1 gap-4 px-5 py-4 md:grid-cols-2">
+          <DetailBlock label="Latero run UUID" value={run.run_id} mono />
+          <DetailBlock label="External run ID" value={run.external_run_id ?? "—"} mono />
+          <DetailBlock label="Task key" value={run.task_key ?? "—"} mono />
+          <DetailBlock label="Logical step" value={run.step ?? "—"} mono />
+          <DetailBlock label="Databricks job run ID" value={run.dbx_job_run_id ?? "—"} mono />
+          <DetailBlock label="Databricks task run ID" value={run.dbx_task_run_id ?? "—"} mono />
+          <DetailBlock label="Parent run ID" value={run.parent_run_id ?? "—"} mono />
+          <DetailBlock label="Trigger" value={trigger ?? "—"} />
+        </div>
+      </Section>
 
       {/* Timing breakdown */}
       {hasBreakdown && (
@@ -267,7 +292,7 @@ export function RunDetail({ runId }: { runId: string }) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["Status", "Step", "Started"].map((h) => (
+                {["Status", "Task", "Started"].map((h) => (
                   <th key={h} className="text-left px-4 py-2 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>{h}</th>
                 ))}
               </tr>
@@ -280,7 +305,18 @@ export function RunDetail({ runId }: { runId: string }) {
                       {statusIcon(String(c.status ?? ""))} {String(c.status ?? "—")}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-xs" style={{ color: "var(--color-text)" }}>{String(c.step ?? "—")}</td>
+                  <td className="px-4 py-2.5 text-xs">
+                    <div className="flex flex-col">
+                      <span className="font-mono" style={{ color: "var(--color-text)" }}>
+                        {String(c.task_key ?? c.step ?? "—")}
+                      </span>
+                      {c.step && c.task_key && c.step !== c.task_key && (
+                        <span style={{ color: "var(--color-text-muted)" }}>
+                          step: {String(c.step)}
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-2.5 text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {c.started_at ? new Date(String(c.started_at)).toLocaleString() : "—"}
                   </td>
@@ -312,6 +348,17 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
         <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>{title}</h2>
       </div>
       {children}
+    </div>
+  );
+}
+
+function DetailBlock({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs mb-1" style={{ color: "var(--color-text-muted)" }}>{label}</p>
+      <p className={cn("text-sm", mono ? "font-mono break-all" : "break-words")} style={{ color: "var(--color-text)" }}>
+        {value}
+      </p>
     </div>
   );
 }

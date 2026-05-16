@@ -7,6 +7,7 @@ import { DateRangePicker } from "@/components/ui";
 import { CheckCircle, XCircle, AlertTriangle, Clock, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import type { RunSummary } from "@/types/v2";
 
 const STATUS_OPTIONS = ["", "SUCCESS", "FAILED", "WARNING", "RUNNING"];
 
@@ -26,7 +27,22 @@ export function RunsExplorer() {
   const { from, to, preset, setRange, setPreset } = useDateRange({ scope: "monitor:runs", defaultPreset: "7d" });
   const { data, isLoading, isError } = useRuns({ from, to, status: status || undefined, step: step || undefined });
 
-  const runs = (data?.data ?? []) as Array<Record<string, string>>;
+  const runs = (data?.data ?? []) as RunSummary[];
+
+  const formatDuration = (raw: number | null | undefined) => {
+    if (raw == null) return "—";
+    const seconds = Math.round(raw / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return rest > 0 ? `${minutes}m ${rest}s` : `${minutes}m`;
+  };
+
+  const taskLabel = (run: RunSummary) => run.task_key || run.step || "—";
+  const logicalStep = (run: RunSummary) => {
+    if (!run.step) return null;
+    return run.task_key && run.task_key !== run.step ? run.step : null;
+  };
 
   return (
     <div className="page-content flex h-full flex-col overflow-x-hidden pt-3">
@@ -44,7 +60,7 @@ export function RunsExplorer() {
         </select>
         <input
           type="text"
-          placeholder="Filter by job…"
+          placeholder="Filter by job or task…"
           value={step}
           onChange={(e) => setStep(e.target.value)}
           className="h-9 text-sm rounded-md border px-2.5 min-w-56 flex-1"
@@ -77,6 +93,7 @@ export function RunsExplorer() {
               <tr style={{ background: "var(--color-surface-subtle)", borderBottom: "1px solid var(--color-border)" }}>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Status</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Job</th>
+                <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Task</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Environment</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Started</th>
                 <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--color-text-muted)" }}>Duration</th>
@@ -87,7 +104,7 @@ export function RunsExplorer() {
             <tbody>
               {runs.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: "var(--color-text-muted)" }}>
+                  <td colSpan={8} className="px-4 py-8 text-center" style={{ color: "var(--color-text-muted)" }}>
                     No runs found
                   </td>
                 </tr>
@@ -120,6 +137,18 @@ export function RunsExplorer() {
                     {run.job_name ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-xs">
+                    <div className="flex flex-col">
+                      <span className="font-mono" style={{ color: "var(--color-text)" }}>
+                        {taskLabel(run)}
+                      </span>
+                      {logicalStep(run) && (
+                        <span style={{ color: "var(--color-text-muted)" }}>
+                          step: {logicalStep(run)}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
                     {run.environment ? (
                       <span
                         className="px-1.5 py-0.5 rounded text-xs font-medium"
@@ -136,7 +165,7 @@ export function RunsExplorer() {
                     {run.started_at ? new Date(run.started_at).toLocaleString() : "—"}
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {run.duration_ms != null ? `${Math.round(Number(run.duration_ms) / 1000)}s` : "—"}
+                    {formatDuration(run.duration_ms)}
                   </td>
                   <td className="px-4 py-3 text-xs">
                     {Number(run.dq_count) > 0 ? (

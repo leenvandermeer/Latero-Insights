@@ -16,6 +16,7 @@ export {
   // V2
   fetchRuns,
   fetchRunDetail,
+  fetchTypedRunDetail,
   fetchEntities,
   fetchEntityDetail,
   fetchEntityRuns,
@@ -94,4 +95,3 @@ export type {
   EvidenceGaps,
   EvidenceEventType,
 } from "./evidence";
-

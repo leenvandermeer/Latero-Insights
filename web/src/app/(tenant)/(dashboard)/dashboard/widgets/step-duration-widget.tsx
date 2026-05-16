@@ -5,6 +5,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { useRuns } from "@/hooks/use-runs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui";
 import { ChartSkeleton } from "@/components/ui";
+import type { RunSummary } from "@/types/v2";
 
 interface Props { from: string; to: string; titleOverride?: string; }
 
@@ -12,7 +13,7 @@ export function StepDurationWidget({ from, to, titleOverride }: Props) {
   const { data: response, isLoading, error } = useRuns({ from, to });
 
   const chartData = useMemo(() => {
-    const runs = (response?.data ?? []) as Array<Record<string, unknown>>;
+    const runs = (response?.data ?? []) as RunSummary[];
     const byJob = new Map<string, { queue: number; setup: number; exec: number; count: number }>();
 
     for (const run of runs) {

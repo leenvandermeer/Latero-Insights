@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/ui";
+import type { RunSummary } from "@/types/v2";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -279,7 +280,7 @@ function OpenIncidentsPanel() {
 
 // ── Recent runs panel ─────────────────────────────────────────────────────────
 
-function RecentRunsPanel({ runs, loading }: { runs: Array<Record<string, string>>; loading: boolean }) {
+function RecentRunsPanel({ runs, loading }: { runs: RunSummary[]; loading: boolean }) {
   return (
     <div className="rounded-xl border flex flex-col" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
       <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "var(--color-border)" }}>
@@ -342,7 +343,7 @@ export function HealthOverview() {
   const { data: runsRes, isLoading: runsLoading } = useRuns({ from, to, limit: 10 });
 
   const health = healthRes?.data as Record<string, unknown> | undefined;
-  const runs = (runsRes?.data ?? []) as Array<Record<string, string>>;
+  const runs = (runsRes?.data ?? []) as RunSummary[];
   const layerHealth = (health?.layer_health ?? []) as Array<{ layer: string; run_count: number; success_count: number; success_rate: number }>;
 
   const h = (key: string): string | number => health != null ? (health[key] as string | number) ?? "—" : "—";

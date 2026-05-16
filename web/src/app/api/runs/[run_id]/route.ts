@@ -27,6 +27,7 @@ export async function GET(
     // Run + job
     const runRes = await pool.query(
       `SELECT r.run_id, r.external_run_id, j.job_name, j.dataset_id,
+              r.step, r.task_key,
               r.status, r.environment,
               r.started_at, r.ended_at,
               COALESCE(
@@ -37,6 +38,7 @@ export async function GET(
               ) AS duration_ms,
               r.attempt_number, r.queue_duration_ms, r.setup_duration_ms,
               r.trigger, r.run_page_url,
+              r.dbx_job_run_id, r.dbx_task_run_id,
               r.parent_run_id, r.run_facets
        FROM meta.runs r
        JOIN meta.jobs j USING (job_id)
@@ -108,7 +110,9 @@ export async function GET(
     // Child runs
     const childrenRes = await pool.query(
       `SELECT r.run_id, r.external_run_id, j.job_name, j.dataset_id,
-              r.status, r.started_at, r.ended_at, r.duration_ms
+              r.step, r.task_key,
+              r.status, r.started_at, r.ended_at, r.duration_ms,
+              r.dbx_job_run_id, r.dbx_task_run_id
        FROM meta.runs r
        JOIN meta.jobs j USING (job_id)
        WHERE r.parent_run_id = $1 AND r.installation_id = $2

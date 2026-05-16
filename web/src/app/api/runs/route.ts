@@ -38,7 +38,11 @@ export async function GET(request: NextRequest) {
 
   let filters = "";
   if (status) { filters += ` AND r.status = $${idx++}`; values.push(status.toUpperCase()); }
-  if (step) { filters += ` AND j.job_name ILIKE $${idx++}`; values.push(`%${step}%`); }
+  if (step) {
+    filters += ` AND (j.job_name ILIKE $${idx} OR COALESCE(r.task_key, '') ILIKE $${idx} OR COALESCE(r.step, '') ILIKE $${idx})`;
+    values.push(`%${step}%`);
+    idx++;
+  }
   if (entity) { filters += ` AND j.dataset_id = $${idx++}`; values.push(entity); }
   if (product_id) { filters += ` AND j.dataset_id = $${idx++}`; values.push(product_id); }
   if (cursor) { filters += ` AND r.started_at < $${idx++}`; values.push(cursor); }
@@ -47,11 +51,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await pool.query(
-      `SELECT
+       `SELECT
          r.run_id,
          r.external_run_id,
          j.job_name,
          j.dataset_id,
+         r.step,
+         r.task_key,
          r.status,
          r.environment,
          r.started_at,
@@ -62,6 +68,8 @@ export async function GET(request: NextRequest) {
          r.setup_duration_ms,
          r.trigger,
          r.run_page_url,
+         r.dbx_job_run_id,
+         r.dbx_task_run_id,
          r.parent_run_id,
          (SELECT COUNT(*) FROM meta.run_io io WHERE io.run_id = r.run_id) AS io_count,
          (SELECT COUNT(*) FROM meta.quality_results qr

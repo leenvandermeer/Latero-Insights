@@ -9,6 +9,7 @@ import type {
   SettingsResponse,
   SettingsUpdateRequest,
 } from "./types";
+import type { RunDetail, RunSummary } from "@/types/v2";
 
 /**
  * Typed API client for Latero Control.
@@ -152,7 +153,7 @@ export function seedDemoData(): Promise<{ seeded: { pipelines: number; quality: 
 export function fetchRuns(params: {
   from?: string; to?: string; status?: string; step?: string;
   product_id?: string; entity?: string; cursor?: string; limit?: number;
-}): Promise<{ data: unknown[]; source: string; next_cursor?: string }> {
+}): Promise<{ data: RunSummary[]; source: string; next_cursor?: string }> {
   const p = new URLSearchParams();
   if (params.from) p.set("from", params.from);
   if (params.to) p.set("to", params.to);
@@ -166,6 +167,10 @@ export function fetchRuns(params: {
 }
 
 export function fetchRunDetail(runId: string): Promise<{ data: unknown; source: string }> {
+  return request(`/runs/${encodeURIComponent(runId)}`);
+}
+
+export function fetchTypedRunDetail(runId: string): Promise<{ data: RunDetail; source: string }> {
   return request(`/runs/${encodeURIComponent(runId)}`);
 }
 
