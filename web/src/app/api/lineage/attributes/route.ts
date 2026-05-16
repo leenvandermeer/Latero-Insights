@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       meta: {
         resolution: "data_lineage_derived",
         provenanceCounts: {
-          lineage_attributes_current: attributes.length,
+          lineage_attribute: attributes.length,
         },
       },
     });

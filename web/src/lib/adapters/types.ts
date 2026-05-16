@@ -104,13 +104,12 @@ export interface LineageAttribute {
   // OpenLineage ColumnLineageFacet — afgeleid van is_direct + transformation_mode in Databricks
   transformation_type?: "DIRECT" | "INDIRECT" | "UNKNOWN" | null;
   transformation_subtype?: string | null;
-  provenance?: "lineage_attributes_current";
+  provenance?: "lineage_attribute";
   evidence?: string | null;
 }
 
 export interface LineageSchemaInventory {
-  lineage_entities_current: string[];
-  lineage_attributes_current: string[];
+  lineage_attribute: string[];
   lineage_dataset: string[];
 }
 

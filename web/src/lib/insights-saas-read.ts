@@ -384,7 +384,7 @@ async function getLineageAttributesFromMetaStore(installationId?: string | null,
     valid_from: row.valid_from,
     valid_to: row.valid_to,
     is_current: true,
-    provenance: "lineage_attributes_current" as const,
+    provenance: "lineage_attribute" as const,
   })) as LineageAttribute[];
 }
 

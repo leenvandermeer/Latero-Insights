@@ -200,15 +200,13 @@ export class DatabricksAdapter implements DataAdapter {
 
   async getLineageSchemaInventory(): Promise<LineageSchemaInventory> {
     const id = this.installationId;
-    const [entities, attributes, hops] = await Promise.all([
-      describeColumns("lineage_entities_current", id),
-      describeColumns("lineage_attributes_current", id),
+    const [attributes, hops] = await Promise.all([
+      describeColumns("lineage_attribute", id),
       describeColumns("lineage_dataset", id),
     ]);
 
     return {
-      lineage_entities_current: entities,
-      lineage_attributes_current: attributes,
+      lineage_attribute: attributes,
       lineage_dataset: hops,
     };
   }
@@ -321,12 +319,14 @@ export class DatabricksAdapter implements DataAdapter {
 
   async getLineageAttributes(asOf?: string): Promise<LineageAttribute[]> {
     const id = this.installationId;
-    const columns = await describeColumns("lineage_attributes_current", id);
-    const hasIsCurrent = hasColumn(columns, "is_current");
+    // LADR-081: reads from meta.lineage_attribute (SCD2) instead of the deprecated
+    // meta.lineage_attributes_current projected table (removed in LADR-017/LADR-081).
+    const rawTable = "lineage_attribute";
+    const columns = await describeColumns(rawTable, id);
     const hasValidFrom = hasColumn(columns, "valid_from");
-    const datasetColumn = preferredColumn(columns, "dataset_id");
-    const sourceLayerColumn = preferredColumn(columns, "source_layer");
-    const targetLayerColumn = preferredColumn(columns, "target_layer");
+    const hasIsCurrentCol = hasColumn(columns, "is_current");
+    const sourceLayerExpr = hasColumn(columns, "source_layer") ? "source_layer" : "CAST(NULL AS STRING) AS source_layer";
+    const targetLayerExpr = hasColumn(columns, "target_layer") ? "target_layer" : "CAST(NULL AS STRING) AS target_layer";
     // OpenLineage ColumnLineageFacet: Databricks heeft is_direct (boolean) + transformation_mode (string)
     // is_direct=true → DIRECT, is_direct=false → INDIRECT (OL standaard)
     const hasIsDirectCol = hasColumn(columns, "is_direct");
@@ -338,18 +338,31 @@ export class DatabricksAdapter implements DataAdapter {
       ? ", transformation_mode AS transformation_subtype"
       : ", CAST(NULL AS STRING) AS transformation_subtype";
     const validFromExpr = hasValidFrom ? ", valid_from, valid_to" : ", CAST(NULL AS STRING) AS valid_from, CAST(NULL AS STRING) AS valid_to";
+    const datasetExpr = hasColumn(columns, "dataset_id") ? "dataset_id" : "CAST(NULL AS STRING) AS dataset_id";
+    const isCurrentExpr = hasIsCurrentCol ? ", is_current" : ", true AS is_current";
 
     // Point-in-time filter: when asOf is provided and the table has SCD2 columns, filter
     // to rows whose validity window covers the requested date. Falls back to is_current=true
     // when the column is absent (pre-migration instances).
     let whereConditions: string[];
     if (asOf && hasValidFrom) {
-      whereConditions = [`'${asOf}' >= valid_from`, `(valid_to IS NULL OR '${asOf}' < valid_to)`];
+      whereConditions = [
+        `'${asOf}' >= valid_from`,
+        `(valid_to IS NULL OR '${asOf}' < valid_to)`,
+        "lineage_group_id IS NOT NULL",
+        "target_attribute IS NOT NULL",
+        "COALESCE(hop_kind, 'data_flow') != 'context'",
+      ];
     } else {
-      whereConditions = hasIsCurrent ? ["is_current = true"] : [];
+      whereConditions = [
+        ...(hasIsCurrentCol ? ["is_current = true"] : []),
+        "lineage_group_id IS NOT NULL",
+        "target_attribute IS NOT NULL",
+        "COALESCE(hop_kind, 'data_flow') != 'context'",
+      ];
     }
 
-    const sql = `SELECT ${datasetColumn ? `${datasetColumn} AS dataset_id, ` : "CAST(NULL AS STRING) AS dataset_id, "}source_entity_fqn AS source_name, source_attribute, target_entity_fqn AS target_name, target_attribute${sourceLayerColumn ? `, ${sourceLayerColumn} AS source_layer` : ", CAST(NULL AS STRING) AS source_layer"}${targetLayerColumn ? `, ${targetLayerColumn} AS target_layer` : ", CAST(NULL AS STRING) AS target_layer"}${hasIsCurrent ? ", is_current" : ", true AS is_current"}${validFromExpr}${isDirectExpr}${transformationModeExpr} FROM ${fqTable("lineage_attributes_current", id)}${await scopedWhereClause("lineage_attributes_current", columns, whereConditions, id)}`;
+    const sql = `SELECT ${datasetExpr} AS dataset_id, source_entity AS source_name, source_attribute, target_entity AS target_name, target_attribute, ${sourceLayerExpr}, ${targetLayerExpr}${isCurrentExpr}${validFromExpr}${isDirectExpr}${transformationModeExpr} FROM ${fqTable(rawTable, id)}${await scopedWhereClause(rawTable, columns, whereConditions, id)}`;
     const resp = await executeStatement(sql, undefined, id);
     return mapRows(resp, (row, cols) => ({
       dataset_id: col(row, cols, "dataset_id"),
@@ -364,7 +377,7 @@ export class DatabricksAdapter implements DataAdapter {
       valid_to: col(row, cols, "valid_to") ?? null,
       transformation_type: (col(row, cols, "transformation_type") as "DIRECT" | "INDIRECT" | "UNKNOWN" | null) ?? "UNKNOWN",
       transformation_subtype: col(row, cols, "transformation_subtype"),
-      provenance: "lineage_attributes_current",
+      provenance: "lineage_attribute" as const,
     }));
   }
 
@@ -421,7 +434,7 @@ export class DatabricksAdapter implements DataAdapter {
       valid_to: col(row, cols, "valid_to"),
       is_current: parseBoolean(col(row, cols, "is_current")),
       transformation_type: (col(row, cols, "transformation_type") as "DIRECT" | "INDIRECT" | "UNKNOWN" | null) ?? "UNKNOWN",
-      provenance: "lineage_attributes_current",
+      provenance: "lineage_attribute",
     }));
   }
 
