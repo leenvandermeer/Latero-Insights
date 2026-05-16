@@ -93,8 +93,7 @@ export function RunDetail({ runId }: { runId: string }) {
   const io       = run.io_datasets ?? [];
   const dqChecks = run.dq_checks ?? [];
   const children = run.child_runs ?? [];
-  const taskLabel = run.task_key || run.step || run.job_name || runId;
-  const logicalStep = run.step && run.task_key && run.step !== run.task_key ? run.step : null;
+  const taskLabel = run.task_key || run.job_name || runId;
 
   return (
     <div className="page-content flex flex-col gap-6 overflow-x-hidden">
@@ -134,11 +133,6 @@ export function RunDetail({ runId }: { runId: string }) {
               </a>
             )}
           </div>
-          {logicalStep && (
-            <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-              Logical step: <span className="font-mono">{logicalStep}</span>
-            </p>
-          )}
           <p className="text-sm mt-1 font-mono" style={{ color: "var(--color-text-muted)" }}>{runId}</p>
         </div>
       </div>
@@ -147,7 +141,7 @@ export function RunDetail({ runId }: { runId: string }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Job",         value: String(run.job_name ?? run.dataset_id ?? "—") },
-          { label: "Task",        value: String(run.task_key ?? run.step ?? "—") },
+          { label: "Task",        value: String(run.task_key ?? "—") },
           { label: "Started",     value: run.started_at ? new Date(String(run.started_at)).toLocaleString() : "—" },
           { label: "Finished",    value: run.ended_at ? new Date(String(run.ended_at)).toLocaleString() : "—" },
           { label: "Duration",    value: formatDuration(run.duration_ms) },
@@ -167,7 +161,6 @@ export function RunDetail({ runId }: { runId: string }) {
           <DetailBlock label="Latero run UUID" value={run.run_id} mono />
           <DetailBlock label="External run ID" value={run.external_run_id ?? "—"} mono />
           <DetailBlock label="Task key" value={run.task_key ?? "—"} mono />
-          <DetailBlock label="Logical step" value={run.step ?? "—"} mono />
           <DetailBlock label="Databricks job run ID" value={run.dbx_job_run_id ?? "—"} mono />
           <DetailBlock label="Databricks task run ID" value={run.dbx_task_run_id ?? "—"} mono />
           <DetailBlock label="Parent run ID" value={run.parent_run_id ?? "—"} mono />
@@ -308,13 +301,8 @@ export function RunDetail({ runId }: { runId: string }) {
                   <td className="px-4 py-2.5 text-xs">
                     <div className="flex flex-col">
                       <span className="font-mono" style={{ color: "var(--color-text)" }}>
-                        {String(c.task_key ?? c.step ?? "—")}
+                        {String(c.task_key ?? "—")}
                       </span>
-                      {c.step && c.task_key && c.step !== c.task_key && (
-                        <span style={{ color: "var(--color-text-muted)" }}>
-                          step: {String(c.step)}
-                        </span>
-                      )}
                     </div>
                   </td>
                   <td className="px-4 py-2.5 text-xs" style={{ color: "var(--color-text-muted)" }}>

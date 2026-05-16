@@ -38,11 +38,7 @@ export function RunsExplorer() {
     return rest > 0 ? `${minutes}m ${rest}s` : `${minutes}m`;
   };
 
-  const taskLabel = (run: RunSummary) => run.task_key || run.step || "—";
-  const logicalStep = (run: RunSummary) => {
-    if (!run.step) return null;
-    return run.task_key && run.task_key !== run.step ? run.step : null;
-  };
+  const taskLabel = (run: RunSummary) => run.task_key || "—";
 
   return (
     <div className="page-content flex h-full flex-col overflow-x-hidden pt-3">
@@ -137,16 +133,9 @@ export function RunsExplorer() {
                     {run.job_name ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-xs">
-                    <div className="flex flex-col">
-                      <span className="font-mono" style={{ color: "var(--color-text)" }}>
-                        {taskLabel(run)}
-                      </span>
-                      {logicalStep(run) && (
-                        <span style={{ color: "var(--color-text-muted)" }}>
-                          step: {logicalStep(run)}
-                        </span>
-                      )}
-                    </div>
+                    <span className="font-mono" style={{ color: "var(--color-text)" }}>
+                      {taskLabel(run)}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-xs">
                     {run.environment ? (

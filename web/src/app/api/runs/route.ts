@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   let filters = "";
   if (status) { filters += ` AND r.status = $${idx++}`; values.push(status.toUpperCase()); }
   if (step) {
-    filters += ` AND (j.job_name ILIKE $${idx} OR COALESCE(r.task_key, '') ILIKE $${idx} OR COALESCE(r.step, '') ILIKE $${idx})`;
+    filters += ` AND (j.job_name ILIKE $${idx} OR COALESCE(r.task_key, '') ILIKE $${idx})`;
     values.push(`%${step}%`);
     idx++;
   }
@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
          r.external_run_id,
          j.job_name,
          j.dataset_id,
-         r.step,
          r.task_key,
          r.status,
          r.environment,

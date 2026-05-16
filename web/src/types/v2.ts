@@ -66,7 +66,6 @@ export interface RunDetail {
   job_name: string;
   dataset_id?: string | null;
   entity_fqn?: string | null;
-  step?: string | null;
   task_key?: string | null;
   status: "SUCCESS" | "FAILED" | "WARNING" | "UNKNOWN";
   environment?: string | null;
@@ -94,7 +93,6 @@ export interface RunSummary {
   external_run_id: string;
   job_name: string;
   dataset_id?: string | null;
-  step?: string | null;
   task_key?: string | null;
   status: "SUCCESS" | "FAILED" | "WARNING" | "RUNNING" | "UNKNOWN";
   environment?: string | null;
