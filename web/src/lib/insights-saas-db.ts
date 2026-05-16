@@ -169,7 +169,7 @@ export async function validateLicense(
 
   const result = await pool.query(
     `
-      SELECT subscription_tier, valid_until, active
+      SELECT tier AS subscription_tier, valid_until, active
       FROM insights_installations
       WHERE installation_id = $1
         AND crypt($2, token_hash) = token_hash
@@ -223,7 +223,7 @@ export async function listInstallations(): Promise<InstallationRow[]> {
   const pool = getPgPool();
   await pool.query("ALTER TABLE insights_installations ADD COLUMN IF NOT EXISTS last_token_used_at TIMESTAMPTZ");
   const result = await pool.query(
-    `SELECT installation_id, label, environment, subscription_tier, valid_until, active, created_at, last_token_used_at
+    `SELECT installation_id, label, environment, tier AS subscription_tier, valid_until, active, created_at, last_token_used_at
      FROM insights_installations
      ORDER BY created_at DESC`,
   );
@@ -240,7 +240,7 @@ export async function createInstallation(
   const pool = getPgPool();
   await pool.query(
     `INSERT INTO insights_installations
-       (installation_id, environment, token_hash, label, subscription_tier)
+       (installation_id, environment, token_hash, label, tier)
      VALUES ($1, $2, crypt($3, gen_salt('bf')), $4, $5)`,
     [installationId, environment, rawToken, label ?? null, subscriptionTier],
   );
@@ -295,7 +295,7 @@ export async function updateInstallation(
   if (fields.label !== undefined) { sets.push(`label = $${idx++}`); values.push(fields.label); }
   if (fields.active !== undefined) { sets.push(`active = $${idx++}`); values.push(fields.active); }
   if (fields.valid_until !== undefined) { sets.push(`valid_until = $${idx++}`); values.push(fields.valid_until); }
-  if (fields.subscription_tier !== undefined) { sets.push(`subscription_tier = $${idx++}`); values.push(fields.subscription_tier); }
+  if (fields.subscription_tier !== undefined) { sets.push(`tier = $${idx++}`); values.push(fields.subscription_tier); }
 
   if (sets.length === 0) return false;
 
