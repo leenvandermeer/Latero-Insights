@@ -88,6 +88,9 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       environment: run.environment || "unknown",
       timestampUtc: run.timestamp_utc,
       durationMs: run.duration_ms ?? null,
+      dbxJobRunId: run.dbx_job_run_id || null,
+      dbxTaskRunId: run.dbx_task_run_id || null,
+      taskKey: run.task_key || null,
     });
   }
 

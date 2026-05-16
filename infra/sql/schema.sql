@@ -391,6 +391,10 @@ CREATE TABLE IF NOT EXISTS meta.runs (
   rows_total      BIGINT,
   run_date        DATE GENERATED ALWAYS AS ((started_at AT TIME ZONE 'UTC')::date) STORED,
   run_facets      JSONB,
+  -- Databricks multi-task job context (NULL for non-Databricks sources)
+  dbx_job_run_id  TEXT,
+  dbx_task_run_id TEXT,
+  task_key        TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (run_id),
   CONSTRAINT meta_runs_installation_id_external_run_id_run_date_key

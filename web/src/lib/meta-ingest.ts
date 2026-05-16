@@ -66,6 +66,10 @@ export interface MetaPipelineRunParams {
   rowsUpdated?: number | null;
   rowsDeleted?: number | null;
   rowsTotal?: number | null;
+  // Databricks multi-task job context
+  dbxJobRunId?: string | null;
+  dbxTaskRunId?: string | null;
+  taskKey?: string | null;
 }
 
 export async function writeMetaPipelineRun(
@@ -177,7 +181,10 @@ export async function writeMetaPipelineRun(
             rows_inserted     = COALESCE($12, rows_inserted),
             rows_updated      = COALESCE($13, rows_updated),
             rows_deleted      = COALESCE($14, rows_deleted),
-            rows_total        = COALESCE($15, rows_total)
+            rows_total        = COALESCE($15, rows_total),
+            dbx_job_run_id    = COALESCE($16, dbx_job_run_id),
+            dbx_task_run_id   = COALESCE($17, dbx_task_run_id),
+            task_key          = COALESCE($18, task_key)
         WHERE installation_id = $4
           AND external_run_id = $5
           AND run_date        = $6
@@ -199,6 +206,9 @@ export async function writeMetaPipelineRun(
         params.rowsUpdated      ?? null,
         params.rowsDeleted      ?? null,
         params.rowsTotal        ?? null,
+        params.dbxJobRunId      ?? null,
+        params.dbxTaskRunId     ?? null,
+        params.taskKey          ?? null,
       ],
     );
 
@@ -212,8 +222,9 @@ export async function writeMetaPipelineRun(
             job_id, installation_id, external_run_id,
             status, environment, started_at, ended_at, duration_ms,
             attempt_number, queue_duration_ms, setup_duration_ms, trigger, run_page_url,
-            rows_inserted, rows_updated, rows_deleted, rows_total
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            rows_inserted, rows_updated, rows_deleted, rows_total,
+            dbx_job_run_id, dbx_task_run_id, task_key
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
           ON CONFLICT DO NOTHING
           RETURNING run_id
         `,
@@ -235,6 +246,9 @@ export async function writeMetaPipelineRun(
           params.rowsUpdated      ?? null,
           params.rowsDeleted      ?? null,
           params.rowsTotal        ?? null,
+          params.dbxJobRunId      ?? null,
+          params.dbxTaskRunId     ?? null,
+          params.taskKey          ?? null,
         ],
       );
       runUuid = insertResult.rows[0].run_id as string;
