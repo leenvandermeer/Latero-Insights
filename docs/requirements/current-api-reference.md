@@ -1,6 +1,6 @@
 # Latero Control API Reference
 
-Status: CURRENT — bijgewerkt 2026-05-04  
+Status: CURRENT — bijgewerkt 2026-05-16  
 Owner: Latero product
 
 For the full external ingest contract, see:
@@ -125,7 +125,7 @@ Common behavior:
 | `/api/v1/events` | POST | OpenLineage RunEvent ingest (canonical V2) |
 | `/api/v1/pipeline-runs` | POST | Legacy pipeline run ingest |
 | `/api/v1/dq-checks` | POST | Legacy DQ check ingest |
-| `/api/v1/lineage` | POST | Legacy lineage hop ingest |
+| `/api/v1/lineage` | POST | Direct lineage ingest for dataset- and column-level edges (legacy aliases supported) |
 | `/api/v1/ingest` | POST | Generic ingest endpoint |
 | `/api/v1/me` | GET | Current user info |
 | `/api/v1/users` | GET | Users for active installation |
@@ -141,6 +141,22 @@ Primary ingest endpoint for Latero runtimes.
 Accepts an OpenLineage `RunEvent` or array of `RunEvent`.  
 Auth: Bearer token; `installation_id` from `producer` or `installation_id` field.  
 Processes: runs, run_io, lineage_edges, lineage_columns (ColumnLineageFacet), quality_results (DataQualityAssertionsFacet).
+
+### `POST /api/v1/lineage` — direct lineage ingest
+
+Compatibility endpoint for runtimes and adapters that post lineage without the
+generic batch envelope. Accepts canonical `source_ref` / `target_ref` fields and
+still accepts legacy aliases `input_entity` / `output_entity`.
+
+Supports:
+- Dataset lineage via `source_ref`, `target_ref`, `source_layer`, `target_layer`
+- Column lineage via optional `source_attribute`, `target_attribute`
+- Forward-compatible metadata fields such as `lineage_scope`, `relation_type`, `evidence`
+
+Current storage behavior:
+- `meta.lineage_edges` is driven by the resolved source and target refs plus layers
+- `meta.lineage_columns` is additionally written when both attribute fields are present
+- `relation_type` and `evidence` are accepted for compatibility and audit logging, but are not yet materialized as first-class columns in `meta.*`
 
 ---
 
@@ -169,4 +185,3 @@ All routes require `is_admin = true` on the session.
 **Read side:** all dashboard APIs read from `meta.*` tables in Postgres.  
 **Write side:** `/api/v1/*` writes to `meta.*`; `/api/sync/databricks` pulls from Databricks into the same store.  
 **Schema:** `infra/sql/init/` (migrations 001–017+)
-

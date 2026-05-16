@@ -108,8 +108,8 @@ async function ingestLineage(event: AdapterEvent, pool: ReturnType<typeof getPgP
   const runId          = requireString(event.run_id,          "run_id");
   requireString(event.environment, "environment");
 
-  const sourceRef = String(event.source_ref  ?? event.source_entity ?? "").trim();
-  const targetRef = String(event.target_ref  ?? event.target_entity ?? "").trim();
+  const sourceRef = String(event.source_ref ?? event.source_entity ?? event.input_entity ?? "").trim();
+  const targetRef = String(event.target_ref ?? event.target_entity ?? event.output_entity ?? "").trim();
   if (!sourceRef) throw new Error("source_ref is required");
   if (!targetRef) throw new Error("target_ref is required");
 
@@ -122,8 +122,10 @@ async function ingestLineage(event: AdapterEvent, pool: ReturnType<typeof getPgP
     await writeMetaLineage(pool, {
       installationId,
       externalRunId:   runId,
-      sourceEntity:    String(event.source_entity ?? sourceRef),
-      targetEntity:    String(event.target_entity ?? targetRef),
+      sourceEntity:    sourceRef,
+      targetEntity:    targetRef,
+      sourceRef,
+      targetRef,
       sourceType:      optionalString(event.source_type),
       targetType:      optionalString(event.target_type),
       sourceAttribute: optionalString(event.source_attribute),
@@ -131,6 +133,12 @@ async function ingestLineage(event: AdapterEvent, pool: ReturnType<typeof getPgP
       sourceSystem:    optionalString(event.source_system),
       sourceLayer:     optionalString(event.source_layer),
       targetLayer:     optionalString(event.target_layer),
+      lineageScope:    optionalString(event.lineage_scope),
+      relationType:    optionalString(event.relation_type),
+      evidence:
+        event.evidence && typeof event.evidence === "object" && !Array.isArray(event.evidence)
+          ? (event.evidence as Record<string, unknown>)
+          : null,
       timestampUtc:    new Date().toISOString(),
     });
   }

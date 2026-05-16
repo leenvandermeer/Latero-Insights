@@ -386,6 +386,100 @@ paths:
           $ref: '#/components/responses/InternalError'
 
   # ---------------------------------------------------------------------------
+  # POST /api/v1/lineage
+  # ---------------------------------------------------------------------------
+  /api/v1/lineage:
+    post:
+      operationId: ingestLineageLegacy
+      tags: [Ingest]
+      summary: Ingest a lineage edge
+      description: |
+        Compatibility endpoint for direct lineage ingest. Accepts the canonical
+        `source_ref` and `target_ref` identifiers used by dbt-native Latero
+        adapters and still accepts the legacy aliases `input_entity` and
+        `output_entity`.
+
+        Dataset-level lineage and column-level lineage use the same payload.
+        When `source_attribute` and `target_attribute` are present, Latero also
+        records an attribute-level edge in `meta.lineage_columns`.
+
+        Additional compatibility fields such as `lineage_scope`,
+        `relation_type`, and `evidence` are accepted for forward compatibility.
+        Current storage is driven by the resolved source/target refs, layers,
+        and optional attribute pair.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/LineageEvent'
+                - type: object
+                  required: [installation_id, run_id, environment, timestamp_utc]
+            examples:
+              dataset_lineage:
+                summary: dbt dataset lineage
+                value:
+                  installation_id: inst_abc123
+                  run_id: 550e8400-e29b-41d4-a716-446655440000
+                  environment: prod
+                  timestamp_utc: "2026-05-16T07:14:11Z"
+                  source_ref: bronze.cbsarbeid_raw
+                  target_ref: silver.gemeente_arbeid
+                  source_layer: bronze
+                  target_layer: silver
+                  source_type: table
+                  target_type: table
+                  lineage_scope: dataset
+                  relation_type: transformed_to
+                  evidence:
+                    adapter: dbt
+                    model: silver_gemeente_arbeid
+              column_lineage:
+                summary: dbt column lineage
+                value:
+                  installation_id: inst_abc123
+                  run_id: 550e8400-e29b-41d4-a716-446655440000
+                  environment: prod
+                  timestamp_utc: "2026-05-16T07:14:11Z"
+                  source_ref: bronze.cbsarbeid_raw
+                  target_ref: silver.gemeente_arbeid
+                  source_attribute: personeelsnummer
+                  target_attribute: employee_id
+                  source_layer: bronze
+                  target_layer: silver
+                  lineage_scope: attribute
+                  relation_type: transformed_to
+      responses:
+        '201':
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted, event_type, installation_id]
+                properties:
+                  accepted:
+                    type: boolean
+                    example: true
+                  event_type:
+                    type: string
+                    example: data_lineage
+                  installation_id:
+                    type: string
+                    example: inst_abc123
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ---------------------------------------------------------------------------
   # GET /api/runs
   # ---------------------------------------------------------------------------
   /api/runs:
@@ -830,9 +924,21 @@ components:
             source_entity:
               type: string
               maxLength: 256
+              description: Legacy alias field. When `source_ref` is present, Latero resolves lineage from `source_ref`.
             target_entity:
               type: string
               maxLength: 256
+              description: Legacy alias field. When `target_ref` is present, Latero resolves lineage from `target_ref`.
+            input_entity:
+              type: string
+              maxLength: 256
+              deprecated: true
+              description: Legacy alias for `source_ref`.
+            output_entity:
+              type: string
+              maxLength: 256
+              deprecated: true
+              description: Legacy alias for `target_ref`.
             source_layer:
               $ref: '#/components/schemas/MedallionLayer'
             target_layer:
@@ -861,6 +967,10 @@ components:
             target_attribute:
               type: string
               maxLength: 256
+            evidence:
+              type: object
+              description: Optional adapter evidence for debugging or traceability. Accepted and audit-logged for compatibility.
+              additionalProperties: true
 
     DataProductEvent:
       allOf:

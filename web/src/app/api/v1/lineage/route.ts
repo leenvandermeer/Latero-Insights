@@ -42,8 +42,18 @@ export async function POST(request: NextRequest) {
 
     const timestampUtc = parseTimestamp(body.timestamp_utc);
     const runId = requireString(body.run_id, "run_id");
-    const sourceEntity = requireString(body.input_entity, "input_entity");
-    const targetEntity = requireString(body.output_entity, "output_entity");
+    const sourceEntity = requireString(
+      body.source_ref ?? body.source_entity ?? body.input_entity,
+      "source_ref",
+    );
+    const targetEntity = requireString(
+      body.target_ref ?? body.target_entity ?? body.output_entity,
+      "target_ref",
+    );
+    const evidence =
+      body.evidence && typeof body.evidence === "object" && !Array.isArray(body.evidence)
+        ? (body.evidence as Record<string, unknown>)
+        : null;
 
     const pool = getPgPool();
     await writeMetaLineage(pool, {
@@ -51,6 +61,8 @@ export async function POST(request: NextRequest) {
       externalRunId: runId,
       sourceEntity,
       targetEntity,
+      sourceRef: optionalString(body.source_ref),
+      targetRef: optionalString(body.target_ref),
       sourceType: optionalString(body.source_type),
       targetType: optionalString(body.target_type),
       sourceAttribute: optionalString(body.source_attribute),
@@ -58,6 +70,9 @@ export async function POST(request: NextRequest) {
       sourceSystem: optionalString(body.source_system),
       sourceLayer: optionalString(body.source_layer),
       targetLayer: optionalString(body.target_layer),
+      lineageScope: optionalString(body.lineage_scope),
+      relationType: optionalString(body.relation_type),
+      evidence,
       timestampUtc,
     });
 

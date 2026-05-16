@@ -426,6 +426,8 @@ export interface MetaLineageParams {
   externalRunId: string;
   sourceEntity: string; // input_entity
   targetEntity: string; // output_entity
+  sourceRef?: string | null;
+  targetRef?: string | null;
   sourceType: string | null;
   targetType: string | null;
   sourceAttribute: string | null;
@@ -433,6 +435,9 @@ export interface MetaLineageParams {
   sourceSystem: string | null;
   sourceLayer?: string | null; // logische pipelinelaag bron (OpenLineage: namespace)
   targetLayer?: string | null; // logische pipelinelaag doel
+  lineageScope?: string | null;
+  relationType?: string | null;
+  evidence?: Record<string, unknown> | null;
   timestampUtc: string;
 }
 

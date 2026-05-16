@@ -133,35 +133,97 @@ components:
     LineageEvent:
       type: object
       required:
-        - event_type
         - timestamp_utc
-        - dataset_id
-        - input_entity
-        - output_entity
-        - run_id
-        - step
         - installation_id
+        - run_id
+        - environment
+        - source_ref
+        - target_ref
       properties:
         event_type:
           type: string
-          enum: [data_lineage]
+          enum: [lineage, data_lineage]
+          nullable: true
+          description: Optional on the direct `/lineage` endpoint. Use `lineage` on the generic batch ingest endpoint.
         timestamp_utc:
           type: string
           format: date-time
+        installation_id:
+          type: string
         dataset_id:
           type: string
-        input_entity:
-          type: string
-          description: Source entity identifier
-        output_entity:
-          type: string
-          description: Target entity identifier
+          nullable: true
+          description: Optional compatibility field retained for older clients.
         run_id:
           type: string
           description: Associated pipeline run
-        step:
+        environment:
           type: string
-          description: Pipeline step where transformation occurred
+          description: Deployment environment (dev, staging, production)
+        source_ref:
+          type: string
+          description: Canonical source dataset or entity reference
+          example: bronze.cbsarbeid_raw
+        target_ref:
+          type: string
+          description: Canonical target dataset or entity reference
+          example: silver.gemeente_arbeid
+        source_entity:
+          type: string
+          nullable: true
+          description: Optional compatibility alias. If `source_ref` is present, Latero resolves lineage from `source_ref`.
+        target_entity:
+          type: string
+          nullable: true
+          description: Optional compatibility alias. If `target_ref` is present, Latero resolves lineage from `target_ref`.
+        input_entity:
+          type: string
+          nullable: true
+          deprecated: true
+          description: Legacy alias for `source_ref`
+        output_entity:
+          type: string
+          nullable: true
+          deprecated: true
+          description: Legacy alias for `target_ref`
+        source_layer:
+          type: string
+          nullable: true
+          enum: [landing, raw, bronze, silver, gold]
+        target_layer:
+          type: string
+          nullable: true
+          enum: [landing, raw, bronze, silver, gold]
+        source_type:
+          type: string
+          nullable: true
+          enum: [table, file, stream, api]
+        target_type:
+          type: string
+          nullable: true
+          enum: [table, file, stream, api]
+        source_attribute:
+          type: string
+          nullable: true
+          description: Source column name for column-level lineage
+        target_attribute:
+          type: string
+          nullable: true
+          description: Target column name for column-level lineage
+        lineage_scope:
+          type: string
+          nullable: true
+          enum: [dataset, file, attribute]
+          default: dataset
+        relation_type:
+          type: string
+          nullable: true
+          description: Adapter-defined relation label, for example `transformed_to`
+        evidence:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Optional adapter evidence captured for compatibility and audit logging
         hop_kind:
           type: string
           enum: [data_flow, context]
@@ -169,11 +231,6 @@ components:
           description: |
             data_flow: actual data transformation
             context: metadata/reference relationship
-        installation_id:
-          type: string
-        environment:
-          type: string
-          nullable: true
         source_system:
           type: string
           nullable: true
@@ -369,12 +426,47 @@ paths:
   /lineage:
     post:
       summary: Log a lineage edge
+      description: |
+        Direct lineage ingest endpoint. Accepts canonical `source_ref` and
+        `target_ref` identifiers, plus the legacy aliases `input_entity` and
+        `output_entity`.
+
+        If both `source_attribute` and `target_attribute` are present, Latero
+        also records column-level lineage. Compatibility fields like
+        `lineage_scope`, `relation_type`, and `evidence` are accepted even when
+        current storage does not yet materialize each field as its own column.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/LineageEvent'
+            examples:
+              dataset_lineage:
+                value:
+                  installation_id: inst_abc123
+                  run_id: 550e8400-e29b-41d4-a716-446655440000
+                  environment: prod
+                  timestamp_utc: "2026-05-16T07:14:11Z"
+                  source_ref: bronze.cbsarbeid_raw
+                  target_ref: silver.gemeente_arbeid
+                  source_layer: bronze
+                  target_layer: silver
+                  lineage_scope: dataset
+                  relation_type: transformed_to
+              column_lineage:
+                value:
+                  installation_id: inst_abc123
+                  run_id: 550e8400-e29b-41d4-a716-446655440000
+                  environment: prod
+                  timestamp_utc: "2026-05-16T07:14:11Z"
+                  source_ref: bronze.cbsarbeid_raw
+                  target_ref: silver.gemeente_arbeid
+                  source_attribute: personeelsnummer
+                  target_attribute: employee_id
+                  source_layer: bronze
+                  target_layer: silver
+                  lineage_scope: attribute
       responses:
         '201':
           description: Event accepted
@@ -383,11 +475,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  id:
+                  accepted:
+                    type: boolean
+                  event_type:
                     type: string
-                  timestamp:
+                  installation_id:
                     type: string
-                    format: date-time
         '400':
           description: Invalid event payload
           content:
