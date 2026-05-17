@@ -3,9 +3,9 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3, PlusCircle, Pencil, Loader2, Download, RefreshCw } from "lucide-react";
+import { Package, Search, ChevronDown, ShieldAlert, CircleCheckBig, UserRound, Layers3, PlusCircle, Pencil, Trash2, Loader2, Download, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDataProducts, useUpdateDataProduct, type DataProduct } from "@/hooks/use-data-products";
+import { useDataProducts, useUpdateDataProduct, useDeleteDataProduct, type DataProduct } from "@/hooks/use-data-products";
 import { toast } from "sonner";
 import { useTrustScore } from "@/hooks/use-trust-score";
 import { DataProductSlideOver } from "@/app/(tenant)/(dashboard)/catalog/data-product-slide-over";
@@ -205,6 +205,61 @@ function GovernanceModal({ product, onClose }: { product: Product; onClose: () =
   );
 }
 
+// ── Delete Confirmation Modal ─────────────────────────────────────────────────
+
+function DeleteProductModal({ product, onClose }: { product: Product; onClose: () => void }) {
+  const del = useDeleteDataProduct();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    setError(null);
+    try {
+      await del.mutateAsync(product.data_product_id);
+      toast.success(`"${product.display_name}" deleted`);
+      onClose();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Delete failed";
+      setError(msg);
+    }
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Delete product"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.4)" }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl p-6 flex flex-col gap-4"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-elevated)" }}
+      >
+        <div className="flex flex-col gap-1">
+          <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Delete product?</h2>
+          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            <strong style={{ color: "var(--color-text)" }}>{product.display_name}</strong> and all associated metadata will be permanently removed.
+          </p>
+        </div>
+        {error && <p className="text-xs" style={{ color: "var(--color-error)" }}>{error}</p>}
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm"
+            style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
+            Cancel
+          </button>
+          <button onClick={handleDelete} disabled={del.isPending}
+            className="flex-1 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ background: "var(--color-error)", color: "#fff" }}>
+            {del.isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Deleting…</> : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Product card ──────────────────────────────────────────────────────────────
 
 function ProductCard({ product }: { product: Product }) {
@@ -212,6 +267,7 @@ function ProductCard({ product }: { product: Product }) {
   const issues = getProductIssues(product);
   const isReady = issues.length === 0;
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const score = (trustData as { score?: number } | undefined)?.score;
 
   const accentColor = isReady ? "var(--color-success)" : "var(--color-warning)";
@@ -219,6 +275,7 @@ function ProductCard({ product }: { product: Product }) {
   return (
     <>
       {editOpen && <GovernanceModal product={product} onClose={() => setEditOpen(false)} />}
+      {deleteOpen && <DeleteProductModal product={product} onClose={() => setDeleteOpen(false)} />}
       <div
         className="rounded-xl flex flex-col hover:shadow-sm transition-shadow relative group overflow-hidden"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
@@ -226,15 +283,25 @@ function ProductCard({ product }: { product: Product }) {
         {/* Readiness accent bar */}
         <div className="h-0.5 w-full" style={{ background: accentColor }} />
 
-        {/* Edit governance button — top-right, visible on hover */}
-        <button
-          onClick={() => setEditOpen(true)}
-          className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
-          style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-          title="Edit governance"
-        >
-          <Pencil className="h-3 w-3" />
-        </button>
+        {/* Action buttons — top-right, visible on hover */}
+        <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <button
+            onClick={() => setEditOpen(true)}
+            className="p-1.5 rounded-lg"
+            style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+            title="Edit governance"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => { e.preventDefault(); setDeleteOpen(true); }}
+            className="p-1.5 rounded-lg"
+            style={{ background: "var(--color-surface-alt)", border: "1px solid #fca5a5", color: "var(--color-error)" }}
+            title="Delete product"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
 
         <Link
           href={`/products/${encodeURIComponent(product.data_product_id)}`}

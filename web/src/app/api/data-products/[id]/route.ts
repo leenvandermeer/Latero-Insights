@@ -241,9 +241,30 @@ export async function DELETE(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    // Block delete when open incidents reference this product
+    const openIncidents = await client.query(
+      `SELECT COUNT(*) AS cnt FROM meta.incidents
+       WHERE installation_id = $1 AND product_id = $2 AND status != 'resolved'`,
+      [installationId, id]
+    );
+    const openCount = Number(openIncidents.rows[0]?.cnt ?? 0);
+    if (openCount > 0) {
+      await client.query("ROLLBACK");
+      return NextResponse.json(
+        { error: `This product has ${openCount} open incident${openCount === 1 ? "" : "s"}. Resolve them before deleting.` },
+        { status: 409 }
+      );
+    }
+
     // Detach entities (FK is ON DELETE SET NULL, but we do it explicitly for clarity)
     await client.query(
       `UPDATE meta.entities SET data_product_id = NULL WHERE installation_id = $1 AND data_product_id = $2`,
+      [installationId, id]
+    );
+
+    // Detach resolved incidents (no FK constraint, clean up orphan references)
+    await client.query(
+      `UPDATE meta.incidents SET product_id = NULL WHERE installation_id = $1 AND product_id = $2`,
       [installationId, id]
     );
 
