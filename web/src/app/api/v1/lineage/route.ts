@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
     await writeMetaLineage(pool, {
       installationId,
       externalRunId: runId,
+      taskName: optionalString(body.task_name) ?? optionalString(body.task_key),
       sourceEntity,
       targetEntity,
       sourceRef: optionalString(body.source_ref),

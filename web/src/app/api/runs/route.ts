@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   let filters = "";
   if (status) { filters += ` AND r.status = $${idx++}`; values.push(status.toUpperCase()); }
   if (step) {
-    filters += ` AND (j.job_name ILIKE $${idx} OR COALESCE(r.task_key, '') ILIKE $${idx})`;
+    filters += ` AND (j.job_name ILIKE $${idx} OR r.task_name ILIKE $${idx})`;
     values.push(`%${step}%`);
     idx++;
   }
@@ -54,22 +54,15 @@ export async function GET(request: NextRequest) {
        `SELECT
          r.run_id,
          r.external_run_id,
+         r.source_parent_run_id,
          j.job_name,
          j.dataset_id,
-         r.task_key,
+         r.task_name,
          r.status,
          r.environment,
          r.started_at,
          r.ended_at,
          r.duration_ms,
-         r.attempt_number,
-         r.queue_duration_ms,
-         r.setup_duration_ms,
-         r.trigger,
-         r.run_page_url,
-         r.dbx_job_run_id,
-         r.dbx_task_run_id,
-         r.parent_run_id,
          (SELECT COUNT(*) FROM meta.run_io io WHERE io.run_id = r.run_id) AS io_count,
          (SELECT COUNT(*) FROM meta.quality_results qr
             JOIN meta.quality_rules qru ON qru.check_id = qr.check_id AND qru.installation_id = qr.installation_id

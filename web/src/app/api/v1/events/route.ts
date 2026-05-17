@@ -12,7 +12,7 @@
  *   - SchemaFacet → meta.datasets (dataset_facets)
  *   - DataQualityAssertionsFacet → meta.quality_results
  *   - ColumnLineageFacet → meta.lineage_columns
- *   - ParentRunFacet → meta.runs.parent_run_id
+ *   - ParentRunFacet → meta.runs.source_parent_run_id
  *   - Remaining facets → run_facets / dataset_facets JSONB
  */
 import { NextRequest, NextResponse } from "next/server";
@@ -100,8 +100,6 @@ async function processOLEvent(
   const status = normalizeEventStatus(eventType);
   const isTerminal = ["COMPLETE", "FAIL", "ABORT"].includes(eventType.toUpperCase());
   const endedAt = isTerminal ? eventTime : null;
-  const eventDate = eventTime.slice(0, 10);
-
   // Extract parent run from ParentRunFacet
   const parentFacet = runFacets["parent"] as Record<string, unknown> | undefined;
   const parentRunId = parentFacet?.run
@@ -158,9 +156,9 @@ async function processOLEvent(
   const updateResult = await pool.query(
     `UPDATE meta.runs
      SET status = $1, ended_at = $2, run_facets = $3
-     WHERE installation_id = $4 AND external_run_id = $5
+     WHERE installation_id = $4 AND external_run_id = $5 AND task_name = $6
      RETURNING run_id`,
-    [status, endedAt, JSON.stringify(runFacets), installationId, runId]
+    [status, endedAt, JSON.stringify(runFacets), installationId, runId, jobName]
   );
 
   let runUuid: string;
@@ -168,12 +166,12 @@ async function processOLEvent(
     runUuid = updateResult.rows[0].run_id;
   } else {
     const insertResult = await pool.query(
-      `INSERT INTO meta.runs (job_id, installation_id, external_run_id, step,
-         status, environment, started_at, ended_at, parent_run_id, run_facets)
-       VALUES ($1, $2, $3, $4, $5, 'openlineage', $6, $7, $8, $9)
+      `INSERT INTO meta.runs (job_id, installation_id, external_run_id, source_parent_run_id,
+         task_name, status, environment, started_at, ended_at, run_facets)
+       VALUES ($1, $2, $3, $4, $5, $6, 'openlineage', $7, $8, $9)
        RETURNING run_id`,
-      [jobId, installationId, runId, jobName.slice(0, 100), status,
-        eventTime, endedAt, parentRunId || null, JSON.stringify(runFacets)]
+      [jobId, installationId, runId, parentRunId || null, jobName.slice(0, 200), status,
+        eventTime, endedAt, JSON.stringify(runFacets)]
     );
     runUuid = insertResult.rows[0].run_id;
   }

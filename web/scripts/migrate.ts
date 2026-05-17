@@ -24,8 +24,9 @@ const DATABASE_URL =
 const MIGRATIONS_DIR = (() => {
   const candidates = [
     process.env.MIGRATIONS_DIR,
-    resolve(__dirname, "../../infra/sql/init"),
-    resolve(__dirname, "infra/sql/init"),
+    resolve(process.cwd(), "../infra/sql/init"),
+    resolve(process.cwd(), "infra/sql/init"),
+    resolve("/app/infra/sql/init"),
   ].filter(Boolean) as string[];
   for (const dir of candidates) {
     try { readdirSync(dir); return dir; } catch { /* try next */ }

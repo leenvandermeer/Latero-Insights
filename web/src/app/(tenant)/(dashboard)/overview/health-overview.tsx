@@ -315,7 +315,7 @@ function RecentRunsPanel({ runs, loading }: { runs: RunSummary[]; loading: boole
                     {statusIcon(status)} {status}
                   </span>
                   <span className="flex-1 min-w-0 truncate font-mono text-xs" style={{ color: "var(--color-text)" }}>
-                    {String(run.job_name ?? run.task_key ?? rid)}
+                    {String(run.task_name ?? run.job_name ?? rid)}
                   </span>
                   {!!run.started_at && (
                     <span className="shrink-0 text-xs" style={{ color: "var(--color-text-muted)" }}>

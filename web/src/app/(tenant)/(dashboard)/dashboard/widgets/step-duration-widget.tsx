@@ -14,34 +14,25 @@ export function StepDurationWidget({ from, to, titleOverride }: Props) {
 
   const chartData = useMemo(() => {
     const runs = (response?.data ?? []) as RunSummary[];
-    const byJob = new Map<string, { queue: number; setup: number; exec: number; count: number }>();
+    const byTask = new Map<string, { total: number; count: number }>();
 
     for (const run of runs) {
       const total = run.duration_ms != null ? Number(run.duration_ms) : null;
       if (total == null) continue;
-      const key   = String(run.job_name ?? run.dataset_id ?? "unknown");
-      const queue = run.queue_duration_ms != null ? Number(run.queue_duration_ms) : 0;
-      const setup = run.setup_duration_ms != null ? Number(run.setup_duration_ms) : 0;
-      const exec  = Math.max(0, total - queue - setup);
-      const existing = byJob.get(key) ?? { queue: 0, setup: 0, exec: 0, count: 0 };
-      existing.queue += queue;
-      existing.setup += setup;
-      existing.exec  += exec;
+      const key = String(run.task_name ?? run.job_name ?? run.dataset_id ?? "unknown");
+      const existing = byTask.get(key) ?? { total: 0, count: 0 };
+      existing.total += total;
       existing.count++;
-      byJob.set(key, existing);
+      byTask.set(key, existing);
     }
 
-    return Array.from(byJob.entries())
-      .map(([job, { queue, setup, exec, count }]) => ({
-        step:  job,
-        queue: Math.round(queue / count / 100) / 10,
-        setup: Math.round(setup / count / 100) / 10,
-        exec:  Math.round(exec  / count / 100) / 10,
+    return Array.from(byTask.entries())
+      .map(([task, { total, count }]) => ({
+        step: task,
+        duration: Math.round(total / count / 100) / 10,
       }))
-      .sort((a, b) => (b.queue + b.setup + b.exec) - (a.queue + a.setup + a.exec));
+      .sort((a, b) => b.duration - a.duration);
   }, [response]);
-
-  const hasBreakdown = chartData.some((d) => d.queue > 0 || d.setup > 0);
 
   if (isLoading) return <ChartSkeleton className="h-full" />;
   if (error) return (
@@ -66,13 +57,10 @@ export function StepDurationWidget({ from, to, titleOverride }: Props) {
                 contentStyle={{ backgroundColor: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "8px", fontSize: "13px" }}
                 formatter={(value: number, name: string) => [`${value}s`, name.charAt(0).toUpperCase() + name.slice(1)]}
               />
-              {hasBreakdown && <Legend wrapperStyle={{ fontSize: "12px" }} />}
-              {hasBreakdown && <Bar dataKey="queue" name="Queue" stackId="a" fill="var(--color-surface-alt, #e2e8f0)" radius={[0, 0, 0, 0]} />}
-              {hasBreakdown && <Bar dataKey="setup" name="Setup" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} />}
+              <Legend wrapperStyle={{ fontSize: "12px" }} />
               <Bar
-                dataKey="exec"
-                name={hasBreakdown ? "Execution" : "Avg Duration"}
-                stackId="a"
+                dataKey="duration"
+                name="Avg Duration"
                 fill="var(--color-primary)"
                 radius={[0, 4, 4, 0]}
               />

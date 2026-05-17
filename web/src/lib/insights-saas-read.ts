@@ -41,7 +41,8 @@ async function getPipelineRunsFromMetaStore(range: DateRange): Promise<PipelineR
         r.duration_ms,
         r.environment,
         j.job_name,
-        pr.external_run_id                      AS parent_run_id
+        r.task_name,
+        r.source_parent_run_id
       FROM meta.runs r
       JOIN meta.jobs j USING (job_id)
       LEFT JOIN LATERAL (
@@ -49,9 +50,8 @@ async function getPipelineRunsFromMetaStore(range: DateRange): Promise<PipelineR
         WHERE installation_id = r.installation_id AND dataset_id = j.dataset_id
         LIMIT 1
       ) d ON true
-      LEFT JOIN meta.runs pr ON pr.run_id = r.parent_run_id
       WHERE r.run_date BETWEEN $1 AND $2${installationFilter}
-        AND r.parent_run_id IS NULL
+        AND r.source_parent_run_id IS NULL
       ORDER BY r.started_at DESC
     `,
     values,

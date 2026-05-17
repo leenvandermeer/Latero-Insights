@@ -82,16 +82,15 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       installationId: effectiveInstallationId,
       datasetId: run.dataset_id,
       jobName: run.job_name || null,
+      taskName: run.task_name || run.job_name || run.dataset_id,
       sourceSystem: run.source_system || null,
       targetLayer: run.target_layer || null,
       runId: run.run_id,
+      sourceParentRunId: run.source_parent_run_id || null,
       status: run.run_status,
       environment: run.environment || "unknown",
       timestampUtc: run.timestamp_utc,
       durationMs: run.duration_ms ?? null,
-      dbxJobRunId: run.dbx_job_run_id || null,
-      dbxTaskRunId: run.dbx_task_run_id || null,
-      taskKey: run.task_key || null,
     });
   }
 
@@ -107,6 +106,7 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
       policyVersion: check.policy_version ?? null,
       message: null,
       externalRunId: check.run_id || null,
+      taskName: null,
       timestampUtc: check.timestamp_utc,
     });
   }
@@ -115,6 +115,7 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
     await writeMetaLineage(pool, {
       installationId: effectiveInstallationId,
       externalRunId: hop.run_id,
+      taskName: null,
       sourceEntity: hop.source_entity,
       targetEntity: hop.target_entity,
       sourceType: hop.source_type || null,

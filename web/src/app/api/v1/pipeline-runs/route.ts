@@ -62,8 +62,10 @@ export async function POST(request: NextRequest) {
     await writeMetaPipelineRun(pool, {
       installationId,
       datasetId,
+      taskName: optionalString(body.task_name) ?? optionalString(body.task_key) ?? datasetId,
       sourceSystem: optionalString(body.source_system),
       runId,
+      sourceParentRunId: optionalString(body.source_parent_run_id) ?? optionalString(body.parent_run_id) ?? optionalString(body.dbx_job_run_id),
       status: runStatus,
       environment,
       timestampUtc,
@@ -72,6 +74,10 @@ export async function POST(request: NextRequest) {
       rowsUpdated:  toNullableBigint(body.rows_updated),
       rowsDeleted:  toNullableBigint(body.rows_deleted),
       rowsTotal:    toNullableBigint(body.rows_total),
+      runFacets:
+        body.run_facets && typeof body.run_facets === "object" && !Array.isArray(body.run_facets)
+          ? (body.run_facets as Record<string, unknown>)
+          : null,
     });
 
     await pool.query(

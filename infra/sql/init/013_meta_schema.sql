@@ -52,7 +52,8 @@ CREATE TABLE IF NOT EXISTS meta.runs (
   job_id          UUID        NOT NULL REFERENCES meta.jobs (job_id),
   installation_id TEXT        NOT NULL REFERENCES insights_installations (installation_id),
   external_run_id TEXT        NOT NULL,
-  parent_run_id   UUID        REFERENCES meta.runs (run_id),
+  source_parent_run_id TEXT,
+  task_name       TEXT        NOT NULL,
   status          TEXT        NOT NULL,
   environment     TEXT        NOT NULL,
   started_at      TIMESTAMPTZ NOT NULL,
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS meta.runs (
   run_date        DATE GENERATED ALWAYS AS ((started_at AT TIME ZONE 'UTC')::date) STORED,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (run_id),
-  UNIQUE (installation_id, external_run_id, run_date),
+  UNIQUE (installation_id, external_run_id, task_name, run_date),
   CONSTRAINT meta_runs_status_check
     CHECK (status IN ('SUCCESS','FAILED','WARNING','RUNNING'))
 );

@@ -215,7 +215,7 @@ export class DatabricksAdapter implements DataAdapter {
     const id = this.installationId;
     const columns = await describeColumns("runs", id);
     // source_layer/target_layer: LMETA-015 — aanwezig in Databricks workspace.meta.runs
-    const optional = ["job_name", "parent_run_id", "source_layer", "target_layer", "dbx_job_run_id", "dbx_task_run_id", "task_key"]
+    const optional = ["job_name", "task_name", "source_parent_run_id", "source_layer", "target_layer"]
       .filter((name) => hasColumn(columns, name));
     const sql = `SELECT event_type, timestamp_utc, event_date, dataset_id, source_system, run_id, run_status, duration_ms, environment${optional.length > 0 ? `, ${optional.join(", ")}` : ""} FROM ${fqTable("runs", id)} WHERE event_date >= '${escapeSqlString(range.from)}' AND event_date <= '${escapeSqlString(range.to)}'${await liveDataPredicate("runs", columns, id)} ORDER BY timestamp_utc DESC`;
     const resp = await executeStatement(sql, undefined, id);
@@ -230,12 +230,10 @@ export class DatabricksAdapter implements DataAdapter {
       duration_ms: col(row, cols, "duration_ms") ? Number(col(row, cols, "duration_ms")) : null,
       environment: col(row, cols, "environment"),
       job_name: col(row, cols, "job_name"),
-      parent_run_id: col(row, cols, "parent_run_id"),
+      task_name: col(row, cols, "task_name"),
+      source_parent_run_id: col(row, cols, "source_parent_run_id"),
       source_layer: col(row, cols, "source_layer"),
       target_layer: col(row, cols, "target_layer"),
-      dbx_job_run_id: col(row, cols, "dbx_job_run_id"),
-      dbx_task_run_id: col(row, cols, "dbx_task_run_id"),
-      task_key: col(row, cols, "task_key"),
     }));
   }
 

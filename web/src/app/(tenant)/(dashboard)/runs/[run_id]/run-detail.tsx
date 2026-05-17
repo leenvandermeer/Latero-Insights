@@ -11,9 +11,6 @@ import {
   Clock,
   Database,
   ShieldCheck,
-  ExternalLink,
-  RefreshCw,
-  Timer,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -80,20 +77,10 @@ export function RunDetail({ runId }: { runId: string }) {
   }
 
   const status        = String(run.status ?? "UNKNOWN");
-  const attemptNumber = run.attempt_number != null ? Number(run.attempt_number) : null;
-  const isRetry       = attemptNumber != null && attemptNumber > 0;
-  const trigger       = run.trigger ? String(run.trigger) : null;
-  const runPageUrl    = run.run_page_url ? String(run.run_page_url) : null;
-  const durationMs    = run.duration_ms    != null ? Number(run.duration_ms)    : null;
-  const queueMs       = run.queue_duration_ms != null ? Number(run.queue_duration_ms) : null;
-  const setupMs       = run.setup_duration_ms != null ? Number(run.setup_duration_ms) : null;
-  const execMs        = durationMs != null && queueMs != null && setupMs != null
-    ? Math.max(0, durationMs - queueMs - setupMs) : durationMs;
-  const hasBreakdown  = queueMs != null && setupMs != null && durationMs != null && durationMs > 0;
   const io       = run.io_datasets ?? [];
   const dqChecks = run.dq_checks ?? [];
   const children = run.child_runs ?? [];
-  const taskLabel = run.task_key || run.job_name || runId;
+  const taskLabel = run.task_name || run.job_name || runId;
   const hasRowCounts = run.rows_inserted != null || run.rows_updated != null
     || run.rows_deleted != null || run.rows_total != null;
 
@@ -117,23 +104,6 @@ export function RunDetail({ runId }: { runId: string }) {
             <span className={statusBadge(status)}>
               {statusIcon(status)} {status}
             </span>
-            {isRetry && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-orange-100 text-orange-700">
-                <RefreshCw className="h-3 w-3" /> Retry #{attemptNumber}
-              </span>
-            )}
-            {trigger && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-[var(--color-surface-subtle)]" style={{ color: "var(--color-text-muted)" }}>
-                {trigger}
-              </span>
-            )}
-            {runPageUrl && (
-              <a href={runPageUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs hover:underline"
-                style={{ color: "var(--color-brand)" }}>
-                <ExternalLink className="h-3 w-3" /> Databricks
-              </a>
-            )}
           </div>
           <p className="text-sm mt-1 font-mono" style={{ color: "var(--color-text-muted)" }}>{runId}</p>
         </div>
@@ -143,13 +113,13 @@ export function RunDetail({ runId }: { runId: string }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Job",         value: String(run.job_name ?? run.dataset_id ?? "—") },
-          { label: "Task",        value: String(run.task_key ?? run.job_name ?? "—") },
+          { label: "Task",        value: String(run.task_name ?? run.job_name ?? "—") },
           { label: "Started",     value: run.started_at ? new Date(String(run.started_at)).toLocaleString() : "—" },
           { label: "Finished",    value: run.ended_at ? new Date(String(run.ended_at)).toLocaleString() : "—" },
           { label: "Duration",    value: formatDuration(run.duration_ms) },
           { label: "Environment", value: String(run.environment ?? "—") },
           { label: "Run ID",      value: String(run.external_run_id ?? "—") },
-          { label: "Retry",       value: attemptNumber != null ? String(attemptNumber) : "—" },
+          { label: "Parent Run",  value: String(run.source_parent_run_id ?? "—") },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-lg border px-4 py-3" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
             <p className="text-xs mb-1" style={{ color: "var(--color-text-muted)" }}>{label}</p>
@@ -162,47 +132,12 @@ export function RunDetail({ runId }: { runId: string }) {
         <div className="grid grid-cols-1 gap-4 px-5 py-4 md:grid-cols-2">
           <DetailBlock label="Latero run UUID" value={run.run_id} mono />
           <DetailBlock label="External run ID" value={run.external_run_id ?? "—"} mono />
-          <DetailBlock label="Task key" value={run.task_key ?? "—"} mono />
-          <DetailBlock label="Databricks job run ID" value={run.dbx_job_run_id ?? "—"} mono />
-          <DetailBlock label="Databricks task run ID" value={run.dbx_task_run_id ?? "—"} mono />
-          <DetailBlock label="Parent run ID" value={run.parent_run_id ?? "—"} mono />
-          <DetailBlock label="Trigger" value={trigger ?? "—"} />
+          <DetailBlock label="Task name" value={run.task_name ?? "—"} mono />
+          <DetailBlock label="Source parent run ID" value={run.source_parent_run_id ?? "—"} mono />
+          <DetailBlock label="Environment" value={run.environment ?? "—"} />
+          <DetailBlock label="Job name" value={run.job_name ?? "—"} />
         </div>
       </Section>
-
-      {/* Timing breakdown */}
-      {hasBreakdown && (
-        <Section icon={<Timer className="h-4 w-4" />} title="Timing breakdown">
-          <div className="px-5 py-4 flex flex-col gap-3">
-            <div className="flex gap-0 h-4 rounded overflow-hidden w-full">
-              {queueMs! > 0 && (
-                <div
-                  title={`Queue: ${formatDuration(queueMs)}`}
-                  className="h-full"
-                  style={{ width: `${(queueMs! / durationMs!) * 100}%`, background: "var(--color-surface-alt, #e2e8f0)" }}
-                />
-              )}
-              {setupMs! > 0 && (
-                <div
-                  title={`Setup: ${formatDuration(setupMs)}`}
-                  className="h-full"
-                  style={{ width: `${(setupMs! / durationMs!) * 100}%`, background: "var(--color-warning, #f59e0b)" }}
-                />
-              )}
-              <div
-                title={`Execution: ${formatDuration(execMs)}`}
-                className="h-full flex-1"
-                style={{ background: "var(--color-brand)" }}
-              />
-            </div>
-            <div className="flex flex-wrap gap-4 text-xs">
-              <LegendItem color="var(--color-surface-alt, #e2e8f0)" label="Queue" value={formatDuration(queueMs)} textColor="var(--color-text-muted)" />
-              <LegendItem color="var(--color-warning, #f59e0b)" label="Setup" value={formatDuration(setupMs)} textColor="var(--color-text-muted)" />
-              <LegendItem color="var(--color-brand)" label="Execution" value={formatDuration(execMs)} textColor="var(--color-text)" />
-            </div>
-          </div>
-        </Section>
-      )}
 
       {/* Row counts */}
       {hasRowCounts && (
@@ -324,7 +259,7 @@ export function RunDetail({ runId }: { runId: string }) {
                   <td className="px-4 py-2.5 text-xs">
                     <div className="flex flex-col">
                       <span className="font-mono" style={{ color: "var(--color-text)" }}>
-                        {String(c.task_key ?? "—")}
+                        {String(c.task_name ?? "—")}
                       </span>
                     </div>
                   </td>
@@ -337,16 +272,6 @@ export function RunDetail({ runId }: { runId: string }) {
           </table>
         </Section>
       )}
-    </div>
-  );
-}
-
-function LegendItem({ color, label, value, textColor }: { color: string; label: string; value: string; textColor: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="inline-block h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ background: color }} />
-      <span style={{ color: "var(--color-text-muted)" }}>{label}</span>
-      <span className="font-medium" style={{ color: textColor }}>{value}</span>
     </div>
   );
 }

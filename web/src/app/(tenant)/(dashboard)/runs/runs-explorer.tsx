@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRuns } from "@/hooks/use-runs";
 import { useDateRange } from "@/hooks/use-date-range";
 import { DateRangePicker } from "@/components/ui";
-import { CheckCircle, XCircle, AlertTriangle, Clock, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import type { RunSummary } from "@/types/v2";
@@ -38,7 +38,7 @@ export function RunsExplorer() {
     return rest > 0 ? `${minutes}m ${rest}s` : `${minutes}m`;
   };
 
-  const taskLabel = (run: RunSummary) => run.task_key || run.job_name || "—";
+  const taskLabel = (run: RunSummary) => run.task_name || run.job_name || "—";
 
   return (
     <div className="page-content flex h-full flex-col overflow-x-hidden pt-3">
@@ -122,11 +122,6 @@ export function RunsExplorer() {
                       )}>
                         {run.status ?? "UNKNOWN"}
                       </span>
-                      {Number(run.attempt_number) > 0 && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-100 text-orange-700">
-                          <RefreshCw className="h-2.5 w-2.5" /> #{run.attempt_number}
-                        </span>
-                      )}
                     </span>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: "var(--color-text)" }}>

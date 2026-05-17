@@ -27,7 +27,7 @@ export async function GET(
     // Run + job
     const runRes = await pool.query(
       `SELECT r.run_id, r.external_run_id, j.job_name, j.dataset_id,
-              r.task_key,
+              r.source_parent_run_id, r.task_name,
               r.status, r.environment,
               r.started_at, r.ended_at,
               COALESCE(
@@ -36,10 +36,7 @@ export async function GET(
                      THEN ROUND(EXTRACT(EPOCH FROM (r.ended_at - r.started_at)) * 1000)
                      ELSE NULL END
               ) AS duration_ms,
-              r.attempt_number, r.queue_duration_ms, r.setup_duration_ms,
-              r.trigger, r.run_page_url,
-              r.dbx_job_run_id, r.dbx_task_run_id,
-              r.parent_run_id, r.run_facets,
+              r.run_facets,
               r.rows_inserted, r.rows_updated, r.rows_deleted, r.rows_total
        FROM meta.runs r
        JOIN meta.jobs j USING (job_id)
@@ -111,14 +108,13 @@ export async function GET(
     // Child runs
     const childrenRes = await pool.query(
       `SELECT r.run_id, r.external_run_id, j.job_name, j.dataset_id,
-              r.task_key,
-              r.status, r.started_at, r.ended_at, r.duration_ms,
-              r.dbx_job_run_id, r.dbx_task_run_id
+              r.source_parent_run_id, r.task_name,
+              r.status, r.started_at, r.ended_at, r.duration_ms
        FROM meta.runs r
        JOIN meta.jobs j USING (job_id)
-       WHERE r.parent_run_id = $1 AND r.installation_id = $2
+       WHERE r.source_parent_run_id = $1 AND r.installation_id = $2
        ORDER BY r.started_at`,
-      [run_id, installationId]
+      [String(run.external_run_id), installationId]
     );
 
     return NextResponse.json({

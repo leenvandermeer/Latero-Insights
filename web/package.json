@@ -9,6 +9,7 @@
     "lint": "next lint",
     "seed": "tsx scripts/seed-cache.ts",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate:runs-canonical": "tsx scripts/migrate-runs-canonical.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"

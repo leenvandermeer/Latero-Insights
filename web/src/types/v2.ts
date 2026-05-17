@@ -63,23 +63,16 @@ export interface LayerStatus {
 export interface RunDetail {
   run_id: string;
   external_run_id: string;
+  source_parent_run_id?: string | null;
   job_name: string;
   dataset_id?: string | null;
   entity_fqn?: string | null;
-  task_key?: string | null;
+  task_name: string;
   status: "SUCCESS" | "FAILED" | "WARNING" | "UNKNOWN";
   environment?: string | null;
   started_at: string;
   ended_at?: string | null;
   duration_ms?: number | null;
-  attempt_number?: number | null;
-  queue_duration_ms?: number | null;
-  setup_duration_ms?: number | null;
-  trigger?: string | null;
-  run_page_url?: string | null;
-  dbx_job_run_id?: string | null;
-  dbx_task_run_id?: string | null;
-  parent_run_id?: string | null;
   run_facets?: Record<string, unknown> | null;
   rows_inserted?: number | null;
   rows_updated?: number | null;
@@ -95,22 +88,15 @@ export interface RunDetail {
 export interface RunSummary {
   run_id: string;
   external_run_id: string;
+  source_parent_run_id?: string | null;
   job_name: string;
   dataset_id?: string | null;
-  task_key?: string | null;
+  task_name: string;
   status: "SUCCESS" | "FAILED" | "WARNING" | "RUNNING" | "UNKNOWN";
   environment?: string | null;
   started_at: string;
   ended_at?: string | null;
   duration_ms?: number | null;
-  attempt_number?: number | null;
-  queue_duration_ms?: number | null;
-  setup_duration_ms?: number | null;
-  trigger?: string | null;
-  run_page_url?: string | null;
-  dbx_job_run_id?: string | null;
-  dbx_task_run_id?: string | null;
-  parent_run_id?: string | null;
   dq_count?: number;
   io_count?: number;
 }

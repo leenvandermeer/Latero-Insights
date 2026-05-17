@@ -373,32 +373,24 @@ CREATE TABLE IF NOT EXISTS meta.runs (
   job_id          UUID  NOT NULL REFERENCES meta.jobs (job_id),
   installation_id TEXT  NOT NULL REFERENCES insights_installations (installation_id),
   external_run_id TEXT  NOT NULL,
-  parent_run_id   UUID  REFERENCES meta.runs (run_id),
+  source_parent_run_id TEXT,
+  task_name       TEXT  NOT NULL,
   status          TEXT  NOT NULL
                         CHECK (status IN ('SUCCESS','FAILED','WARNING','RUNNING')),
   environment     TEXT  NOT NULL,
   started_at      TIMESTAMPTZ NOT NULL,
   ended_at        TIMESTAMPTZ,
   duration_ms     BIGINT,
-  attempt_number  INT,
-  queue_duration_ms BIGINT,
-  setup_duration_ms BIGINT,
-  trigger         TEXT,
-  run_page_url    TEXT,
   rows_inserted   BIGINT,
   rows_updated    BIGINT,
   rows_deleted    BIGINT,
   rows_total      BIGINT,
   run_date        DATE GENERATED ALWAYS AS ((started_at AT TIME ZONE 'UTC')::date) STORED,
   run_facets      JSONB,
-  -- Databricks multi-task job context (NULL for non-Databricks sources)
-  dbx_job_run_id  TEXT,
-  dbx_task_run_id TEXT,
-  task_key        TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (run_id),
-  CONSTRAINT meta_runs_installation_id_external_run_id_run_date_key
-    UNIQUE (installation_id, external_run_id, run_date)
+  CONSTRAINT meta_runs_installation_id_external_run_id_task_name_run_date_key
+    UNIQUE (installation_id, external_run_id, task_name, run_date)
 );
 
 CREATE INDEX IF NOT EXISTS idx_meta_runs_installation_date

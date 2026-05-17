@@ -51,24 +51,24 @@ async function ingestPipelineRun(event: AdapterEvent, pool: ReturnType<typeof ge
     installationId,
     datasetId,
     jobName:         optionalString(event.job_name),
+    taskName:        optionalString(event.task_name) ?? optionalString(event.task_key) ?? optionalString(event.job_name) ?? datasetId,
     sourceSystem:    optionalString(event.source_system),
     layer:           optionalString(event.source_layer),
     targetLayer:     optionalString(event.target_layer),
     runId,
+    sourceParentRunId: optionalString(event.source_parent_run_id) ?? optionalString(event.parent_run_id) ?? optionalString(event.dbx_job_run_id),
     status,
     environment,
     timestampUtc:    finishedAt.toISOString(),
     durationMs,
-    attemptNumber:   toNullableBigint(event.attempt_number),
-    queueDurationMs: toNullableBigint(event.queue_duration_ms),
-    setupDurationMs: toNullableBigint(event.setup_duration_ms),
-    trigger:         optionalString(event.trigger),
-    runPageUrl:      optionalString(event.run_page_url),
-    taskKey:         optionalString(event.task_key),
     rowsInserted:    toNullableBigint(event.rows_inserted),
     rowsUpdated:     toNullableBigint(event.rows_updated),
     rowsDeleted:     toNullableBigint(event.rows_deleted),
     rowsTotal:       toNullableBigint(event.rows_total),
+    runFacets:
+      event.run_facets && typeof event.run_facets === "object" && !Array.isArray(event.run_facets)
+        ? (event.run_facets as Record<string, unknown>)
+        : null,
   });
 }
 
@@ -107,6 +107,7 @@ async function ingestDqCheck(event: AdapterEvent, pool: ReturnType<typeof getPgP
     policyVersion:  optionalString(event.policy_version),
     message:        optionalString(event.message),
     externalRunId:  optionalString(event.run_id),
+    taskName:       optionalString(event.task_name) ?? optionalString(event.task_key),
     timestampUtc:   new Date().toISOString(),
     resultValue:    toNullableNumber(event.result_value),
     thresholdValue: toNullableNumber(event.threshold_value),
@@ -138,6 +139,7 @@ async function ingestLineage(event: AdapterEvent, pool: ReturnType<typeof getPgP
     await writeMetaLineage(pool, {
       installationId,
       externalRunId:   runId,
+      taskName:        optionalString(event.task_name) ?? optionalString(event.task_key),
       sourceEntity:    sourceRef,
       targetEntity:    targetRef,
       sourceRef,

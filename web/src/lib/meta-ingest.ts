@@ -48,28 +48,22 @@ export interface MetaPipelineRunParams {
   installationId: string;
   datasetId: string;
   jobName?: string | null; // LINS-020: native job name van de bron (bijv. Databricks job name)
+  taskName: string;
   sourceSystem: string | null;
   layer?: string | null;
   targetLayer?: string | null; // LADR-058: laag van de output-dataset (voor layer-scoped ID)
   runId: string;
+  sourceParentRunId?: string | null;
   status: string;
   environment: string;
   timestampUtc: string;
   durationMs: number | null;
-  attemptNumber?: number | null;
-  queueDurationMs?: number | null;
-  setupDurationMs?: number | null;
-  trigger?: string | null;
-  runPageUrl?: string | null;
   // LADR-080: CDC row counts (optioneel — null betekent niet gerapporteerd)
   rowsInserted?: number | null;
   rowsUpdated?: number | null;
   rowsDeleted?: number | null;
   rowsTotal?: number | null;
-  // Databricks multi-task job context
-  dbxJobRunId?: string | null;
-  dbxTaskRunId?: string | null;
-  taskKey?: string | null;
+  runFacets?: Record<string, unknown> | null;
 }
 
 export async function writeMetaPipelineRun(
@@ -173,21 +167,16 @@ export async function writeMetaPipelineRun(
         SET status            = $1,
             ended_at          = $2,
             duration_ms       = $3,
-            attempt_number    = COALESCE($7,  attempt_number),
-            queue_duration_ms = COALESCE($8,  queue_duration_ms),
-            setup_duration_ms = COALESCE($9,  setup_duration_ms),
-            trigger           = COALESCE($10, trigger),
-            run_page_url      = COALESCE($11, run_page_url),
-            rows_inserted     = COALESCE($12, rows_inserted),
-            rows_updated      = COALESCE($13, rows_updated),
-            rows_deleted      = COALESCE($14, rows_deleted),
-            rows_total        = COALESCE($15, rows_total),
-            dbx_job_run_id    = COALESCE($16, dbx_job_run_id),
-            dbx_task_run_id   = COALESCE($17, dbx_task_run_id),
-            task_key          = COALESCE($18, task_key)
+            source_parent_run_id = COALESCE($7, source_parent_run_id),
+            rows_inserted     = COALESCE($8,  rows_inserted),
+            rows_updated      = COALESCE($9,  rows_updated),
+            rows_deleted      = COALESCE($10, rows_deleted),
+            rows_total        = COALESCE($11, rows_total),
+            run_facets        = COALESCE($12, run_facets)
         WHERE installation_id = $4
           AND external_run_id = $5
-          AND run_date        = $6
+          AND task_name       = $6
+          AND run_date        = $13
         RETURNING run_id
       `,
       [
@@ -196,19 +185,14 @@ export async function writeMetaPipelineRun(
         params.durationMs,
         params.installationId,
         params.runId,
+        params.taskName,
+        params.sourceParentRunId ?? null,
+        params.rowsInserted      ?? null,
+        params.rowsUpdated       ?? null,
+        params.rowsDeleted       ?? null,
+        params.rowsTotal         ?? null,
+        params.runFacets ? JSON.stringify(params.runFacets) : null,
         runDate,
-        params.attemptNumber    ?? null,
-        params.queueDurationMs  ?? null,
-        params.setupDurationMs  ?? null,
-        params.trigger          ?? null,
-        params.runPageUrl       ?? null,
-        params.rowsInserted     ?? null,
-        params.rowsUpdated      ?? null,
-        params.rowsDeleted      ?? null,
-        params.rowsTotal        ?? null,
-        params.dbxJobRunId      ?? null,
-        params.dbxTaskRunId     ?? null,
-        params.taskKey          ?? null,
       ],
     );
 
@@ -219,12 +203,11 @@ export async function writeMetaPipelineRun(
       const insertResult = await client.query(
         `
           INSERT INTO meta.runs (
-            job_id, installation_id, external_run_id,
+            job_id, installation_id, external_run_id, source_parent_run_id, task_name,
             status, environment, started_at, ended_at, duration_ms,
-            attempt_number, queue_duration_ms, setup_duration_ms, trigger, run_page_url,
             rows_inserted, rows_updated, rows_deleted, rows_total,
-            dbx_job_run_id, dbx_task_run_id, task_key
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+            run_facets
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
           ON CONFLICT DO NOTHING
           RETURNING run_id
         `,
@@ -232,23 +215,18 @@ export async function writeMetaPipelineRun(
           jobId,
           params.installationId,
           params.runId,
+          params.sourceParentRunId ?? null,
+          params.taskName,
           params.status,
           params.environment,
           params.timestampUtc,
           endedAt,
           params.durationMs,
-          params.attemptNumber    ?? null,
-          params.queueDurationMs  ?? null,
-          params.setupDurationMs  ?? null,
-          params.trigger          ?? null,
-          params.runPageUrl       ?? null,
-          params.rowsInserted     ?? null,
-          params.rowsUpdated      ?? null,
-          params.rowsDeleted      ?? null,
-          params.rowsTotal        ?? null,
-          params.dbxJobRunId      ?? null,
-          params.dbxTaskRunId     ?? null,
-          params.taskKey          ?? null,
+          params.rowsInserted ?? null,
+          params.rowsUpdated ?? null,
+          params.rowsDeleted ?? null,
+          params.rowsTotal ?? null,
+          params.runFacets ? JSON.stringify(params.runFacets) : null,
         ],
       );
       runUuid = insertResult.rows[0].run_id as string;
@@ -332,6 +310,7 @@ export interface MetaDqCheckParams {
   policyVersion: string | null;
   message: string | null;
   externalRunId: string | null;
+  taskName?: string | null;
   timestampUtc: string;
   resultValue?: number | null;
   thresholdValue?: number | null;
@@ -396,10 +375,11 @@ export async function writeMetaDqCheck(
           FROM meta.runs
           WHERE installation_id = $1
             AND external_run_id = $2
+            AND ($3::text IS NULL OR task_name = $3)
           ORDER BY started_at DESC
           LIMIT 1
         `,
-        [params.installationId, params.externalRunId],
+        [params.installationId, params.externalRunId, params.taskName ?? null],
       );
       metaRunId = (runRes.rows[0]?.run_id as string | undefined) ?? null;
     }
@@ -448,6 +428,7 @@ export async function writeMetaDqCheck(
 export interface MetaLineageParams {
   installationId: string;
   externalRunId: string;
+  taskName?: string | null;
   sourceEntity: string; // input_entity
   targetEntity: string; // output_entity
   sourceRef?: string | null;
@@ -480,10 +461,11 @@ export async function writeMetaLineage(
         FROM meta.runs
         WHERE installation_id = $1
           AND external_run_id = $2
+          AND ($3::text IS NULL OR task_name = $3)
         ORDER BY started_at DESC
         LIMIT 1
       `,
-      [params.installationId, params.externalRunId],
+      [params.installationId, params.externalRunId, params.taskName ?? null],
     );
     const metaRunId: string | null =
       (runRes.rows[0]?.run_id as string | undefined) ?? null;

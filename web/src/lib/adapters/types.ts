@@ -9,14 +9,11 @@ export interface PipelineRun {
   duration_ms: number | null;
   environment: string | null;
   job_name?: string | null;
-  parent_run_id?: string | null;
+  task_name?: string | null;
+  source_parent_run_id?: string | null;
   // LMETA-015: logische pipelinelagen (landing/raw/bronze/silver/gold)
   source_layer?: string | null;
   target_layer?: string | null;
-  // Databricks multi-task job context
-  dbx_job_run_id?: string | null;
-  dbx_task_run_id?: string | null;
-  task_key?: string | null;
 }
 
 export interface DataQualityCheck {

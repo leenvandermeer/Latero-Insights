@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
       policyVersion: optionalString(body.policy_version),
       message: optionalString(body.message),
       externalRunId: optionalString(body.run_id),
+      taskName: optionalString(body.task_name) ?? optionalString(body.task_key),
       timestampUtc,
     });
 
