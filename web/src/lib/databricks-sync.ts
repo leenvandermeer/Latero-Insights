@@ -10,6 +10,7 @@ export interface SyncResult {
   dq_checks: number;
   lineage: number;
   column_lineage: number;
+  data_products_bootstrapped: number;
   diagnostics?: {
     environment_filter: string | null;
     date_range: { from: string; to: string };
@@ -144,11 +145,37 @@ export async function syncFromDatabricks(range: { from: string; to: string }, in
     });
   }
 
+  // Bootstrap data products for entities that were discovered during this sync
+  // but have no linked data product yet. Idempotent: skips entities already linked.
+  const bootstrapResult = await pool.query<{ count: string }>(
+    `WITH new_products AS (
+       INSERT INTO meta.data_products (data_product_id, installation_id, display_name, valid_from)
+       SELECT gen_random_uuid()::text, e.installation_id, COALESCE(e.display_name, e.entity_id), now()
+       FROM meta.entities e
+       WHERE e.installation_id = $1
+         AND e.valid_to IS NULL
+         AND e.data_product_id IS NULL
+       ON CONFLICT DO NOTHING
+       RETURNING data_product_id, installation_id, display_name
+     )
+     UPDATE meta.entities e
+     SET data_product_id = np.data_product_id, updated_at = now()
+     FROM new_products np
+     WHERE np.installation_id = e.installation_id
+       AND COALESCE(e.display_name, e.entity_id) = np.display_name
+       AND e.valid_to IS NULL
+       AND e.data_product_id IS NULL
+     RETURNING e.entity_id`,
+    [effectiveInstallationId],
+  );
+  const bootstrapped = bootstrapResult.rowCount ?? 0;
+
   return {
     pipeline_runs: runs.length,
     dq_checks: checks.length,
     lineage: hops.length,
     column_lineage: attributes.length,
+    data_products_bootstrapped: bootstrapped,
     diagnostics: {
       environment_filter: environmentFilter,
       date_range: { from, to },

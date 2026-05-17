@@ -243,6 +243,32 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Bootstrap data products for any entities created by this batch that have no product yet.
+  // Runs only when pipeline_run events were accepted; skips entities already linked.
+  const hasPipelineRuns = results.some((r) => r.event_type === "pipeline_run" && r.status === "accepted");
+  if (hasPipelineRuns) {
+    await pool.query(
+      `WITH new_products AS (
+         INSERT INTO meta.data_products (data_product_id, installation_id, display_name, valid_from)
+         SELECT gen_random_uuid()::text, e.installation_id, COALESCE(e.display_name, e.entity_id), now()
+         FROM meta.entities e
+         WHERE e.installation_id = $1
+           AND e.valid_to IS NULL
+           AND e.data_product_id IS NULL
+         ON CONFLICT DO NOTHING
+         RETURNING data_product_id, installation_id, display_name
+       )
+       UPDATE meta.entities e
+       SET data_product_id = np.data_product_id, updated_at = now()
+       FROM new_products np
+       WHERE np.installation_id = e.installation_id
+         AND COALESCE(e.display_name, e.entity_id) = np.display_name
+         AND e.valid_to IS NULL
+         AND e.data_product_id IS NULL`,
+      [installationId],
+    );
+  }
+
   await pool.query(
     `INSERT INTO ingest_audit (endpoint, installation_id, status_code, request_body, response_body)
      VALUES ($1, $2, $3, $4::jsonb, $5::jsonb)`,
