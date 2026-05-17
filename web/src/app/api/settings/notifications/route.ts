@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/lib/session-auth";
+import { requireSession, checkIsAdmin } from "@/lib/session-auth";
 import { getNotificationConfig, updateNotificationConfig } from "@/lib/notifications";
 
 /**
@@ -70,6 +70,11 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "No active installation" }, { status: 400 });
     }
 
+    const isAdmin = await checkIsAdmin(session.user_id);
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden: admin role required" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     // Validate input
@@ -133,6 +138,11 @@ export async function POST(req: NextRequest) {
 
     if (!installationId) {
       return NextResponse.json({ error: "No active installation" }, { status: 400 });
+    }
+
+    const isAdmin = await checkIsAdmin(session.user_id);
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden: admin role required" }, { status: 403 });
     }
 
     const body = await req.json();

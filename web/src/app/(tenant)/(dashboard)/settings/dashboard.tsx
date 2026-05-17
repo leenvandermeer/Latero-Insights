@@ -90,6 +90,7 @@ export function SettingsDashboard() {
     queryKey: ["settings", installationId],
     queryFn: fetchSettings,
     staleTime: 0,
+    enabled: !!installationId,
   });
 
   useEffect(() => {
@@ -235,6 +236,9 @@ export function SettingsDashboard() {
     }
   }
 
+  const installationLabel = installation?.label ?? installation?.installation_id ?? "Unknown workspace";
+  const installationEnv = installation?.environment;
+
   return (
     <div className="max-w-5xl space-y-6">
       <PageHeader title="Settings" icon={Settings2} />
@@ -247,6 +251,9 @@ export function SettingsDashboard() {
             </span>
             <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "var(--color-sidebar-hover)", color: "var(--color-text-muted)" }}>
               Runtime configuration
+            </span>
+            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "var(--color-sidebar-hover)", color: "var(--color-text-muted)" }}>
+              {installationLabel}{installationEnv ? ` · ${installationEnv}` : ""}
             </span>
           </div>
           <h2 className="text-lg font-medium" style={{ color: "var(--color-text)" }}>

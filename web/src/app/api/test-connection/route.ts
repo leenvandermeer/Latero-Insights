@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { loadSettings } from "@/lib/settings";
-import { requireSession } from "@/lib/session-auth";
+import { requireSession, checkIsAdmin } from "@/lib/session-auth";
 
 // Transient states that indicate the warehouse is warming up — worth retrying
 const RETRYABLE_STATES = new Set(["PENDING", "RUNNING"]);
@@ -12,6 +12,11 @@ export async function POST(request: NextRequest) {
     session = await requireSession(request);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const isAdmin = await checkIsAdmin(session.user_id);
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Forbidden: admin role required" }, { status: 403 });
   }
 
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";

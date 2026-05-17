@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { syncFromDatabricks } from "@/lib/databricks-sync";
-import { requireSession } from "@/lib/session-auth";
+import { requireSession, checkIsAdmin } from "@/lib/session-auth";
 import { loadSettings } from "@/lib/settings";
 
 function defaultDateRange(): { from: string; to: string } {
@@ -23,6 +23,11 @@ export async function POST(request: NextRequest) {
     session = await requireSession(request);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const isAdmin = await checkIsAdmin(session.user_id);
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Forbidden: admin role required" }, { status: 403 });
   }
 
   const settings = loadSettings(session.active_installation_id ?? undefined);

@@ -3,7 +3,7 @@ import { DatabricksAdapter } from "@/lib/adapters/databricks";
 import { rateLimit } from "@/lib/rate-limit";
 import { clearCache, writeToCache } from "@/lib/cache";
 import { getLineageEntitiesFromSaaS, getLineageAttributesFromSaaS } from "@/lib/insights-saas-read";
-import { requireSession } from "@/lib/session-auth";
+import { requireSession, checkIsAdmin } from "@/lib/session-auth";
 
 const adapter = new DatabricksAdapter();
 
@@ -17,12 +17,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // LADR-079: Require authentication to get installation_id
+  // LADR-079: Require admin session to refresh cache
   let installationId: string;
   try {
     const session = await requireSession(request);
     if (!session.active_installation_id) {
       return NextResponse.json({ error: "No active installation" }, { status: 400 });
+    }
+    const isAdmin = await checkIsAdmin(session.user_id);
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden: admin role required" }, { status: 403 });
     }
     installationId = session.active_installation_id;
   } catch {

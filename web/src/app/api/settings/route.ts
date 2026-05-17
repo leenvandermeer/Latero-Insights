@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { isConnectionMode, loadSettings, saveSettings, maskSettings, type AppSettings } from "@/lib/settings";
-import { requireSession } from "@/lib/session-auth";
+import { requireSession, checkIsAdmin } from "@/lib/session-auth";
 
 export async function GET(request: NextRequest) {
   // LINS-016: Verify user session before exposing settings
@@ -34,6 +34,11 @@ export async function PUT(request: NextRequest) {
     session = await requireSession(request);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const isAdmin = await checkIsAdmin(session.user_id);
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Forbidden: admin role required" }, { status: 403 });
   }
 
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";

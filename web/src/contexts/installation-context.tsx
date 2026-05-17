@@ -127,6 +127,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
       setInstallation(data.active_installation ?? null);
       setInstallations(data.installations ?? []);
       setValidating(false);
+      window.location.reload();
       return true;
     } catch {
       setAuthError("Failed to switch organisation due to a network error.");

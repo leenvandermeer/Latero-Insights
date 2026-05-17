@@ -71,3 +71,4 @@ Naming note:
 | [LADR-079](LADR-079-20260513-stable-entity-guid.md) | 2026-05-13 | Stable Entity GUID for URL-Safe Identification: LINS-021 compliance (no fuzzy matching) | PROPOSED |
 | [LADR-080](LADR-080-20260514-cdc-counts-and-temporal-lineage.md) | 2026-05-14 | CDC row counts op meta.runs + SCD2 temporal lineage (time-travel via ?as_of=) | ACCEPTED |
 | [LADR-081](LADR-081-20260516-migrate-lineage-attrs-to-scd2-source.md) | 2026-05-16 | Lineage attribute queries migreren van projected table naar SCD2 bron (lineage_attribute) | ACCEPTED |
+| [LADR-082](LADR-082-20260517-admin-guard-write-endpoints.md) | 2026-05-17 | Admin guard on infrastructure write endpoints — checkIsAdmin required on sync, cache, settings, test-connection | ACCEPTED |

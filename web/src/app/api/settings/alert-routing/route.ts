@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
-import { requireSession } from "@/lib/session-auth";
+import { requireSession, checkIsAdmin } from "@/lib/session-auth";
 import { getPgPool } from "@/lib/insights-saas-db";
 
 function ip(r: NextRequest) {
   return r.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 }
 
-async function resolveInstallation(request: NextRequest): Promise<string> {
+async function resolveSession(request: NextRequest) {
   const session = await requireSession(request);
-  return session.active_installation_id as string;
+  return session;
 }
 
 /**
@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
   if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   let installationId: string;
-  try { installationId = await resolveInstallation(request); } catch {
+  try {
+    const session = await resolveSession(request);
+    installationId = session.active_installation_id as string;
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -45,7 +48,14 @@ export async function PUT(request: NextRequest) {
   if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   let installationId: string;
-  try { installationId = await resolveInstallation(request); } catch {
+  try {
+    const session = await resolveSession(request);
+    const isAdmin = await checkIsAdmin(session.user_id);
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden: admin role required" }, { status: 403 });
+    }
+    installationId = session.active_installation_id as string;
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
