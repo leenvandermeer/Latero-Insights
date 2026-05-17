@@ -38,7 +38,7 @@ export function RunsExplorer() {
     return rest > 0 ? `${minutes}m ${rest}s` : `${minutes}m`;
   };
 
-  const taskLabel = (run: RunSummary) => run.task_key || "—";
+  const taskLabel = (run: RunSummary) => run.task_key || run.job_name || "—";
 
   return (
     <div className="page-content flex h-full flex-col overflow-x-hidden pt-3">

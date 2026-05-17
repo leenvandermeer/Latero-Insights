@@ -64,6 +64,7 @@ async function ingestPipelineRun(event: AdapterEvent, pool: ReturnType<typeof ge
     setupDurationMs: toNullableBigint(event.setup_duration_ms),
     trigger:         optionalString(event.trigger),
     runPageUrl:      optionalString(event.run_page_url),
+    taskKey:         optionalString(event.task_key),
     rowsInserted:    toNullableBigint(event.rows_inserted),
     rowsUpdated:     toNullableBigint(event.rows_updated),
     rowsDeleted:     toNullableBigint(event.rows_deleted),

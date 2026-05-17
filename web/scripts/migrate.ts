@@ -13,11 +13,25 @@ import { readFileSync, readdirSync } from "fs";
 import { join, resolve } from "path";
 import { Pool } from "pg";
 
+// POSTGRES_URL is used by the production container; DATABASE_URL is the dev convention.
+// Fall back to individual PG* vars so both contexts work without config changes.
 const DATABASE_URL =
   process.env.DATABASE_URL ??
+  process.env.POSTGRES_URL ??
   `postgresql://${process.env.PGUSER ?? "insights"}:${process.env.PGPASSWORD ?? "insights"}@${process.env.PGHOST ?? "localhost"}:${process.env.PGPORT ?? "5432"}/${process.env.PGDATABASE ?? "insights"}`;
 
-const MIGRATIONS_DIR = resolve(__dirname, "../../infra/sql/init");
+// Auto-detect migrations directory: explicit env var, dev path, or bundled production path.
+const MIGRATIONS_DIR = (() => {
+  const candidates = [
+    process.env.MIGRATIONS_DIR,
+    resolve(__dirname, "../../infra/sql/init"),
+    resolve(__dirname, "infra/sql/init"),
+  ].filter(Boolean) as string[];
+  for (const dir of candidates) {
+    try { readdirSync(dir); return dir; } catch { /* try next */ }
+  }
+  throw new Error("Kan de migratiemap niet vinden. Stel MIGRATIONS_DIR in.");
+})();
 
 async function migrate() {
   const pool = new Pool({ connectionString: DATABASE_URL });

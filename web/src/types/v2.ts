@@ -81,6 +81,10 @@ export interface RunDetail {
   dbx_task_run_id?: string | null;
   parent_run_id?: string | null;
   run_facets?: Record<string, unknown> | null;
+  rows_inserted?: number | null;
+  rows_updated?: number | null;
+  rows_deleted?: number | null;
+  rows_total?: number | null;
   // Relations
   io_datasets?: RunIODataset[];
   dq_checks?: RunDQCheck[];

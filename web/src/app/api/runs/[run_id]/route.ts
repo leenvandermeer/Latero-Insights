@@ -39,7 +39,8 @@ export async function GET(
               r.attempt_number, r.queue_duration_ms, r.setup_duration_ms,
               r.trigger, r.run_page_url,
               r.dbx_job_run_id, r.dbx_task_run_id,
-              r.parent_run_id, r.run_facets
+              r.parent_run_id, r.run_facets,
+              r.rows_inserted, r.rows_updated, r.rows_deleted, r.rows_total
        FROM meta.runs r
        JOIN meta.jobs j USING (job_id)
        WHERE r.run_id = $1 AND r.installation_id = $2`,

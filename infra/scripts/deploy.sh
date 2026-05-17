@@ -61,50 +61,28 @@ docker build \
 echo ""
 
 # ── Stap 3: DB-migraties ───────────────────────────────────────────────────
+# Gebruikt dezelfde migrate.cjs runner als lokale ontwikkeling (migrate.ts).
+# Voert alleen een éénmalige --rm container uit zodat er geen losse psql-loop
+# naast de TypeScript-runner bestaat die uit de pas kan lopen.
 echo "▶  3/5  DB-migraties uitvoeren..."
-SQL_DIR="${REPO_DIR}/infra/sql/init"
+
+# Haal de postgres container-netwerk op (docker_default op prod)
+PG_NETWORK=$(docker inspect insights-postgres \
+  --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' 2>/dev/null | head -1)
+PG_NETWORK="${PG_NETWORK:-docker_default}"
+
+POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "${ENV_FILE}" | cut -d= -f2)
+
+docker run --rm \
+  --network "${PG_NETWORK}" \
+  -e "POSTGRES_URL=postgresql://insights:${POSTGRES_PASSWORD}@insights-postgres:5432/insights" \
+  "${IMAGE_TAG}" \
+  node /app/migrate.cjs
+
+# Cleanup oude audit-records (90 dagen retentie)
 PG_CONTAINER="insights-postgres"
 PG_USER="insights"
 PG_DB="insights"
-
-# Zorg dat de tracking-tabel bestaat (altijd idempotent)
-docker exec -i "${PG_CONTAINER}" \
-  psql -U "${PG_USER}" -d "${PG_DB}" -v ON_ERROR_STOP=1 \
-  < "${SQL_DIR}/000_schema_migrations.sql" > /dev/null 2>&1
-
-for sql_file in $(ls -v "${SQL_DIR}"/*.sql); do
-  filename="$(basename "${sql_file}")"
-
-  # Sla 000 over — is al hierboven gedraaid
-  [[ "${filename}" == "000_schema_migrations.sql" ]] && continue
-
-  # Controleer of dit script al is toegepast
-  already_applied=$(docker exec "${PG_CONTAINER}" \
-    psql -U "${PG_USER}" -d "${PG_DB}" -tAq \
-    -c "SELECT 1 FROM schema_migrations WHERE filename = '${filename}' LIMIT 1;" 2>/dev/null)
-
-  if [[ "${already_applied}" == "1" ]]; then
-    echo "   –  ${filename} (al toegepast, overgeslagen)"
-    continue
-  fi
-
-  # Voer het script uit
-  if docker exec -i "${PG_CONTAINER}" \
-    psql -U "${PG_USER}" -d "${PG_DB}" \
-    -v ON_ERROR_STOP=1 \
-    < "${sql_file}" > /dev/null 2>&1; then
-    # Registreer als succesvol toegepast
-    docker exec "${PG_CONTAINER}" \
-      psql -U "${PG_USER}" -d "${PG_DB}" -tAq \
-      -c "INSERT INTO schema_migrations (filename) VALUES ('${filename}') ON CONFLICT DO NOTHING;" > /dev/null 2>&1
-    echo "   ✓  ${filename}"
-  else
-    echo "   ✗  ${filename} — FOUT (deploy gestopt)"
-    exit 1
-  fi
-done
-
-# Cleanup oude audit-records (90 dagen retentie)
 DELETED=$(docker exec "${PG_CONTAINER}" \
   psql -U "${PG_USER}" -d "${PG_DB}" -tAq \
   -c "SELECT cleanup_ingest_audit(90);" 2>/dev/null || echo "0")

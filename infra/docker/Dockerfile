@@ -16,6 +16,9 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=1536"
 RUN npm run build --workspace web
+# Bundle migrate.ts → migrate.cjs zo deploy.sh dezelfde runner gebruikt als dev.
+RUN node_modules/.bin/esbuild web/scripts/migrate.ts \
+    --bundle --platform=node --outfile=migrate.cjs --external:pg
 
 # ── Stage 3: production runtime ───────────────────────────────────────────────
 FROM node:20-alpine AS runner
@@ -39,6 +42,11 @@ COPY --from=builder /app/web/public ./web/public
 # process.cwd() = /app/web (web/server.js doet process.chdir(__dirname)), dus
 # data-pad = /app/web/data/shared-widgets.json.
 COPY --from=builder --chown=nextjs:nodejs /app/web/data ./web/data
+
+# Migration runner — zelfde codepad als lokale ontwikkeling.
+# deploy.sh start een --rm container met dit image om migraties toe te passen.
+COPY --from=builder /app/migrate.cjs ./migrate.cjs
+COPY --from=builder /app/infra/sql/init ./infra/sql/init
 
 # Persistent state directories — mounted as volumes in production
 RUN mkdir -p /app/web/.cache \

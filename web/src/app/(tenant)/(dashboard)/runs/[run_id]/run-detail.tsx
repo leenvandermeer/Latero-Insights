@@ -94,6 +94,8 @@ export function RunDetail({ runId }: { runId: string }) {
   const dqChecks = run.dq_checks ?? [];
   const children = run.child_runs ?? [];
   const taskLabel = run.task_key || run.job_name || runId;
+  const hasRowCounts = run.rows_inserted != null || run.rows_updated != null
+    || run.rows_deleted != null || run.rows_total != null;
 
   return (
     <div className="page-content flex flex-col gap-6 overflow-x-hidden">
@@ -141,7 +143,7 @@ export function RunDetail({ runId }: { runId: string }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Job",         value: String(run.job_name ?? run.dataset_id ?? "—") },
-          { label: "Task",        value: String(run.task_key ?? "—") },
+          { label: "Task",        value: String(run.task_key ?? run.job_name ?? "—") },
           { label: "Started",     value: run.started_at ? new Date(String(run.started_at)).toLocaleString() : "—" },
           { label: "Finished",    value: run.ended_at ? new Date(String(run.ended_at)).toLocaleString() : "—" },
           { label: "Duration",    value: formatDuration(run.duration_ms) },
@@ -198,6 +200,27 @@ export function RunDetail({ runId }: { runId: string }) {
               <LegendItem color="var(--color-warning, #f59e0b)" label="Setup" value={formatDuration(setupMs)} textColor="var(--color-text-muted)" />
               <LegendItem color="var(--color-brand)" label="Execution" value={formatDuration(execMs)} textColor="var(--color-text)" />
             </div>
+          </div>
+        </Section>
+      )}
+
+      {/* Row counts */}
+      {hasRowCounts && (
+        <Section icon={<Database className="h-4 w-4" />} title="Row counts">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-5 py-4">
+            {[
+              { label: "Inserted", value: run.rows_inserted },
+              { label: "Updated",  value: run.rows_updated  },
+              { label: "Deleted",  value: run.rows_deleted  },
+              { label: "Total",    value: run.rows_total    },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-xs mb-0.5" style={{ color: "var(--color-text-muted)" }}>{label}</p>
+                <p className="text-sm font-medium tabular-nums" style={{ color: "var(--color-text)" }}>
+                  {value != null ? Number(value).toLocaleString() : "—"}
+                </p>
+              </div>
+            ))}
           </div>
         </Section>
       )}
