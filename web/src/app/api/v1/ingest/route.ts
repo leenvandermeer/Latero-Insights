@@ -85,18 +85,33 @@ async function ingestDqCheck(event: AdapterEvent, pool: ReturnType<typeof getPgP
     throw new Error("severity must be one of: high, medium, low");
   }
 
+  const toNullableNumber = (v: unknown): number | null => {
+    if (v === undefined || v === null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const checkFacets =
+    event.check_facets && typeof event.check_facets === "object" && !Array.isArray(event.check_facets)
+      ? (event.check_facets as Record<string, unknown>)
+      : null;
+
   await writeMetaDqCheck(pool, {
     installationId,
     datasetId,
     checkId,
-    checkName:     String(event.check_name ?? checkId),
+    checkName:      String(event.check_name ?? checkId),
     checkStatus,
     severity,
-    checkCategory: optionalString(event.check_category),
-    policyVersion: optionalString(event.policy_version),
-    message:       null,
-    externalRunId: optionalString(event.run_id),
-    timestampUtc:  new Date().toISOString(),
+    checkCategory:  optionalString(event.check_category),
+    policyVersion:  optionalString(event.policy_version),
+    message:        optionalString(event.message),
+    externalRunId:  optionalString(event.run_id),
+    timestampUtc:   new Date().toISOString(),
+    resultValue:    toNullableNumber(event.result_value),
+    thresholdValue: toNullableNumber(event.threshold_value),
+    checkResult:    optionalString(event.check_result),
+    checkFacets,
   });
 
   // Suppress unused variable warning — environment is validated above.

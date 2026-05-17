@@ -118,6 +118,58 @@ export function QualityCheckDetail({ resultId }: { resultId: string }) {
         </dl>
       </div>
 
+      {/* Result values */}
+      {(c.result_value != null || c.threshold_value != null || !!c.message || !!c.check_result) && (
+        <div className="rounded-xl p-5" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+          <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>Result</h2>
+          <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {c.result_value != null && (
+              <Field label="Actual value" value={String(c.result_value)} />
+            )}
+            {c.threshold_value != null && (
+              <Field label="Threshold" value={String(c.threshold_value)} />
+            )}
+            {!!c.check_result && (
+              <Field label="Result detail" value={String(c.check_result)} />
+            )}
+            {!!c.message && (
+              <div className="col-span-full">
+                <dt className="text-xs font-medium mb-0.5" style={{ color: "var(--color-text-muted)" }}>Message</dt>
+                <dd className="text-sm font-mono p-2 rounded-lg" style={{ color: "var(--color-text)", background: "var(--color-surface-subtle)" }}>
+                  {String(c.message)}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      )}
+
+      {/* Check facets */}
+      {!!c.check_facets && typeof c.check_facets === "object" && Object.keys(c.check_facets as object).length > 0 && (
+        <div className="rounded-xl p-5" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+          <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text)" }}>Check facets</h2>
+          <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {Object.entries(c.check_facets as Record<string, unknown>).map(([key, val]) => {
+              const isComplex = val !== null && typeof val === "object";
+              return isComplex ? (
+                <div key={key} className="col-span-full">
+                  <dt className="text-xs font-medium mb-0.5" style={{ color: "var(--color-text-muted)" }}>{key}</dt>
+                  <dd>
+                    <pre
+                      className="text-xs p-3 rounded-lg overflow-x-auto"
+                      style={{ background: "var(--color-surface-subtle)", color: "var(--color-text)" }}
+                    >
+                      {JSON.stringify(val, null, 2)}
+                    </pre>
+                  </dd>
+                </div>
+              ) : (
+                <Field key={key} label={key} value={val != null ? String(val) : undefined} />
+              );
+            })}
+          </dl>
+        </div>
+      )}
 
     </div>
   );

@@ -35,7 +35,12 @@ export async function GET(
       r.environment,
       j.job_name,
       COALESCE(r.external_run_id, qr.run_id::text, '') AS run_id,
-      r.run_id::text                           AS internal_run_id
+      r.run_id::text                           AS internal_run_id,
+      qr.message,
+      qr.result_value,
+      qr.threshold_value,
+      qr.check_result,
+      qr.check_facets
     FROM meta.quality_results qr
     JOIN meta.quality_rules qru
       ON qru.installation_id = qr.installation_id

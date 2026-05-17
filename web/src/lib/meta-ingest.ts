@@ -333,6 +333,10 @@ export interface MetaDqCheckParams {
   message: string | null;
   externalRunId: string | null;
   timestampUtc: string;
+  resultValue?: number | null;
+  thresholdValue?: number | null;
+  checkResult?: string | null;
+  checkFacets?: Record<string, unknown> | null;
 }
 
 export async function writeMetaDqCheck(
@@ -406,8 +410,10 @@ export async function writeMetaDqCheck(
     await client.query(
       `
         INSERT INTO meta.quality_results (
-          check_id, installation_id, run_id, status, message, executed_at
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+          check_id, installation_id, run_id, status, message,
+          result_value, threshold_value, check_result, check_facets,
+          executed_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT DO NOTHING
       `,
       [
@@ -416,6 +422,10 @@ export async function writeMetaDqCheck(
         metaRunId,
         params.checkStatus,
         params.message,
+        params.resultValue   ?? null,
+        params.thresholdValue ?? null,
+        params.checkResult   ?? null,
+        params.checkFacets   ? JSON.stringify(params.checkFacets) : null,
         params.timestampUtc,
       ],
     );
